@@ -1,4 +1,4 @@
 Limber Timber
 =============
 
-***Migrations Made Malleable***
+***Database Migrations Made Easy***
