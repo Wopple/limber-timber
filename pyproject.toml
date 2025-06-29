@@ -13,6 +13,8 @@ liti = "liti.cli:main"
 
 [tool.poetry.dependencies]
 python = "3.13.0"
+google-cloud-bigquery = "3.34.0"
+pydantic = "2.11.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
