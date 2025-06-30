@@ -1,7 +1,7 @@
 import string
 from typing import Any
 
-from pydantic import BaseModel, field_serializer, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator, model_validator
 
 from liti.core.model.v1.data_type import BOOL, DataType, FLOAT64, INT64, STRING
 
@@ -11,6 +11,9 @@ type ColumnName = str
 
 
 class TableName(BaseModel):
+    # Make hashable to use as a key
+    model_config = ConfigDict(frozen=True)
+
     database: str
     schema_name: str
     table_name: str

@@ -51,7 +51,7 @@ def get_manifest_path(target_dir: Path) -> Path:
 
 def parse_manifest(path: Path) -> list[Path]:
     obj = parse_json_or_yaml_file(path)
-    return [Path(filename) for filename in obj["ops"]]
+    return [Path(filename) for filename in obj['ops']]
 
 
 def parse_operations_file(path: Path) -> list[Operation]:

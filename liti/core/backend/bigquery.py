@@ -95,10 +95,9 @@ class BigQueryDbBackend(DbBackend):
     def __init__(self, client: BqClient):
         self.client = client
 
-    def get_table(self, name: TableName) -> Table:
+    def get_table(self, name: TableName) -> Table | None:
         bq_table = self.client.get_table(name.str)
-        columns = [to_column(f) for f in bq_table.schema]
-        return Table(name=name, columns=columns)
+        return bq_table and Table(name=name, columns=[to_column(field) for field in bq_table.schema])
 
     def create_table(self, table: Table):
         bq_table = BqTable(table.name.str, [to_schema_field(c) for c in table.columns])

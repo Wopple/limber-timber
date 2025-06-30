@@ -8,7 +8,7 @@ class DbBackend(ABC):
     """ DB backends make changes to and read the state of the database """
 
     @abstractmethod
-    def get_table(self, name: TableName) -> Table:
+    def get_table(self, name: TableName) -> Table | None:
         pass
 
     @abstractmethod
