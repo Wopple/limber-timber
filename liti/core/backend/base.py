@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from liti.core.model.operation.base import Operation
+from liti.core.model.operation.data.base import Operation
 from liti.core.model.schema import Table, TableName
 
 
@@ -54,6 +54,6 @@ class MetaBackend(ABC):
                 break
 
         return {
-            "down": applied[common_operations:],
-            "up": target[common_operations:],
+            'down': applied[common_operations:],
+            'up': target[common_operations:],
         }

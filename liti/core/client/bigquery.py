@@ -11,24 +11,24 @@ class BqClient:
 
     def __enter__(self):
         if self.session_id is not None:
-            raise RuntimeError("Big Query does not support nested transactions")
+            raise RuntimeError('Big Query does not support nested transactions')
 
-        job = self.client.query("BEGIN TRANSACTION", job_config=QueryJobConfig(create_session=True))
+        job = self.client.query('BEGIN TRANSACTION', job_config=QueryJobConfig(create_session=True))
         job.result()
         self.session_id = job.session_info.session_id
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            job = self.query("COMMIT TRANSACTION", job_config=QueryJobConfig(session_id=self.session_id))
+            job = self.query('COMMIT TRANSACTION', job_config=QueryJobConfig(session_id=self.session_id))
         else:
-            job = self.query("ROLLBACK TRANSACTION", job_config=QueryJobConfig(session_id=self.session_id))
+            job = self.query('ROLLBACK TRANSACTION', job_config=QueryJobConfig(session_id=self.session_id))
 
         job.result()
 
     def setup_config(self, job_config: QueryJobConfig | None) -> QueryJobConfig:
         if self.session_id is not None:
             job_config = job_config or QueryJobConfig()
-            job_config.connection_properties = [ConnectionProperty("session_id", self.session_id)]
+            job_config.connection_properties = [ConnectionProperty('session_id', self.session_id)]
 
         return job_config
 

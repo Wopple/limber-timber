@@ -2,31 +2,31 @@ from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter, SchemaFi
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
+from liti.core.function import parse_operation
 from liti.core.model.data_type import Array, BOOL, DataType, FLOAT64, INT64, STRING, Struct
-from liti.core.model.operation.base import Operation
-from liti.core.model.operation.function import parse_operation
+from liti.core.model.operation.data.base import Operation
 from liti.core.model.schema import Column, Table, TableName
 
-REQUIRED = "REQUIRED"
-NULLABLE = "NULLABLE"
-REPEATED = "REPEATED"
+REQUIRED = 'REQUIRED'
+NULLABLE = 'NULLABLE'
+REPEATED = 'REPEATED'
 
 
 def to_field_type(column: Column) -> str:
     data_type = column.data_type
 
     if isinstance(data_type, Struct):
-        return "RECORD"
+        return 'RECORD'
     elif data_type == BOOL:
-        return "BOOLEAN"
+        return 'BOOLEAN'
     elif data_type == INT64:
-        return "INT64"
+        return 'INT64'
     elif data_type == FLOAT64:
-        return "FLOAT64"
+        return 'FLOAT64'
     elif data_type == STRING:
-        return "STRING"
+        return 'STRING'
     else:
-        raise ValueError(f"bigquery.field_type unrecognized data_type - {column}")
+        raise ValueError(f'bigquery.field_type unrecognized data_type - {column}')
 
 
 def to_fields(column: Column) -> tuple[SchemaField, ...]:
@@ -62,18 +62,18 @@ def to_schema_field(column: Column) -> SchemaField:
 def to_data_type(schema_field: SchemaField) -> DataType:
     field_type = schema_field.field_type
 
-    if field_type == "RECORD":
+    if field_type == 'RECORD':
         return Struct(fields={f.name: to_data_type_array(f) for f in schema_field.fields})
-    elif field_type == "BOOLEAN":
+    elif field_type == 'BOOLEAN':
         return BOOL
-    elif field_type == "INT64":
+    elif field_type == 'INT64':
         return INT64
-    elif field_type == "FLOAT64":
+    elif field_type == 'FLOAT64':
         return FLOAT64
-    elif field_type == "STRING":
+    elif field_type == 'STRING':
         return STRING
     else:
-        raise ValueError(f"bigquery.data_type unrecognized field_type - {schema_field}")
+        raise ValueError(f'bigquery.data_type unrecognized field_type - {schema_field}')
 
 
 def to_data_type_array(schema_field: SchemaField) -> DataType:
@@ -97,11 +97,11 @@ class BigQueryDbBackend(DbBackend):
 
     def get_table(self, name: TableName) -> Table:
         bq_table = self.client.get_table(name.str)
-        columns = {f.name: to_column(f) for f in bq_table.schema}
+        columns = [to_column(f) for f in bq_table.schema]
         return Table(name=name, columns=columns)
 
     def create_table(self, table: Table):
-        bq_table = BqTable(table.name.str, [to_schema_field(c) for c in table.columns.values()])
+        bq_table = BqTable(table.name.str, [to_schema_field(c) for c in table.columns])
         self.client.create_table(bq_table)
 
     def drop_table(self, name: TableName):
@@ -115,8 +115,8 @@ class BigQueryMetaBackend(MetaBackend):
 
     def initialize(self):
         self.client.query_and_wait(
-            f"""
-            CREATE SCHEMA IF NOT EXISTS `{self.table_name.database}.{self.table_name.schema}`;
+            f'''
+            CREATE SCHEMA IF NOT EXISTS `{self.table_name.database}.{self.table_name.schema_name}`;
 
             CREATE TABLE IF NOT EXISTS `{self.table_name}` (
                 idx INT64 NOT NULL,
@@ -124,46 +124,46 @@ class BigQueryMetaBackend(MetaBackend):
                 op_data JSON NOT NULL,
                 applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
             )
-            """
+            '''
         )
 
     def get_applied_operations(self) -> list[Operation]:
-        rows = self.client.query_and_wait(f"SELECT op_kind, op_data FROM `{self.table_name}` ORDER BY idx")
+        rows = self.client.query_and_wait(f'SELECT op_kind, op_data FROM `{self.table_name}` ORDER BY idx')
 
         return [parse_operation(row.op_kind, row.op_data) for row in rows]
 
     def apply_operation(self, operation: Operation):
         self.client.query_and_wait(
-            f"""
+            f'''
             INSERT INTO `{self.table_name}` (idx, op_kind, op_data)
             VALUES (
                 (SELECT COALESCE(MAX(idx) + 1, 0) FROM `{self.table_name}`),
                 @op_kind,
                 @op_data
             )
-            """,
+            ''',
             job_config=QueryJobConfig(
                 query_parameters=[
-                    ScalarQueryParameter("op_kind", "STRING", operation.KIND),
-                    ScalarQueryParameter("op_data", "JSON", operation.model_dump_json()),
+                    ScalarQueryParameter('op_kind', 'STRING', operation.KIND),
+                    ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json()),
                 ]
             )
         )
 
     def unapply_operation(self, operation: Operation) -> bool:
         results = self.client.query_and_wait(
-            f"""
+            f'''
             DELETE FROM `{self.table_name}`
              WHERE idx = (SELECT MAX(idx) FROM `{self.table_name}`)
                AND op_kind = @op_kind
 
                -- ensure normalized comparison, cannot compare JSON types
                AND TO_JSON_STRING(op_data) = TO_JSON_STRING(PARSE_JSON(@op_data))
-            """,
+            ''',
             job_config=QueryJobConfig(
                 query_parameters=[
-                    ScalarQueryParameter("op_kind", "STRING", operation.KIND),
-                    ScalarQueryParameter("op_data", "JSON", operation.model_dump_json()),
+                    ScalarQueryParameter('op_kind', 'STRING', operation.KIND),
+                    ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json()),
                 ]
             )
         )

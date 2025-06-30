@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, Self
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
-from liti.core.model.schema import ColumnName
+type FieldName = str
 
 
 class DataType(BaseModel):
@@ -38,11 +38,11 @@ class Array(DataType):
 
     def model_post_init(self, _context: Any):
         if isinstance(self.inner, Array):
-            raise ValueError("Array<Array> is not allowed")
+            raise ValueError('Nested arrays are not allowed')
 
 
 class Struct(DataType):
-    fields: dict[ColumnName, DataType]
+    fields: dict[FieldName, DataType]
 
 
 BOOL = Bool()

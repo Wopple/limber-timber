@@ -1,14 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import ClassVar
-
-from pydantic.main import BaseModel
 
 from liti.core.backend.base import DbBackend
 
 
-class Operation(BaseModel, ABC):
-    KIND: ClassVar[str]
-
+class OperationOps(ABC):
     @abstractmethod
     def up(self, backend: DbBackend):
         """ Apply the operation """
