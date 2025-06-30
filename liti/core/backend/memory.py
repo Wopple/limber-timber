@@ -1,5 +1,5 @@
 from liti.core.backend.base import DbBackend, MetaBackend
-from liti.core.model.operation.data.base import Operation
+from liti.core.model.v1.operation.data.base import Operation
 
 
 class MemoryDbBackend(DbBackend):

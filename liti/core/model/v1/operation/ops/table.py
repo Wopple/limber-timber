@@ -1,6 +1,6 @@
 from liti.core.backend.base import DbBackend
-from liti.core.model.operation.data.table import CreateTable
-from liti.core.model.operation.ops.base import OperationOps
+from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.operation.ops.base import OperationOps
 
 
 class CreateTableOps(OperationOps):

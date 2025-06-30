@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, field_serializer, field_validator, model_validator
 
-from liti.core.model.data_type import BOOL, DataType, FLOAT64, INT64, STRING
+from liti.core.model.v1.data_type import BOOL, DataType, FLOAT64, INT64, STRING
 
 type DbName = str
 type SchemaName = str

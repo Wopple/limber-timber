@@ -3,9 +3,9 @@ from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter, SchemaFi
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.function import parse_operation
-from liti.core.model.data_type import Array, BOOL, DataType, FLOAT64, INT64, STRING, Struct
-from liti.core.model.operation.data.base import Operation
-from liti.core.model.schema import Column, Table, TableName
+from liti.core.model.v1.data_type import Array, BOOL, DataType, FLOAT64, INT64, STRING, Struct
+from liti.core.model.v1.operation.data.base import Operation
+from liti.core.model.v1.schema import Column, Table, TableName
 
 REQUIRED = 'REQUIRED'
 NULLABLE = 'NULLABLE'

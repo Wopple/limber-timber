@@ -3,11 +3,11 @@ from pathlib import Path
 
 import yaml
 
-from liti.core.model.operation.data.base import Operation
-from liti.core.model.operation.data.table import CreateTable
-from liti.core.model.operation.ops.base import OperationOps
-from liti.core.model.operation.ops.table import CreateTableOps
-from liti.core.model.schema import Table
+from liti.core.model.v1.operation.data.base import Operation
+from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.operation.ops.base import OperationOps
+from liti.core.model.v1.operation.ops.table import CreateTableOps
+from liti.core.model.v1.schema import Table
 
 
 def parse_operation(op_kind: str, op_data: dict) -> Operation:
@@ -50,11 +50,8 @@ def get_manifest_path(target_dir: Path) -> Path:
 
 
 def parse_manifest(path: Path) -> list[Path]:
-    array = parse_json_or_yaml_file(path) or []
-
-    assert isinstance(array, list), f'Manifest file {path} should contain a list of filenames.'
-
-    return [Path(filename) for filename in array]
+    obj = parse_json_or_yaml_file(path)
+    return [Path(filename) for filename in obj["ops"]]
 
 
 def parse_operations_file(path: Path) -> list[Operation]:

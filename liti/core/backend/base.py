@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from liti.core.model.operation.data.base import Operation
-from liti.core.model.schema import Table, TableName
+from liti.core.model.v1.operation.data.base import Operation
+from liti.core.model.v1.schema import Table, TableName
 
 
 class DbBackend(ABC):
