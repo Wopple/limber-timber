@@ -18,6 +18,20 @@ class TableName(BaseModel):
     schema_name: str
     table_name: str
 
+    def __init__(self, name: str | None = None, **kwargs):
+        """ Allows TableName('database.schema_name.table_name') """
+
+        if name is None:
+            super().__init__(**kwargs)
+        else:
+            database, schema_name, table_name = self.name_parts(name)
+
+            super().__init__(
+                database=database,
+                schema_name=schema_name,
+                table_name=table_name,
+            )
+
     def __str__(self) -> str:
         return self.str
 
@@ -40,13 +54,17 @@ class TableName(BaseModel):
         if any(c not in chars for c in self.table_name):
             raise ValueError(f'Invalid table name: {self.table_name}')
 
+    @classmethod
+    def name_parts(cls, name: str) -> list[str]:
+        parts = name.split('.')
+        assert len(parts) == 3, f'Expected string in format "database.schema_name.table_name": "{name}"'
+        return parts
+
     @model_validator(mode='before')
     @classmethod
     def allow_string_init(cls, data):
         if isinstance(data, str):
-            parts = data.split('.')
-            assert len(parts) == 3, 'Expected string in format "database.schema_name.table_name"'
-            database, schema_name, table_name = parts
+            database, schema_name, table_name = cls.name_parts(data)
 
             return {
                 'database': database,
