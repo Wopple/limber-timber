@@ -1,21 +1,21 @@
 from abc import ABC, abstractmethod
 
-from liti.core.backend.base import DbBackend
+from liti.core.backend.base import DbBackend, MetaBackend
 
 
 class OperationOps(ABC):
     @abstractmethod
-    def up(self, backend: DbBackend):
+    def up(self, db_backend: DbBackend):
         """ Apply the operation """
         pass
 
     @abstractmethod
-    def down(self, backend: DbBackend):
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend):
         """ Unapply the operation """
         pass
 
     @abstractmethod
-    def is_up(self, backend: DbBackend) -> bool:
+    def is_up(self, db_backend: DbBackend) -> bool:
         """ True if the operation is applied
 
         Assumes that, if applied, this is the most recent operation (otherwise the behavior is not defined).

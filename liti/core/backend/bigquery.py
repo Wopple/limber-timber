@@ -132,7 +132,7 @@ class BigQueryMetaBackend(MetaBackend):
         return [parse_operation(row.op_kind, row.op_data) for row in rows]
 
     def apply_operation(self, operation: Operation):
-        self.client.query_and_wait(
+        results = self.client.query_and_wait(
             f'''
             INSERT INTO `{self.table_name}` (idx, op_kind, op_data)
             VALUES (
@@ -149,7 +149,9 @@ class BigQueryMetaBackend(MetaBackend):
             )
         )
 
-    def unapply_operation(self, operation: Operation) -> bool:
+        assert results.num_dml_affected_rows == 1, f'Expected exactly 1 row inserted: {results.num_dml_affected_rows}'
+
+    def unapply_operation(self, operation: Operation):
         results = self.client.query_and_wait(
             f'''
             DELETE FROM `{self.table_name}`
@@ -167,4 +169,4 @@ class BigQueryMetaBackend(MetaBackend):
             )
         )
 
-        return results.num_dml_affected_rows == 1
+        assert results.num_dml_affected_rows == 1, f'Expected exactly 1 row deleted: {results.num_dml_affected_rows}'

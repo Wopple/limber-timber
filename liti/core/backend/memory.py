@@ -27,9 +27,6 @@ class MemoryMetaBackend(MetaBackend):
     def apply_operation(self, operation: Operation):
         self.applied_operations.append(operation)
 
-    def unapply_operation(self, operation: Operation) -> bool:
-        if self.applied_operations[-1] == operation:
-            self.applied_operations.pop()
-            return True
-        else:
-            return False
+    def unapply_operation(self, operation: Operation):
+        most_recent = self.applied_operations.pop()
+        assert operation == most_recent, 'Expected the operation to be the most recent one'

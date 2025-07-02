@@ -21,6 +21,7 @@ class MigrateRunner:
         self,
         wet_run: bool = False,
         allow_down: bool = False,
+        silent: bool = False,
     ):
         target_operations: list[Operation] = self.get_target_operations()
 
@@ -32,27 +33,31 @@ class MigrateRunner:
         if not allow_down and migration_plan['down']:
             raise RuntimeError('Down migrations required but not allowed. Use --allow-down')
 
-        print('Down')
+        if not silent:
+            print('Down')
 
         for down_op in migration_plan['down']:
             down_ops = attach_ops(down_op)
 
             if down_ops.is_up(self.db_backend):
-                pprint(down_op)
+                if not silent:
+                    pprint(down_op)
 
                 if wet_run:
-                    down_ops.down(self.db_backend)
+                    down_ops.down(self.db_backend, self.meta_backend)
 
             if wet_run:
                 self.meta_backend.unapply_operation(down_op)
 
-        print('Up')
+        if not silent:
+            print('Up')
 
         for up_op in migration_plan['up']:
             up_ops = attach_ops(up_op)
 
             if not up_ops.is_up(self.db_backend):
-                pprint(up_op)
+                if not silent:
+                    pprint(up_op)
 
                 if wet_run:
                     up_ops.up(self.db_backend)
@@ -60,7 +65,8 @@ class MigrateRunner:
             if wet_run:
                 self.meta_backend.apply_operation(up_op)
 
-        print('Done')
+        if not silent:
+            print('Done')
 
     def get_target_operations(self) -> list[Operation]:
         if isinstance(self.target, str):

@@ -36,8 +36,8 @@ class MetaBackend(ABC):
         pass
 
     @abstractmethod
-    def unapply_operation(self, operation: Operation) -> bool:
-        """ Remove the operation from the metadata, returning True if it was successfully unapplied
+    def unapply_operation(self, operation: Operation):
+        """ Remove the operation from the metadata
 
         The operation must be the most recent one.
         """
@@ -54,6 +54,6 @@ class MetaBackend(ABC):
                 break
 
         return {
-            'down': applied[common_operations:],
+            'down': list(reversed(applied[common_operations:])),
             'up': target[common_operations:],
         }

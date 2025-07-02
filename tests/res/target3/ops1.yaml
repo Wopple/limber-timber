@@ -27,3 +27,9 @@ operations:
           nullable: false
         - name: col2
           data_type: INT64
+  - kind: drop_table
+    data:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: my_table

@@ -4,16 +4,18 @@ from pathlib import Path
 import yaml
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.operation.data.table import CreateTable, DropTable
 from liti.core.model.v1.operation.ops.base import OperationOps
-from liti.core.model.v1.operation.ops.table import CreateTableOps
-from liti.core.model.v1.schema import Table
+from liti.core.model.v1.operation.ops.table import CreateTableOps, DropTableOps
+from liti.core.model.v1.schema import Table, TableName
 
 
 def parse_operation(op_kind: str, op_data: dict) -> Operation:
     match op_kind:
         case 'create_table':
             return CreateTable(table=Table(**op_data))
+        case 'drop_table':
+            return DropTable(**op_data)
         case _:
             raise ValueError(f'Unknown operation kind: {op_kind}')
 
@@ -22,6 +24,8 @@ def attach_ops(operation: Operation) -> OperationOps:
     match operation.KIND:
         case 'create_table':
             return CreateTableOps(operation)
+        case 'drop_table':
+            return DropTableOps(operation)
         case _:
             raise ValueError(f'Unhandled operation kind: {operation.KIND}')
 
@@ -51,12 +55,12 @@ def get_manifest_path(target_dir: Path) -> Path:
 
 def parse_manifest(path: Path) -> list[Path]:
     obj = parse_json_or_yaml_file(path)
-    return [Path(filename) for filename in obj['ops']]
+    return [Path(filename) for filename in obj['operation_files']]
 
 
-def parse_operations_file(path: Path) -> list[Operation]:
-    array = parse_json_or_yaml_file(path)
-    return [parse_operation(op['kind'], op['data']) for op in array]
+def parse_operation_file(path: Path) -> list[Operation]:
+    obj = parse_json_or_yaml_file(path)
+    return [parse_operation(op['kind'], op['data']) for op in obj["operations"]]
 
 
 def get_target_operations(target_dir: Path) -> list[Operation]:
@@ -66,5 +70,5 @@ def get_target_operations(target_dir: Path) -> list[Operation]:
     return [
         operation
         for filename in operations_filenames
-        for operation in parse_operations_file(target_dir.joinpath(filename))
+        for operation in parse_operation_file(target_dir.joinpath(filename))
     ]
