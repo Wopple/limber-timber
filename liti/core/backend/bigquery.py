@@ -121,7 +121,7 @@ class BigQueryMetaBackend(MetaBackend):
                 idx INT64 NOT NULL,
                 op_kind STRING NOT NULL,
                 op_data JSON NOT NULL,
-                applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
+                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
             )
             '''
         )

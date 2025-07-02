@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator, model_validator
 
-from liti.core.model.v1.data_type import BOOL, DataType, FLOAT64, INT64, STRING
+from liti.core.model.v1.data_type import BOOL, DataType, FLOAT64, INT64, parse_data_type, serialize_data_type, STRING
 
 type DbName = str
 type SchemaName = str
@@ -74,6 +74,7 @@ class TableName(BaseModel):
         else:
             return data
 
+
 class Column(BaseModel):
     name: ColumnName
     data_type: DataType
@@ -88,29 +89,13 @@ class Column(BaseModel):
     @field_validator('data_type', mode='before')
     @classmethod
     def validate_data_type(cls, value):
-        if isinstance(value, str):
-            match value:
-                case 'BOOL' | 'BOOLEAN': return BOOL
-                case 'INT64': return INT64
-                case 'FLOAT64': return FLOAT64
-                case 'STRING': return STRING
-                case _: raise ValueError(f'Cannot parse data type: {value}')
-        else:
-            return value
+        return parse_data_type(value)
 
     @field_serializer('data_type')
     @classmethod
     def serialize_data_type(cls, value: DataType) -> str:
-        if value == BOOL:
-            return 'BOOL'
-        elif value == INT64:
-            return 'INT64'
-        elif value == FLOAT64:
-            return 'FLOAT64'
-        elif value == STRING:
-            return 'STRING'
-        else:
-            raise ValueError(f'Cannot serialize data type: {value}')
+        return serialize_data_type(value)
+
 
 class Table(BaseModel):
     name: TableName
