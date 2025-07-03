@@ -8,7 +8,7 @@
       "type": "integer",
       "const": 1
     },
-    "ops": {
+    "operation_files": {
       "type": "array",
       "items": {
         "type": "string",
@@ -16,6 +16,6 @@
       }
     }
   },
-  "required": ["version", "ops"],
+  "required": ["version", "operation_files"],
   "additionalProperties": false
 }
