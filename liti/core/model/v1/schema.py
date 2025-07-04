@@ -1,5 +1,5 @@
 import string
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator, model_validator
 
@@ -74,6 +74,13 @@ class TableName(BaseModel):
         else:
             return data
 
+    def with_table_name(self, table_name: str) -> Self:
+        return TableName(
+            database=self.database,
+            schema_name=self.schema_name,
+            table_name=table_name,
+        )
+
 
 class Column(BaseModel):
     name: ColumnName
@@ -96,13 +103,19 @@ class Column(BaseModel):
     def serialize_data_type(cls, value: DataType) -> str:
         return serialize_data_type(value)
 
+    def with_name(self, name: ColumnName) -> Self:
+        return Column(
+            name=name,
+            data_type=self.data_type,
+            nullable=self.nullable,
+        )
+
 
 class Table(BaseModel):
     name: TableName
     columns: list[Column]
 
+    @property
     def column_map(self) -> dict[ColumnName, Column]:
-        if not hasattr(self, '_column_map'):
-            self._column_map = {column.name: column for column in self.columns}
-
-        return self._column_map
+        # Recreate the map to ensure it is up-to-date
+        return {column.name: column for column in self.columns}

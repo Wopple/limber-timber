@@ -5,7 +5,7 @@ from liti.core.client.bigquery import BqClient
 from liti.core.function import parse_operation
 from liti.core.model.v1.data_type import Array, BOOL, DataType, FLOAT64, INT64, STRING, Struct
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, Table, TableName
 
 REQUIRED = 'REQUIRED'
 NULLABLE = 'NULLABLE'
@@ -91,6 +91,23 @@ def to_column(schema_field: SchemaField) -> Column:
     )
 
 
+def data_type_to_sql(data_type: DataType) -> str:
+    if data_type == BOOL:
+        return 'BOOL'
+    elif data_type == INT64:
+        return 'INT64'
+    elif data_type == FLOAT64:
+        return 'FLOAT64'
+    elif data_type == STRING:
+        return 'STRING'
+    elif isinstance(data_type, Array):
+        return f'ARRAY<{data_type_to_sql(data_type.inner)}>'
+    elif isinstance(data_type, Struct):
+        return f'STRUCT<{", ".join(f"{n} {data_type_to_sql(t)}" for n, t in data_type.fields.items())}>'
+    else:
+        raise ValueError(f'bigquery.data_type_to_sql unrecognized data_type - {data_type}')
+
+
 class BigQueryDbBackend(DbBackend):
     def __init__(self, client: BqClient):
         self.client = client
@@ -105,6 +122,27 @@ class BigQueryDbBackend(DbBackend):
 
     def drop_table(self, name: TableName):
         self.client.delete_table(name.str)
+
+    def rename_table(self, from_name: TableName, to_name: TableName):
+        self.client.query_and_wait(f'ALTER TABLE `{from_name}` RENAME TO `{to_name}`')
+
+    def add_column(self, table_name: TableName, column: Column):
+        # TODO: work around this limitation with create table drop table rename table
+        if not column.nullable:
+            raise ValueError('Big Query does not support adding non-nullable columns')
+
+        self.client.query_and_wait(
+            f'''
+            ALTER TABLE `{table_name}`
+            ADD COLUMN `{column.name}` {data_type_to_sql(column.data_type)}
+            '''
+        )
+
+    def drop_column(self, table_name: TableName, column_name: ColumnName):
+        self.client.query_and_wait(f'ALTER TABLE `{table_name}` DROP COLUMN `{column_name}`')
+
+    def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
+        self.client.query_and_wait(f'ALTER TABLE `{table_name}` RENAME COLUMN `{from_name}` TO `{to_name}`')
 
 
 class BigQueryMetaBackend(MetaBackend):

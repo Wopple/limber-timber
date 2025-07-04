@@ -13,10 +13,8 @@ def parse_arguments() -> Namespace:
     parser = ArgumentParser(prog='Limber Timber')
     parser.add_argument('command', help='action to perform')
     parser.add_argument('-t', '--target', required=True, help='directory with migration files')
-    parser.add_argument('-w', '--wet', action=BooleanOptionalAction, default=False,
-                        help='[False] should perform migration side effects')
-    parser.add_argument('-d', '--down', action=BooleanOptionalAction, default=False,
-                        help='[False] should allow performing down migrations')
+    parser.add_argument('-w', '--wet', action=BooleanOptionalAction, default=False, help='[False] should perform migration side effects')
+    parser.add_argument('-d', '--down', action=BooleanOptionalAction, default=False, help='[False] should allow performing down migrations')
     parser.add_argument('--db', default='memory', help='[memory] type of database backend (e.g. memory, bigquery)')
     parser.add_argument('--meta', default='memory', help='[memory] type of metadata backend (e.g. memory, bigquery)')
     parser.add_argument('--meta-table-name', help='fully qualified table name for a metadata table')

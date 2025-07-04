@@ -1,6 +1,6 @@
 from liti.core.backend.base import DbBackend, MetaBackend
-from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
-from liti.core.model.v1.operation.data.table import CreateTable, DropTable
+from liti.core.model.v1.operation.data.table import AddColumn, CreateTable, DropColumn, DropTable, RenameColumn, \
+    RenameTable
 from liti.core.model.v1.operation.ops.base import OperationOps
 
 
@@ -26,24 +26,8 @@ class DropTableOps(OperationOps):
         db_backend.drop_table(self.op.name)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend):
-        from liti.core.runner import MigrateRunner  # circular import
-
-        # Simulate migrations to get the state of the table before it was dropped
-
-        # [:-1] so the simulation does not drop the table we want to create
-        sim_ops = meta_backend.get_applied_operations()[:-1]
-        sim_db = MemoryDbBackend()
-        sim_meta = MemoryMetaBackend()
-
-        MigrateRunner(
-            db_backend=sim_db,
-            meta_backend=sim_meta,
-            target=sim_ops,
-        ).run(
-            wet_run=True,
-            silent=True,
-        )
-
+        # Get the table in the state before it was dropped
+        sim_db = self.simulate(meta_backend.get_previous_operations())
         sim_table = sim_db.get_table(self.op.name)
 
         # Recreate the table in that state
@@ -51,3 +35,64 @@ class DropTableOps(OperationOps):
 
     def is_up(self, db_backend: DbBackend) -> bool:
         return db_backend.get_table(self.op.name) is None
+
+
+class RenameTableOps(OperationOps):
+    def __init__(self, op: RenameTable):
+        self.op = op
+
+    def up(self, db_backend: DbBackend):
+        db_backend.rename_table(self.op.from_name, self.op.to_name)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend):
+        db_backend.rename_table(self.op.from_name.with_table_name(self.op.to_name), self.op.from_name.table_name)
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        return db_backend.get_table(self.op.from_name.with_table_name(self.op.to_name)) is not None
+
+
+class AddColumnOps(OperationOps):
+    def __init__(self, op: AddColumn):
+        self.op = op
+
+    def up(self, db_backend: DbBackend):
+        db_backend.add_column(self.op.table_name, self.op.column)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend):
+        db_backend.drop_column(self.op.table_name, self.op.column.name)
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        return db_backend.get_table(self.op.table_name).column_map.get(self.op.column.name) == self.op.column
+
+
+class DropColumnOps(OperationOps):
+    def __init__(self, op: DropColumn):
+        self.op = op
+
+    def up(self, db_backend: DbBackend):
+        db_backend.drop_column(self.op.table_name, self.op.column_name)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend):
+        # Get the column in the state before it was dropped
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_column = sim_db.get_table(self.op.table_name).column_map[self.op.column_name]
+
+        # Recreate the column in that state
+        db_backend.add_column(self.op.table_name, sim_column)
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        return db_backend.get_table(self.op.table_name).column_map.get(self.op.column_name) is None
+
+
+class RenameColumnOps(OperationOps):
+    def __init__(self, op: RenameColumn):
+        self.op = op
+
+    def up(self, db_backend: DbBackend):
+        db_backend.rename_column(self.op.table_name, self.op.from_name, self.op.to_name)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend):
+        db_backend.rename_column(self.op.table_name, self.op.to_name, self.op.from_name)
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        return db_backend.get_table(self.op.table_name).column_map.get(self.op.to_name) is not None

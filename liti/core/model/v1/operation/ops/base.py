@@ -1,9 +1,22 @@
 from abc import ABC, abstractmethod
 
 from liti.core.backend.base import DbBackend, MetaBackend
+from liti.core.model.v1.operation.data.base import Operation
 
 
 class OperationOps(ABC):
+    @staticmethod
+    def simulate(operations: list[Operation]) -> DbBackend:
+        # circular imports
+        from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
+        from liti.core.runner import MigrateRunner
+
+        sim_db = MemoryDbBackend()
+        sim_meta = MemoryMetaBackend()
+        sim_runner = MigrateRunner(db_backend=sim_db, meta_backend=sim_meta, target=operations)
+        sim_runner.run(wet_run=True, silent=True)
+        return sim_db
+
     @abstractmethod
     def up(self, db_backend: DbBackend):
         """ Apply the operation """

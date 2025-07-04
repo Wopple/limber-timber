@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, Table, TableName
 
 
 class DbBackend(ABC):
@@ -17,6 +17,22 @@ class DbBackend(ABC):
 
     @abstractmethod
     def drop_table(self, name: TableName):
+        pass
+
+    @abstractmethod
+    def rename_table(self, from_name: TableName, to_name: str):
+        pass
+
+    @abstractmethod
+    def add_column(self, table_name: TableName, column: Column):
+        pass
+
+    @abstractmethod
+    def drop_column(self, table_name: TableName, column_name: ColumnName):
+        pass
+
+    @abstractmethod
+    def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
         pass
 
 
@@ -43,14 +59,17 @@ class MetaBackend(ABC):
         """
         pass
 
+    def get_previous_operations(self) -> list[Operation]:
+        return self.get_applied_operations()[:-1]
+
     def get_migration_plan(self, target: list[Operation]) -> dict[str, list[Operation]]:
         applied = self.get_applied_operations()
-
         common_operations = 0
 
-        for i, (applied_op, target_op) in enumerate(zip(applied, target)):
-            if applied_op != target_op:
-                common_operations = i
+        for applied_op, target_op in zip(applied, target):
+            if applied_op == target_op:
+                common_operations += 1
+            else:
                 break
 
         return {
