@@ -15,7 +15,7 @@ class CreateTableOps(OperationOps):
         db_backend.drop_table(self.op.table.name)
 
     def is_up(self, db_backend: DbBackend) -> bool:
-        return db_backend.get_table(self.op.table.name) == self.op.table
+        return db_backend.get_table(self.op.table.name) is not None
 
 
 class DropTableOps(OperationOps):
@@ -62,7 +62,7 @@ class AddColumnOps(OperationOps):
         db_backend.drop_column(self.op.table_name, self.op.column.name)
 
     def is_up(self, db_backend: DbBackend) -> bool:
-        return db_backend.get_table(self.op.table_name).column_map.get(self.op.column.name) == self.op.column
+        return db_backend.get_table(self.op.table_name).column_map.get(self.op.column.name) is not None
 
 
 class DropColumnOps(OperationOps):

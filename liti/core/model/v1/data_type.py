@@ -1,6 +1,6 @@
-from typing import Any, Self
+from typing import Any
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 
 type FieldName = str
 
@@ -31,6 +31,19 @@ class Float(DataType):
 
 class String(DataType):
     characters: int | None = None
+    collate: str | None = None
+
+
+class Date(DataType):
+    pass
+
+
+class DateTime(DataType):
+    pass
+
+
+class Timestamp(DataType):
+    pass
 
 
 class Array(DataType):
@@ -46,25 +59,37 @@ class Struct(DataType):
 
 
 def parse_data_type(data: DataType | str | list[Any] | dict[str, Any]) -> DataType:
+    # Already parsed
     if isinstance(data, DataType):
         return data
+    # Map string value to atomic type
     elif isinstance(data, str):
         match data.upper():
-            case 'BOOL' | 'BOOLEAN': return BOOL
-            case 'INT64': return INT64
-            case 'FLOAT64': return FLOAT64
-            case 'STRING': return STRING
+            case 'BOOL' | 'BOOLEAN':
+                return BOOL
+            case 'INT64':
+                return INT64
+            case 'FLOAT64':
+                return FLOAT64
+            case 'STRING':
+                return STRING
+            case 'DATE':
+                return DATE
+            case 'DATETIME':
+                return DATE_TIME
+            case 'TIMESTAMP':
+                return TIMESTAMP
+    # Arrays are represented as a list with exactly one element representing the inner type
     elif isinstance(data, list):
         if len(data) == 1:
             return Array(inner=parse_data_type(data[0]))
         else:
             raise ValueError(f'Array data type must have exactly one inner type: {data}')
+    # Structs are represented as a dict
     elif isinstance(data, dict):
-        return Struct(
-            fields={k: parse_data_type(v) for k, v in data.items()}
-        )
-
-    raise ValueError(f'Cannot parse data type: {data}')
+        return Struct(fields={k: parse_data_type(v) for k, v in data.items()})
+    else:
+        raise ValueError(f'Cannot parse data type: {data}')
 
 def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
     if isinstance(data, Bool):
@@ -75,15 +100,24 @@ def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
         return f'FLOAT{data.bits}'
     elif isinstance(data, String):
         return 'STRING'
+    elif isinstance(data, Date):
+        return 'DATE'
+    elif isinstance(data, DateTime):
+        return 'DATETIME'
+    elif isinstance(data, Timestamp):
+        return 'TIMESTAMP'
     elif isinstance(data, Array):
         return [serialize_data_type(data.inner)]
     elif isinstance(data, Struct):
         return {k: serialize_data_type(v) for k, v in data.fields.items()}
-    
-    raise ValueError(f'Cannot serialize data type: {data}')
+    else:
+        raise ValueError(f'Cannot serialize data type: {data}')
 
 
 BOOL = Bool()
 INT64 = Int(bits=64)
 FLOAT64 = Float(bits=64)
 STRING = String()
+DATE = Date()
+DATE_TIME = DateTime()
+TIMESTAMP = Timestamp()

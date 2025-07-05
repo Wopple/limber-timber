@@ -1,9 +1,13 @@
+import logging
 from pathlib import Path
 
-from devtools import pprint
+from devtools import pformat
+
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.function import attach_ops, get_target_operations
 from liti.core.model.v1.operation.data.base import Operation
+
+log = logging.getLogger(__name__)
 
 
 class MigrateRunner:
@@ -34,14 +38,14 @@ class MigrateRunner:
             raise RuntimeError('Down migrations required but not allowed. Use --allow-down')
 
         if not silent:
-            print('Down')
+            log.info('Down')
 
         for down_op in migration_plan['down']:
             down_ops = attach_ops(down_op)
 
             if down_ops.is_up(self.db_backend):
                 if not silent:
-                    pprint(down_op)
+                    log.info(pformat(down_op))
 
                 if wet_run:
                     down_ops.down(self.db_backend, self.meta_backend)
@@ -50,14 +54,14 @@ class MigrateRunner:
                 self.meta_backend.unapply_operation(down_op)
 
         if not silent:
-            print('Up')
+            log.info('Up')
 
         for up_op in migration_plan['up']:
             up_ops = attach_ops(up_op)
 
             if not up_ops.is_up(self.db_backend):
                 if not silent:
-                    pprint(up_op)
+                    log.info(pformat(up_op))
 
                 if wet_run:
                     up_ops.up(self.db_backend)
@@ -66,7 +70,7 @@ class MigrateRunner:
                 self.meta_backend.apply_operation(up_op)
 
         if not silent:
-            print('Done')
+            log.info('Done')
 
     def get_target_operations(self) -> list[Operation]:
         if isinstance(self.target, str):

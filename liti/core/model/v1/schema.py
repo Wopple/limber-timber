@@ -1,13 +1,31 @@
 import string
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator, model_validator
 
-from liti.core.model.v1.data_type import BOOL, DataType, FLOAT64, INT64, parse_data_type, serialize_data_type, STRING
+from liti.core.model.v1.data_type import DataType, parse_data_type, serialize_data_type
 
 type DbName = str
 type SchemaName = str
 type ColumnName = str
+
+type RoundingMode = Literal[
+    'ROUNDING_MODE_UNSPECIFIED',
+    'ROUND_HALF_AWAY_FROM_ZERO',
+    'ROUND_HALF_EVEN',
+]
+
+
+IDENTIFIER_CHARS = set(string.ascii_letters + string.digits + '_')
+DATABASE_CHARS = set(string.ascii_letters + string.digits + '_-')
+
+
+def is_identifier(value: str) -> bool:
+    return all(c in IDENTIFIER_CHARS for c in value)
+
+
+def is_database(value: str) -> bool:
+    return all(c in DATABASE_CHARS for c in value)
 
 
 class TableName(BaseModel):
@@ -33,25 +51,20 @@ class TableName(BaseModel):
             )
 
     def __str__(self) -> str:
-        return self.str
+        return self.string
 
     @property
-    def str(self) -> str:
+    def string(self) -> str:
         return f'{self.database}.{self.schema_name}.{self.table_name}'
 
     def model_post_init(self, _context: Any):
-        chars = string.ascii_letters + string.digits + '_'
-        database_chars = chars + '-'
-        chars = set(chars)
-        database_chars = set(database_chars)
-
-        if any(c not in database_chars for c in self.database):
+        if not is_database(self.database):
             raise ValueError(f'Invalid database: {self.database}')
 
-        if any(c not in chars for c in self.schema_name):
+        if not is_identifier(self.schema_name):
             raise ValueError(f'Invalid schema: {self.schema_name}')
 
-        if any(c not in chars for c in self.table_name):
+        if not is_identifier(self.table_name):
             raise ValueError(f'Invalid table name: {self.table_name}')
 
     @classmethod
@@ -62,7 +75,7 @@ class TableName(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def allow_string_init(cls, data):
+    def allow_string_init(cls, data: str | dict[str, str]) -> dict[str, str]:
         if isinstance(data, str):
             database, schema_name, table_name = cls.name_parts(data)
 
@@ -82,20 +95,34 @@ class TableName(BaseModel):
         )
 
 
+class ForeignKey(BaseModel):
+    table_name: TableName
+    column_name: ColumnName
+
+
+class ColumnOptions(BaseModel):
+    description: str | None = None
+    rounding_mode: RoundingMode | None = None
+
+
 class Column(BaseModel):
     name: ColumnName
     data_type: DataType
+    primary_key: bool = False
+    primary_enforced: bool = False
+    foreign_key: ForeignKey | None = None
+    foreign_enforced: bool = False
+    default_expression: str | None = None
     nullable: bool = False
+    options: ColumnOptions | None = None
 
     def model_post_init(self, _context: Any):
-        chars = set(string.ascii_letters + string.digits + '_')
-
-        if any(c not in chars for c in self.name):
-            raise ValueError(f'Invalid column name: {self.name}')
+        if not is_identifier(self.name):
+            raise ValueError(f'Invalid name: {self.name}')
 
     @field_validator('data_type', mode='before')
     @classmethod
-    def validate_data_type(cls, value):
+    def validate_data_type(cls, value: DataType | str | list[Any] | dict[str, Any]):
         return parse_data_type(value)
 
     @field_serializer('data_type')
@@ -104,11 +131,7 @@ class Column(BaseModel):
         return serialize_data_type(value)
 
     def with_name(self, name: ColumnName) -> Self:
-        return Column(
-            name=name,
-            data_type=self.data_type,
-            nullable=self.nullable,
-        )
+        return self.model_copy(update={'name': name})
 
 
 class Table(BaseModel):

@@ -1,11 +1,17 @@
+import logging
+
 from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter, SchemaField, Table as BqTable
+from google.cloud.bigquery.schema import _DEFAULT_VALUE
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.function import parse_operation
-from liti.core.model.v1.data_type import Array, BOOL, DataType, FLOAT64, INT64, STRING, Struct
+from liti.core.model.v1.data_type import Array, BOOL, DataType, DATE, DATE_TIME, FLOAT64, INT64, STRING, Struct, \
+    TIMESTAMP
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.schema import Column, ColumnName, Table, TableName
+
+log = logging.getLogger(__name__)
 
 REQUIRED = 'REQUIRED'
 NULLABLE = 'NULLABLE'
@@ -25,6 +31,12 @@ def to_field_type(column: Column) -> str:
         return 'FLOAT64'
     elif data_type == STRING:
         return 'STRING'
+    elif data_type == DATE:
+        return 'DATE'
+    elif data_type == DATE_TIME:
+        return 'DATETIME'
+    elif data_type == TIMESTAMP:
+        return 'TIMESTAMP'
     else:
         raise ValueError(f'bigquery.field_type unrecognized data_type - {column}')
 
@@ -55,7 +67,10 @@ def to_schema_field(column: Column) -> SchemaField:
         name=column.name,
         field_type=to_field_type(column),
         mode=to_mode(column),
+        default_value_expression=column.default_expression,
+        description=column.options.description or _DEFAULT_VALUE,
         fields=to_fields(column),
+        rounding_mode=column.options.rounding_mode,
     )
 
 
@@ -72,6 +87,12 @@ def to_data_type(schema_field: SchemaField) -> DataType:
         return FLOAT64
     elif field_type == 'STRING':
         return STRING
+    elif field_type == 'DATE':
+        return DATE
+    elif field_type == 'DATETIME':
+        return DATE_TIME
+    elif field_type == 'TIMESTAMP':
+        return TIMESTAMP
     else:
         raise ValueError(f'bigquery.data_type unrecognized field_type - {schema_field}')
 
@@ -100,6 +121,12 @@ def data_type_to_sql(data_type: DataType) -> str:
         return 'FLOAT64'
     elif data_type == STRING:
         return 'STRING'
+    elif data_type == DATE:
+        return 'DATE'
+    elif data_type == DATE_TIME:
+        return 'DATETIME'
+    elif data_type == TIMESTAMP:
+        return 'TIMESTAMP'
     elif isinstance(data_type, Array):
         return f'ARRAY<{data_type_to_sql(data_type.inner)}>'
     elif isinstance(data_type, Struct):
@@ -113,28 +140,64 @@ class BigQueryDbBackend(DbBackend):
         self.client = client
 
     def get_table(self, name: TableName) -> Table | None:
-        bq_table = self.client.get_table(name.str)
+        bq_table = self.client.get_table(name.string)
         return bq_table and Table(name=name, columns=[to_column(field) for field in bq_table.schema])
 
     def create_table(self, table: Table):
-        bq_table = BqTable(table.name.str, [to_schema_field(c) for c in table.columns])
+        bq_table = BqTable(table.name.string, [to_schema_field(c) for c in table.columns])
         self.client.create_table(bq_table)
 
     def drop_table(self, name: TableName):
-        self.client.delete_table(name.str)
+        self.client.delete_table(name.string)
 
     def rename_table(self, from_name: TableName, to_name: TableName):
         self.client.query_and_wait(f'ALTER TABLE `{from_name}` RENAME TO `{to_name}`')
 
     def add_column(self, table_name: TableName, column: Column):
-        # TODO: work around this limitation with create table drop table rename table
+        column_schema_parts = []
+
+        if column.primary_key:
+            if column.primary_enforced:
+                # TODO? update this if Big Query ever supports enforcement
+                log.warning('Not enforcing primary key since Big Query does not support enforcement')
+                column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
+            else:
+                column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
+
+        if column.foreign_key:
+            table_name = column.foreign_key.table_name
+            column_name = column.foreign_key.column_name
+
+            if column.foreign_enforced:
+                # TODO? update this if Big Query ever supports enforcement
+                log.warning('Not enforcing foreign key since Big Query does not support enforcement')
+                column_schema_parts.append(f'REFERENCES {table_name}({column_name}) NOT ENFORCED')
+            else:
+                column_schema_parts.append(f'REFERENCES {table_name}({column_name}) NOT ENFORCED')
+
+        if column.default_expression:
+            column_schema_parts.append(f'DEFAULT {column.default_expression}')
+
         if not column.nullable:
-            raise ValueError('Big Query does not support adding non-nullable columns')
+            # TODO: work around this limitation with: create table > drop table > rename table
+            log.warning('Adding column as nullable since Big Query does not support adding non-nullable columns')
+
+        if column.options:
+            option_parts = []
+
+            if column.options.description:
+                option_parts.append(f'description = "{column.options.description}"')
+
+            if column.options.rounding_mode:
+                option_parts.append(f'rounding_mode = "{column.options.rounding_mode}"')
+
+            if option_parts:
+                column_schema_parts.append(f'OPTIONS({", ".join(option_parts)})')
 
         self.client.query_and_wait(
             f'''
             ALTER TABLE `{table_name}`
-            ADD COLUMN `{column.name}` {data_type_to_sql(column.data_type)}
+            ADD COLUMN `{column.name}` {data_type_to_sql(column.data_type)} {" ".join(column_schema_parts)}
             '''
         )
 
@@ -193,11 +256,11 @@ class BigQueryMetaBackend(MetaBackend):
         results = self.client.query_and_wait(
             f'''
             DELETE FROM `{self.table_name}`
-             WHERE idx = (SELECT MAX(idx) FROM `{self.table_name}`)
-               AND op_kind = @op_kind
+            WHERE idx = (SELECT MAX(idx) FROM `{self.table_name}`)
+                AND op_kind = @op_kind
 
-               -- ensure normalized comparison, cannot compare JSON types
-               AND TO_JSON_STRING(op_data) = TO_JSON_STRING(PARSE_JSON(@op_data))
+                -- ensure normalized comparison, cannot compare JSON types
+                AND TO_JSON_STRING(op_data) = TO_JSON_STRING(PARSE_JSON(@op_data))
             ''',
             job_config=QueryJobConfig(
                 query_parameters=[

@@ -1,5 +1,5 @@
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
-from liti.core.model.v1.data_type import BOOL, FLOAT64, INT64, STRING
+from liti.core.model.v1.data_type import FLOAT64, INT64, STRING
 from liti.core.model.v1.schema import Column, Table, TableName
 from liti.core.runner import MigrateRunner
 
