@@ -17,7 +17,7 @@ def create_table(num: int) -> CreateTable:
 
 
 def drop_table(num: int) -> DropTable:
-    return DropTable(name=table_name(num))
+    return DropTable(table_name=table_name(num))
 
 
 def test_get_migration_plan_same():

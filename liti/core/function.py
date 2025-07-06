@@ -9,13 +9,12 @@ from liti.core.model.v1.operation.data.table import AddColumn, CreateTable, Drop
 from liti.core.model.v1.operation.ops.base import OperationOps
 from liti.core.model.v1.operation.ops.table import AddColumnOps, CreateTableOps, DropColumnOps, DropTableOps, \
     RenameColumnOps, RenameTableOps
-from liti.core.model.v1.schema import Table
 
 
 def parse_operation(op_kind: str, op_data: dict) -> Operation:
     match op_kind:
         case 'create_table':
-            return CreateTable(table=Table(**op_data))
+            return CreateTable(**op_data)
         case 'drop_table':
             return DropTable(**op_data)
         case 'rename_table':

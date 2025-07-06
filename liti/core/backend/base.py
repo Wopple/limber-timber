@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, Identifier, Table, TableName
 
 
 class DbBackend(ABC):
     """ DB backends make changes to and read the state of the database """
+
+    @abstractmethod
+    def has_table(self, name: TableName) -> bool:
+        pass
 
     @abstractmethod
     def get_table(self, name: TableName) -> Table | None:
@@ -20,7 +24,7 @@ class DbBackend(ABC):
         pass
 
     @abstractmethod
-    def rename_table(self, from_name: TableName, to_name: str):
+    def rename_table(self, from_name: TableName, to_name: Identifier):
         pass
 
     @abstractmethod
@@ -34,6 +38,9 @@ class DbBackend(ABC):
     @abstractmethod
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
         pass
+
+    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
+        raise NotImplementedError("not supported")
 
 
 class MetaBackend(ABC):

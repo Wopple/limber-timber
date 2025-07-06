@@ -15,7 +15,7 @@ class CreateTableOps(OperationOps):
         db_backend.drop_table(self.op.table.name)
 
     def is_up(self, db_backend: DbBackend) -> bool:
-        return db_backend.get_table(self.op.table.name) is not None
+        return db_backend.has_table(self.op.table.name)
 
 
 class DropTableOps(OperationOps):
@@ -23,18 +23,18 @@ class DropTableOps(OperationOps):
         self.op = op
 
     def up(self, db_backend: DbBackend):
-        db_backend.drop_table(self.op.name)
+        db_backend.drop_table(self.op.table_name)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend):
         # Get the table in the state before it was dropped
         sim_db = self.simulate(meta_backend.get_previous_operations())
-        sim_table = sim_db.get_table(self.op.name)
+        sim_table = sim_db.get_table(self.op.table_name)
 
         # Recreate the table in that state
         db_backend.create_table(sim_table)
 
     def is_up(self, db_backend: DbBackend) -> bool:
-        return db_backend.get_table(self.op.name) is None
+        return not db_backend.has_table(self.op.table_name)
 
 
 class RenameTableOps(OperationOps):
@@ -48,7 +48,7 @@ class RenameTableOps(OperationOps):
         db_backend.rename_table(self.op.from_name.with_table_name(self.op.to_name), self.op.from_name.table_name)
 
     def is_up(self, db_backend: DbBackend) -> bool:
-        return db_backend.get_table(self.op.from_name.with_table_name(self.op.to_name)) is not None
+        return db_backend.has_table(self.op.from_name.with_table_name(self.op.to_name))
 
 
 class AddColumnOps(OperationOps):
@@ -62,7 +62,7 @@ class AddColumnOps(OperationOps):
         db_backend.drop_column(self.op.table_name, self.op.column.name)
 
     def is_up(self, db_backend: DbBackend) -> bool:
-        return db_backend.get_table(self.op.table_name).column_map.get(self.op.column.name) is not None
+        return self.op.column.name in db_backend.get_table(self.op.table_name).column_map
 
 
 class DropColumnOps(OperationOps):
@@ -81,7 +81,7 @@ class DropColumnOps(OperationOps):
         db_backend.add_column(self.op.table_name, sim_column)
 
     def is_up(self, db_backend: DbBackend) -> bool:
-        return db_backend.get_table(self.op.table_name).column_map.get(self.op.column_name) is None
+        return self.op.column_name not in db_backend.get_table(self.op.table_name).column_map
 
 
 class RenameColumnOps(OperationOps):
@@ -95,4 +95,4 @@ class RenameColumnOps(OperationOps):
         db_backend.rename_column(self.op.table_name, self.op.to_name, self.op.from_name)
 
     def is_up(self, db_backend: DbBackend) -> bool:
-        return db_backend.get_table(self.op.table_name).column_map.get(self.op.to_name) is not None
+        return self.op.to_name in db_backend.get_table(self.op.table_name).column_map

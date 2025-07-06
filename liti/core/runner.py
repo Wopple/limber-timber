@@ -35,7 +35,7 @@ class MigrateRunner:
         migration_plan = self.meta_backend.get_migration_plan(target_operations)
 
         if not allow_down and migration_plan['down']:
-            raise RuntimeError('Down migrations required but not allowed. Use --allow-down')
+            raise RuntimeError('Down migrations required but not allowed. Use --down')
 
         if not silent:
             log.info('Down')

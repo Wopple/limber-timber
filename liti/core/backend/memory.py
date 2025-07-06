@@ -1,11 +1,14 @@
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, Identifier, Table, TableName
 
 
 class MemoryDbBackend(DbBackend):
     def __init__(self):
         self.tables = {}
+
+    def has_table(self, name: TableName) -> bool:
+        return name in self.tables
 
     def get_table(self, name: TableName) -> Table | None:
         return self.tables.get(name)
@@ -16,7 +19,7 @@ class MemoryDbBackend(DbBackend):
     def drop_table(self, name: TableName):
         del self.tables[name]
 
-    def rename_table(self, from_name: TableName, to_name: str):
+    def rename_table(self, from_name: TableName, to_name: Identifier):
         self.tables[from_name.with_table_name(to_name)] = self.tables.pop(from_name)
 
     def add_column(self, table_name: TableName, column: Column):
@@ -29,6 +32,9 @@ class MemoryDbBackend(DbBackend):
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
         table = self.get_table(table_name)
         table.columns = [col if col.name != from_name else col.with_name(to_name) for col in table.columns]
+
+    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
+        self.tables[table_name].clustering = columns
 
 
 class MemoryMetaBackend(MetaBackend):

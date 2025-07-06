@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, Identifier, Table, TableName
 
 
 class CreateTable(Operation):
@@ -11,16 +11,23 @@ class CreateTable(Operation):
 
 
 class DropTable(Operation):
-    name: TableName
+    table_name: TableName
 
     KIND: ClassVar[str] = 'drop_table'
 
 
 class RenameTable(Operation):
     from_name: TableName
-    to_name: str
+    to_name: Identifier
 
     KIND: ClassVar[str] = 'rename_table'
+
+
+class SetClustering(Operation):
+    table_name: TableName
+    columns: list[ColumnName]
+
+    KIND: ClassVar[str] = 'set_clustering'
 
 
 class AddColumn(Operation):

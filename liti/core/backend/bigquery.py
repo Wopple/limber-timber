@@ -1,6 +1,9 @@
+import json
 import logging
 
-from google.cloud.bigquery import QueryJobConfig, ScalarQueryParameter, SchemaField, Table as BqTable
+from google.cloud.bigquery import DatasetReference, PartitionRange, QueryJobConfig, RangePartitioning, \
+    ScalarQueryParameter, SchemaField, \
+    Table as BqTable, TableReference, TimePartitioning
 from google.cloud.bigquery.schema import _DEFAULT_VALUE
 
 from liti.core.backend.base import DbBackend, MetaBackend
@@ -9,7 +12,7 @@ from liti.core.function import parse_operation
 from liti.core.model.v1.data_type import Array, BOOL, DataType, DATE, DATE_TIME, FLOAT64, INT64, STRING, Struct, \
     TIMESTAMP
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, Identifier, Table, TableName
 
 log = logging.getLogger(__name__)
 
@@ -64,13 +67,13 @@ def to_mode(column: Column) -> str:
 
 def to_schema_field(column: Column) -> SchemaField:
     return SchemaField(
-        name=column.name,
+        name=column.name.string,
         field_type=to_field_type(column),
         mode=to_mode(column),
         default_value_expression=column.default_expression,
-        description=column.options.description or _DEFAULT_VALUE,
+        description=(column.options.description if column.options else None) or _DEFAULT_VALUE,
         fields=to_fields(column),
-        rounding_mode=column.options.rounding_mode,
+        rounding_mode=column.options.rounding_mode if column.options else None,
     )
 
 
@@ -139,18 +142,44 @@ class BigQueryDbBackend(DbBackend):
     def __init__(self, client: BqClient):
         self.client = client
 
+    def has_table(self, name: TableName) -> bool:
+        dataset = DatasetReference(name.database.string, name.schema_name.string)
+        return self.client.has_table(TableReference(dataset, name.table_name.string))
+
     def get_table(self, name: TableName) -> Table | None:
         bq_table = self.client.get_table(name.string)
         return bq_table and Table(name=name, columns=[to_column(field) for field in bq_table.schema])
 
     def create_table(self, table: Table):
         bq_table = BqTable(table.name.string, [to_schema_field(c) for c in table.columns])
+
+        if table.partitioning:
+            if table.partitioning.kind == 'time':
+                bq_table.time_partitioning = TimePartitioning(
+                    type_=table.partitioning.time_unit.upper(),
+                    field=table.partitioning.column.string if table.partitioning.column else None,
+                    expiration_ms=table.partitioning.expiration_ms,
+                    require_partition_filter=table.partitioning.require_filter,
+                )
+            elif table.partitioning.kind == 'int':
+                bq_table.range_partitioning = RangePartitioning(
+                    range_=PartitionRange(
+                        start=table.partitioning.int_start,
+                        end=table.partitioning.int_end,
+                        interval=table.partitioning.int_step,
+                    ),
+                    field=table.partitioning.column.string,
+                )
+            else:
+                raise ValueError(f'Unsupported partitioning type: {table.partitioning.type}')
+
+        bq_table.clustering_fields = [c.string for c in table.clustering] if table.clustering else None
         self.client.create_table(bq_table)
 
     def drop_table(self, name: TableName):
         self.client.delete_table(name.string)
 
-    def rename_table(self, from_name: TableName, to_name: TableName):
+    def rename_table(self, from_name: TableName, to_name: Identifier):
         self.client.query_and_wait(f'ALTER TABLE `{from_name}` RENAME TO `{to_name}`')
 
     def add_column(self, table_name: TableName, column: Column):
@@ -207,6 +236,11 @@ class BigQueryDbBackend(DbBackend):
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
         self.client.query_and_wait(f'ALTER TABLE `{table_name}` RENAME COLUMN `{from_name}` TO `{to_name}`')
 
+    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
+        bq_table = self.client.get_table(table_name.string)
+        bq_table.clustering_fields = [c.string for c in columns] if columns else None
+        self.client.update_table(bq_table, ['clustering_fields'])
+
 
 class BigQueryMetaBackend(MetaBackend):
     def __init__(self, client: BqClient, table_name: TableName):
@@ -230,7 +264,7 @@ class BigQueryMetaBackend(MetaBackend):
     def get_applied_operations(self) -> list[Operation]:
         rows = self.client.query_and_wait(f'SELECT op_kind, op_data FROM `{self.table_name}` ORDER BY idx')
 
-        return [parse_operation(row.op_kind, row.op_data) for row in rows]
+        return [parse_operation(row.op_kind, json.loads(row.op_data)) for row in rows]
 
     def apply_operation(self, operation: Operation):
         results = self.client.query_and_wait(
@@ -260,7 +294,7 @@ class BigQueryMetaBackend(MetaBackend):
                 AND op_kind = @op_kind
 
                 -- ensure normalized comparison, cannot compare JSON types
-                AND TO_JSON_STRING(op_data) = TO_JSON_STRING(PARSE_JSON(@op_data))
+                AND TO_JSON_STRING(op_data) = TO_JSON_STRING(@op_data)
             ''',
             job_config=QueryJobConfig(
                 query_parameters=[

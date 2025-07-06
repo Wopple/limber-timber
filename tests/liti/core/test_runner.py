@@ -1,6 +1,6 @@
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.model.v1.data_type import FLOAT64, INT64, STRING
-from liti.core.model.v1.schema import Column, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, Table, TableName
 from liti.core.runner import MigrateRunner
 
 
@@ -114,7 +114,7 @@ def test_add_column():
 
     assert len(db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).columns) == 4
     assert len(meta_backend.get_applied_operations()) == 2
-    assert 'col4' in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
+    assert ColumnName('col4') in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
 
     runner_2 = MigrateRunner(
         db_backend=db_backend,
@@ -126,7 +126,7 @@ def test_add_column():
 
     assert len(db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).columns) == 3
     assert len(meta_backend.get_applied_operations()) == 1
-    assert 'col4' not in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
+    assert ColumnName('col4') not in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
 
 
 def test_drop_column():
@@ -143,7 +143,7 @@ def test_drop_column():
 
     assert len(db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).columns) == 2
     assert len(meta_backend.get_applied_operations()) == 2
-    assert 'col3' not in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
+    assert ColumnName('col3') not in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
 
     runner_2 = MigrateRunner(
         db_backend=db_backend,
@@ -155,7 +155,7 @@ def test_drop_column():
 
     assert len(db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).columns) == 3
     assert len(meta_backend.get_applied_operations()) == 1
-    assert 'col3' in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
+    assert ColumnName('col3') in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
 
 
 def test_rename_column():
@@ -172,8 +172,8 @@ def test_rename_column():
 
     assert len(db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).columns) == 3
     assert len(meta_backend.get_applied_operations()) == 2
-    assert 'col3' not in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
-    assert 'col4' in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
+    assert ColumnName('col3') not in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
+    assert ColumnName('col4') in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
 
     runner_2 = MigrateRunner(
         db_backend=db_backend,
@@ -185,5 +185,5 @@ def test_rename_column():
 
     assert len(db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).columns) == 3
     assert len(meta_backend.get_applied_operations()) == 1
-    assert 'col3' in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
-    assert 'col4' not in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
+    assert ColumnName('col3') in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map
+    assert ColumnName('col4') not in db_backend.get_table(TableName('my_project.my_dataset.my_table_1')).column_map

@@ -2,19 +2,20 @@ version: 1
 operations:
 - kind: create_table
   data:
-    name:
-      database: my_project
-      schema_name: my_dataset
-      table_name: my_table_1
-    columns:
-    - name: col1
-      data_type: INT64
-      nullable: false
-    - name: col2
-      data_type: FLOAT64
-      nullable: true
-    - name: col3
-      data_type: STRING
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: my_table_1
+      columns:
+      - name: col1
+        data_type: INT64
+        nullable: false
+      - name: col2
+        data_type: FLOAT64
+        nullable: true
+      - name: col3
+        data_type: STRING
 - kind: drop_column
   data:
     table_name:
