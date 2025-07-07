@@ -37,37 +37,38 @@ class MigrateRunner:
         if not allow_down and migration_plan['down']:
             raise RuntimeError('Down migrations required but not allowed. Use --down')
 
+        def apply_operations(operations: list[Operation], up: bool):
+            for op in operations:
+                if up:
+                    up_op = op
+                else:
+                    # Down migrations apply the inverse operation
+                    up_op = attach_ops(op).down(self.db_backend, self.meta_backend)
+
+                up_ops = attach_ops(up_op)
+
+                if not up_ops.is_up(self.db_backend):
+                    if not silent:
+                        log.info(pformat(up_op))
+
+                    if wet_run:
+                        up_ops.up(self.db_backend)
+
+                if wet_run:
+                    if up:
+                        self.meta_backend.apply_operation(op)
+                    else:
+                        self.meta_backend.unapply_operation(op)
+
         if not silent:
             log.info('Down')
 
-        for down_op in migration_plan['down']:
-            down_ops = attach_ops(down_op)
-
-            if down_ops.is_up(self.db_backend):
-                if not silent:
-                    log.info(pformat(down_op))
-
-                if wet_run:
-                    down_ops.down(self.db_backend, self.meta_backend)
-
-            if wet_run:
-                self.meta_backend.unapply_operation(down_op)
+        apply_operations(migration_plan['down'], False)
 
         if not silent:
             log.info('Up')
 
-        for up_op in migration_plan['up']:
-            up_ops = attach_ops(up_op)
-
-            if not up_ops.is_up(self.db_backend):
-                if not silent:
-                    log.info(pformat(up_op))
-
-                if wet_run:
-                    up_ops.up(self.db_backend)
-
-            if wet_run:
-                self.meta_backend.apply_operation(up_op)
+        apply_operations(migration_plan['up'], True)
 
         if not silent:
             log.info('Done')

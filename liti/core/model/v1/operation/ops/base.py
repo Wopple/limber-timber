@@ -23,8 +23,8 @@ class OperationOps(ABC):
         pass
 
     @abstractmethod
-    def down(self, db_backend: DbBackend, meta_backend: MetaBackend):
-        """ Unapply the operation """
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> Operation:
+        """ Build the inverse operation """
         pass
 
     @abstractmethod
