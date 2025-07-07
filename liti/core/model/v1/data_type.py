@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 type FieldName = str
 
@@ -87,6 +87,11 @@ class Timestamp(DataType):
 class Range(DataType):
     kind: Literal['DATE', 'DATETIME', 'TIMESTAMP']
 
+    @field_validator('kind', mode='before')
+    @classmethod
+    def validate_kind(cls, value: str) -> str:
+        return value.upper()
+
 
 class Interval(DataType):
     pass
@@ -104,15 +109,19 @@ class Struct(DataType):
     fields: dict[FieldName, DataType]
 
 
-def parse_data_type(data: DataType | str | list[Any] | dict[str, Any]) -> DataType:
+def parse_data_type(data: DataType | str | dict[str, Any]) -> DataType:
     # Already parsed
     if isinstance(data, DataType):
         return data
-    # Map string value to nonparametric type
+    # Map string value to type
     elif isinstance(data, str):
         match data.upper():
             case 'BOOL' | 'BOOLEAN':
                 return BOOL
+            case 'INT64':
+                return INT64
+            case 'FLOAT64':
+                return FLOAT64
             case 'STRING':
                 return STRING
             case 'JSON':
@@ -129,7 +138,7 @@ def parse_data_type(data: DataType | str | list[Any] | dict[str, Any]) -> DataTy
                 return INTERVAL
     # Parse parametric type
     elif isinstance(data, dict):
-        match data['type']:
+        match data['type'].upper():
             case 'INT':
                 return Int(bits=data['bits'])
             case 'FLOAT':

@@ -1,9 +1,14 @@
-from google.cloud.bigquery import Client, ConnectionProperty, QueryJob, QueryJobConfig
-from google.cloud.bigquery.table import RowIterator, Table, TableReference
+from typing import Iterable
+
+from google.cloud.bigquery import Client, ConnectionProperty, DatasetReference, QueryJob, QueryJobConfig
+from google.cloud.bigquery.table import RowIterator, Table, TableListItem, TableReference
 
 
 class BqClient:
-    """ Can be used as a context manager to run queries within a transaction """
+    """ Big Query client that lives in terms of google.cloud.bigquery
+
+    Can be used as a context manager to run queries within a transaction.
+    """
 
     def __init__(self, client: Client):
         self.client = client
@@ -47,14 +52,17 @@ class BqClient:
 
         return False
 
-    def get_table(self, table_name: str) -> Table:
-        return self.client.get_table(table_name)
+    def get_table(self, table_ref: TableReference) -> Table:
+        return self.client.get_table(table_ref)
+
+    def list_tables(self, dataset_ref: DatasetReference) -> Iterable[TableListItem]:
+        return self.client.list_tables(dataset_ref)
 
     def create_table(self, bq_table: Table):
         self.client.create_table(bq_table)
 
-    def delete_table(self, table_name: str):
-        self.client.delete_table(table_name)
+    def delete_table(self, table_ref: TableReference):
+        self.client.delete_table(table_ref)
 
     def update_table(self, table: Table, fields: list[str]) -> Table:
         return self.client.update_table(table, fields)

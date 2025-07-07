@@ -1,11 +1,20 @@
 from abc import ABC, abstractmethod
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, Identifier, Table, TableName
+from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, SchemaName, Table, TableName
 
 
 class DbBackend(ABC):
     """ DB backends make changes to and read the state of the database """
+
+    @abstractmethod
+    def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
+        pass
+
+    @abstractmethod
+    def scan_table(self, name: TableName) -> CreateTable | None:
+        pass
 
     @abstractmethod
     def has_table(self, name: TableName) -> bool:

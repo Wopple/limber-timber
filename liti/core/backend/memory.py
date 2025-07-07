@@ -1,11 +1,25 @@
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, Identifier, Table, TableName
+from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, SchemaName, Table, TableName
 
 
 class MemoryDbBackend(DbBackend):
     def __init__(self):
-        self.tables = {}
+        self.tables: dict[TableName, Table] = {}
+
+    def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
+        return [
+            CreateTable(table=table)
+            for name, table in self.tables.items()
+            if name.database == database and name.schema_name == schema
+        ]
+
+    def scan_table(self, name: TableName) -> CreateTable | None:
+        if name in self.tables:
+            return CreateTable(table=self.tables[name])
+        else:
+            return None
 
     def has_table(self, name: TableName) -> bool:
         return name in self.tables

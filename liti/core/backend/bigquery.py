@@ -6,6 +6,7 @@ from google.cloud.bigquery import DatasetReference, PartitionRange, QueryJobConf
     ScalarQueryParameter, SchemaField, \
     Table as BqTable, TableReference, TimePartitioning
 from google.cloud.bigquery.schema import _DEFAULT_VALUE
+from google.cloud.bigquery.table import TableListItem
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
@@ -17,7 +18,9 @@ from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DataType, DATE
     Struct, \
     TIME, TIMESTAMP
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, Identifier, Table, TableName
+from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, Partitioning, SchemaName, Table, \
+    TableName
 
 log = logging.getLogger(__name__)
 
@@ -26,9 +29,29 @@ NULLABLE = 'NULLABLE'
 REPEATED = 'REPEATED'
 
 
-def to_field_type(column: Column) -> str:
-    data_type = column.data_type
+def to_dataset_ref(database: DatabaseName, schema: SchemaName) -> DatasetReference:
+    return DatasetReference(database.string, schema.string)
 
+
+def extract_dataset_ref(name: TableName | TableListItem) -> DatasetReference:
+    if isinstance(name, TableName):
+        return to_dataset_ref(name.database, name.schema_name)
+    elif isinstance(name, TableListItem):
+        return DatasetReference(name.project, name.dataset_id)
+    else:
+        raise ValueError(f'Invalid dataset ref type: {type(name)}')
+
+
+def to_table_ref(name: TableName | TableListItem) -> TableReference:
+    if isinstance(name, TableName):
+        return TableReference(extract_dataset_ref(name), name.table_name.string)
+    elif isinstance(name, TableListItem):
+        return TableReference(extract_dataset_ref(name), name.table_id)
+    else:
+        raise ValueError(f'Invalid table ref type: {type(name)}')
+
+
+def to_field_type(data_type: DataType) -> str:
     if data_type == BOOL:
         return 'BOOL'
     elif data_type == INT64:
@@ -36,9 +59,9 @@ def to_field_type(column: Column) -> str:
     elif data_type == FLOAT64:
         return 'FLOAT64'
     elif isinstance(data_type, Numeric):
-        return f'NUMERIC({data_type.precision}, {data_type.scale})'
+        return 'NUMERIC'
     elif isinstance(data_type, BigNumeric):
-        return f'BIGNUMERIC({data_type.precision}, {data_type.scale})'
+        return 'BIGNUMERIC'
     elif data_type == STRING:
         return 'STRING'
     elif data_type == JSON:
@@ -52,18 +75,20 @@ def to_field_type(column: Column) -> str:
     elif data_type == TIMESTAMP:
         return 'TIMESTAMP'
     elif isinstance(data_type, Range):
-        return f'RANGE<{data_type.kind}>'
+        return 'RANGE'
     elif data_type == INTERVAL:
         return 'INTERVAL'
+    elif isinstance(data_type, Array):
+        return to_field_type(data_type.inner)
     elif isinstance(data_type, Struct):
         return 'RECORD'
     else:
-        raise ValueError(f'bigquery.field_type unrecognized data_type - {column}')
+        raise ValueError(f'bigquery.to_field_type unrecognized data_type - {data_type}')
 
 
-def to_fields(column: Column) -> tuple[SchemaField, ...]:
-    data_type = column.data_type
-
+def to_fields(data_type: DataType) -> tuple[SchemaField, ...]:
+    if isinstance(data_type, Array):
+        return to_fields(data_type.inner)
     if isinstance(data_type, Struct):
         return tuple(
             to_schema_field(Column(name=n, data_type=t, nullable=True))
@@ -82,14 +107,44 @@ def to_mode(column: Column) -> str:
         return REQUIRED
 
 
+def to_precision(data_type: DataType) -> int | None:
+    if isinstance(data_type, Array):
+        return to_precision(data_type.inner)
+    elif isinstance(data_type, Numeric | BigNumeric):
+        return data_type.precision
+    else:
+        return None
+
+
+def to_scale(data_type: DataType) -> int | None:
+    if isinstance(data_type, Array):
+        return to_scale(data_type.inner)
+    elif isinstance(data_type, Numeric | BigNumeric):
+        return data_type.scale
+    else:
+        return None
+
+
+def to_range_element_type(data_type: DataType) -> str | None:
+    if isinstance(data_type, Array):
+        return to_range_element_type(data_type.inner)
+    elif isinstance(data_type, Range):
+        return data_type.kind
+    else:
+        return None
+
+
 def to_schema_field(column: Column) -> SchemaField:
     return SchemaField(
         name=column.name.string,
-        field_type=to_field_type(column),
+        field_type=to_field_type(column.data_type),
         mode=to_mode(column),
         default_value_expression=column.default_expression,
         description=(column.options.description if column.options else None) or _DEFAULT_VALUE,
-        fields=to_fields(column),
+        fields=to_fields(column.data_type),
+        precision=to_precision(column.data_type),
+        scale=to_scale(column.data_type),
+        range_element_type=to_range_element_type(column.data_type),
         rounding_mode=column.options.rounding_mode if column.options else None,
     )
 
@@ -141,7 +196,7 @@ def to_data_type(schema_field: SchemaField) -> DataType:
     elif field_type == 'RECORD':
         return Struct(fields={f.name: to_data_type_array(f) for f in schema_field.fields})
     else:
-        raise ValueError(f'bigquery.data_type unrecognized field_type - {schema_field}')
+        raise ValueError(f'bigquery.to_data_type unrecognized field_type - {schema_field}')
 
 
 def to_data_type_array(schema_field: SchemaField) -> DataType:
@@ -194,30 +249,75 @@ def data_type_to_sql(data_type: DataType) -> str:
         raise ValueError(f'bigquery.data_type_to_sql unrecognized data_type - {data_type}')
 
 
+def to_table(table: BqTable) -> Table:
+    if table.time_partitioning:
+        partitioning = Partitioning(
+            kind='TIME',
+            column=ColumnName(table.time_partitioning.field),
+            time_unit=table.time_partitioning.type_,
+            expiration_ms=table.time_partitioning.expiration_ms,
+            require_filter=table.require_partition_filter,
+        )
+    elif table.range_partitioning:
+        range_: PartitionRange = table.range_partitioning.range_
+
+        partitioning = Partitioning(
+            kind='INT',
+            column=ColumnName(table.range_partitioning.field),
+            int_start=range_.start,
+            int_end=range_.end,
+            int_step=range_.interval,
+            require_filter=table.require_partition_filter,
+        )
+    else:
+        partitioning = None
+
+    return Table(
+        name=TableName(table.full_table_id.replace(':', '.')),
+        columns=[to_column(f) for f in table.schema],
+        partitioning=partitioning,
+        clustering=table.clustering_fields,
+    )
+
+
 class BigQueryDbBackend(DbBackend):
+    """ Big Query "client" that adapts terms between liti and google.cloud.bigquery """
+
     def __init__(self, client: BqClient):
         self.client = client
 
+    def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
+        dataset = to_dataset_ref(database, schema)
+        table_items = self.client.list_tables(dataset)
+        tables = [self.get_table(TableName(i.full_table_id.replace(':', '.'))) for i in table_items]
+        return [CreateTable(table=t) for t in tables]
+
+    def scan_table(self, name: TableName) -> CreateTable | None:
+        if self.has_table(name):
+            bq_table = self.get_table(name)
+            return CreateTable(table=to_table(bq_table))
+        else:
+            return None
+
     def has_table(self, name: TableName) -> bool:
-        dataset = DatasetReference(name.database.string, name.schema_name.string)
-        return self.client.has_table(TableReference(dataset, name.table_name.string))
+        return self.client.has_table(to_table_ref(name))
 
     def get_table(self, name: TableName) -> Table | None:
-        bq_table = self.client.get_table(name.string)
+        bq_table = self.client.get_table(to_table_ref(name))
         return bq_table and Table(name=name, columns=[to_column(field) for field in bq_table.schema])
 
     def create_table(self, table: Table):
         bq_table = BqTable(table.name.string, [to_schema_field(c) for c in table.columns])
 
         if table.partitioning:
-            if table.partitioning.kind == 'time':
+            if table.partitioning.kind == 'TIME':
                 bq_table.time_partitioning = TimePartitioning(
-                    type_=table.partitioning.time_unit.upper(),
+                    type_=table.partitioning.time_unit,
                     field=table.partitioning.column.string if table.partitioning.column else None,
                     expiration_ms=table.partitioning.expiration_ms,
                     require_partition_filter=table.partitioning.require_filter,
                 )
-            elif table.partitioning.kind == 'int':
+            elif table.partitioning.kind == 'INT':
                 bq_table.range_partitioning = RangePartitioning(
                     range_=PartitionRange(
                         start=table.partitioning.int_start,
@@ -227,13 +327,13 @@ class BigQueryDbBackend(DbBackend):
                     field=table.partitioning.column.string,
                 )
             else:
-                raise ValueError(f'Unsupported partitioning type: {table.partitioning.type}')
+                raise ValueError(f'Unsupported partitioning type: {table.partitioning.kind}')
 
         bq_table.clustering_fields = [c.string for c in table.clustering] if table.clustering else None
         self.client.create_table(bq_table)
 
     def drop_table(self, name: TableName):
-        self.client.delete_table(name.string)
+        self.client.delete_table(to_table_ref(name))
 
     def rename_table(self, from_name: TableName, to_name: Identifier):
         self.client.query_and_wait(f'ALTER TABLE `{from_name}` RENAME TO `{to_name}`')
@@ -293,7 +393,7 @@ class BigQueryDbBackend(DbBackend):
         self.client.query_and_wait(f'ALTER TABLE `{table_name}` RENAME COLUMN `{from_name}` TO `{to_name}`')
 
     def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
-        bq_table = self.client.get_table(table_name.string)
+        bq_table = self.client.get_table(to_table_ref(table_name))
         bq_table.clustering_fields = [c.string for c in columns] if columns else None
         self.client.update_table(bq_table, ['clustering_fields'])
 

@@ -12,7 +12,7 @@ from liti.core.model.v1.operation.ops.table import AddColumnOps, CreateTableOps,
 
 
 def parse_operation(op_kind: str, op_data: dict) -> Operation:
-    match op_kind:
+    match op_kind.lower():
         case 'create_table':
             return CreateTable(**op_data)
         case 'drop_table':
@@ -50,9 +50,11 @@ def parse_json_or_yaml_file(path: Path) -> list | dict:
     with open(path) as f:
         content = f.read()
 
-    if path.suffix == '.json':
+    suffix = path.suffix.lower()
+
+    if suffix == '.json':
         return json.loads(content)
-    elif path.suffix in ('.yaml', '.yml'):
+    elif suffix in ('.yaml', '.yml'):
         return yaml.safe_load(content)
     else:
         raise ValueError(f'Unexpected file extension: "{path}"')

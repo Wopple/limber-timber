@@ -1,0 +1,73 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: my_table_1
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      - name: col_int_64
+        data_type: INT64
+      - name: col_float_64
+        data_type: FLOAT64
+      - name: col_int_64_bits
+        data_type:
+          type: INT
+          bits: 64
+      - name: col_float_64_bits
+        data_type:
+          type: FLOAT
+          bits: 64
+      - name: col_numeric
+        data_type:
+          type: NUMERIC
+          precision: 38
+          scale: 9
+      - name: col_big_numeric
+        data_type:
+          type: BIGNUMERIC
+          precision: 76
+          scale: 38
+      - name: col_string
+        data_type: STRING
+      - name: col_json
+        data_type: JSON
+      - name: col_date
+        data_type: DATE
+      - name: col_time
+        data_type: TIME
+      - name: col_date_time
+        data_type: DATETIME
+      - name: col_timestamp
+        data_type: TIMESTAMP
+      - name: col_range_date
+        data_type:
+          type: RANGE
+          kind: DATE
+      - name: col_range_datetime
+        data_type:
+          type: RANGE
+          kind: DATETIME
+      - name: col_range_timestamp
+        data_type:
+          type: RANGE
+          kind: TIMESTAMP
+      - name: col_array
+        data_type:
+          type: ARRAY
+          inner:
+            type: STRUCT
+            fields:
+              field_bool: BOOL
+      - name: col_struct
+        data_type:
+          type: STRUCT
+          fields:
+            field_bool: BOOL
+            field_array:
+              type: ARRAY
+              inner: BOOL

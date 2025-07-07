@@ -147,6 +147,11 @@ class ColumnOptions(BaseModel):
     description: str | None = None
     rounding_mode: RoundingMode | None = None
 
+    @field_validator('rounding_mode', mode='before')
+    @classmethod
+    def validate_rounding_mode(cls, value: str | None) -> str | None:
+        return value and value.upper()
+
 
 class Column(BaseModel):
     name: ColumnName
@@ -161,12 +166,12 @@ class Column(BaseModel):
 
     @field_validator('data_type', mode='before')
     @classmethod
-    def validate_data_type(cls, value: DataType | str | list[Any] | dict[str, Any]):
+    def validate_data_type(cls, value: DataType | str | dict[str, Any]) -> DataType:
         return parse_data_type(value)
 
     @field_serializer('data_type')
     @classmethod
-    def serialize_data_type(cls, value: DataType) -> str:
+    def serialize_data_type(cls, value: DataType) -> str | dict[str, Any]:
         return serialize_data_type(value)
 
     def with_name(self, name: ColumnName) -> Self:
@@ -174,9 +179,9 @@ class Column(BaseModel):
 
 
 class Partitioning(BaseModel):
-    kind: Literal['time', 'int']
+    kind: Literal['TIME', 'INT']
     column: ColumnName | None = None
-    time_unit: Literal['year', 'month', 'day', 'hour'] | None = None
+    time_unit: Literal['YEAR', 'MONTH', 'DAY', 'HOUR'] | None = None
     int_start: int | None = None
     int_end: int | None = None
     int_step: int | None = None
@@ -184,10 +189,10 @@ class Partitioning(BaseModel):
     require_filter: bool = False
 
     def model_post_init(self, _context: Any):
-        if self.kind == 'time':
+        if self.kind == 'TIME':
             required = ['kind', 'time_unit', 'expiration_ms', 'require_filter']
             allowed = required + ['column']
-        elif self.kind == 'int':
+        elif self.kind == 'INT':
             required = ['kind', 'column', 'int_start', 'int_end', 'int_step', 'expiration_ms', 'require_filter']
             allowed = required
         else:
@@ -212,6 +217,16 @@ class Partitioning(BaseModel):
 
         if errors:
             raise ValueError('\n'.join(errors))
+
+    @field_validator('kind', mode='before')
+    @classmethod
+    def validate_kind(cls, value: str | None) -> str | None:
+        return value and value.upper()
+
+    @field_validator('time_unit', mode='before')
+    @classmethod
+    def validate_time_unit(cls, value: str | None) -> str | None:
+        return value and value.upper()
 
 
 class Table(BaseModel):

@@ -1,7 +1,53 @@
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
-from liti.core.model.v1.data_type import FLOAT64, INT64, STRING
+from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, INT64, JSON, Numeric, Range, \
+    STRING, \
+    Struct, \
+    TIME, TIMESTAMP
 from liti.core.model.v1.schema import Column, ColumnName, Table, TableName
 from liti.core.runner import MigrateRunner
+
+
+def test_all_data_types():
+    db_backend = MemoryDbBackend()
+    meta_backend = MemoryMetaBackend()
+
+    runner_1 = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_all_data_types',
+    )
+
+    runner_1.run(wet_run=True)
+    actual_table = db_backend.get_table(TableName('my_project.my_dataset.my_table_1'))
+
+    assert len(db_backend.tables) == 1
+
+    assert actual_table == Table(
+        name=TableName('my_project.my_dataset.my_table_1'),
+        columns=[
+            Column(name=ColumnName('col_bool'), data_type=BOOL),
+            Column(name=ColumnName('col_int_64'), data_type=INT64),
+            Column(name=ColumnName('col_float_64'), data_type=FLOAT64),
+            Column(name=ColumnName('col_int_64_bits'), data_type=INT64),
+            Column(name=ColumnName('col_float_64_bits'), data_type=FLOAT64),
+            Column(name=ColumnName('col_numeric'), data_type=Numeric(precision=38, scale=9)),
+            Column(name=ColumnName('col_big_numeric'), data_type=BigNumeric(precision=76, scale=38)),
+            Column(name=ColumnName('col_string'), data_type=STRING),
+            Column(name=ColumnName('col_json'), data_type=JSON),
+            Column(name=ColumnName('col_date'), data_type=DATE),
+            Column(name=ColumnName('col_time'), data_type=TIME),
+            Column(name=ColumnName('col_date_time'), data_type=DATE_TIME),
+            Column(name=ColumnName('col_timestamp'), data_type=TIMESTAMP),
+            Column(name=ColumnName('col_range_date'), data_type=Range(kind='DATE')),
+            Column(name=ColumnName('col_range_datetime'), data_type=Range(kind='DATETIME')),
+            Column(name=ColumnName('col_range_timestamp'), data_type=Range(kind='TIMESTAMP')),
+            Column(name=ColumnName('col_array'), data_type=Array(inner=Struct(fields={'field_bool': BOOL}))),
+            Column(
+                name=ColumnName('col_struct'),
+                data_type=Struct(fields={'field_bool': BOOL, 'field_array': Array(inner=BOOL)}),
+            ),
+        ],
+    )
 
 
 def test_create_table():
