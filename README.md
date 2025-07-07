@@ -18,12 +18,14 @@ I am writing the migration system I always wanted but does not exist (yet).
 - In-memory support
 - Database adoption
 - No checksums
+- Manifest instead of numbered or timestamped migration filenames
 - JSON schema for migration files
 
 ## Not Goals
 
+- ORM
 - Parsing SQL
-- Specifying some kinds of migrations in data (e.g. DML migrations)
+- Specifying all kinds of migrations in pure data (e.g. DML migrations will use SQL)
 - Preserving data lost from dropping tables and columns
 
 ## Rationale
@@ -37,6 +39,7 @@ I am writing the migration system I always wanted but does not exist (yet).
 - Separation of database and metadata allows for more flexible metadata storage options
 - In-memory database and metadata allow for application unit testing
 - No checksums allows for modifying migration files without breaking the migrations
+- Manifest files cause git merge conflicts when parallel development has collisions
 
 ## Roadmap
 
@@ -58,14 +61,14 @@ These are listed in rough priority order if you are interested in contributing.
       - ✅ STRING
       - ✅ DATE
       - ✅ DATETIME
-      - ➡️ TIME
+      - ✅ TIME
       - ✅ TIMESTAMP
       - ➡️ GEOGRAPHY
-      - ➡️ INTERVAL
-      - ➡️ JSON
-      - ➡️ NUMERIC
-      - ➡️ BIGNUMERIC
-      - ➡️ RANGE
+      - ✅ INTERVAL
+      - ✅ JSON
+      - ✅ NUMERIC
+      - ✅ BIGNUMERIC
+      - ✅ RANGE
       - ✅ ARRAY
       - ✅ STRUCT
       - ✅ PRIMARY KEY
@@ -76,10 +79,8 @@ These are listed in rough priority order if you are interested in contributing.
   - ✅ Rename Table
   - ✅ Set Table Partition Expiration
   - ✅ Set Table Clustering
-  - ➡️ Add Column
-    - ➡️ Work Around Big Query's Nullable Column Constraint
-  - ➡️ Drop Column
-    - ➡️ Work Around Big Query's Nullable Column Constraint
+  - ✅ Add Column
+  - ✅ Drop Column
   - ✅ Rename Column
   - ➡️ Alter Column
   - ➡️ Create View
@@ -136,7 +137,9 @@ operations:
         table_name: users
       columns:
       - name: id
-        data_type: INT64
+        data_type:
+          type: INT
+          bits: 64
       - name: name
         data_type: STRING
 ```

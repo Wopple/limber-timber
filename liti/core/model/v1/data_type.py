@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -29,12 +29,50 @@ class Float(DataType):
         return self.bits // 8
 
 
+class Numeric(DataType):
+    precision: int | None = None
+    scale: int | None = None
+
+    def model_post_init(self, _context: Any):
+        self.precision = self.precision or 38
+        self.scale = self.scale or 9
+
+        if not (0 <= self.scale <= 9):
+            raise ValueError(f'Scale must be between 0 and 9: {self.scale}')
+
+        if not (max(1, self.scale) <= self.precision <= self.scale + 29):
+            raise ValueError(f'Precision must be between {max(1, self.scale)} and {self.scale + 29}: {self.precision}')
+
+
+class BigNumeric(DataType):
+    precision: int | None = None
+    scale: int | None = None
+
+    def model_post_init(self, _context: Any):
+        self.precision = self.precision or 76
+        self.scale = self.scale or 38
+
+        if not (0 <= self.scale <= 38):
+            raise ValueError(f'Scale must be between 0 and 38: {self.scale}')
+
+        if not (max(1, self.scale) <= self.precision <= self.scale + 38):
+            raise ValueError(f'Precision must be between {max(1, self.scale)} and {self.scale + 38}: {self.precision}')
+
+
 class String(DataType):
     characters: int | None = None
     collate: str | None = None
 
 
+class Json(DataType):
+    pass
+
+
 class Date(DataType):
+    pass
+
+
+class Time(DataType):
     pass
 
 
@@ -43,6 +81,14 @@ class DateTime(DataType):
 
 
 class Timestamp(DataType):
+    pass
+
+
+class Range(DataType):
+    kind: Literal['DATE', 'DATETIME', 'TIMESTAMP']
+
+
+class Interval(DataType):
     pass
 
 
@@ -62,32 +108,42 @@ def parse_data_type(data: DataType | str | list[Any] | dict[str, Any]) -> DataTy
     # Already parsed
     if isinstance(data, DataType):
         return data
-    # Map string value to atomic type
+    # Map string value to nonparametric type
     elif isinstance(data, str):
         match data.upper():
             case 'BOOL' | 'BOOLEAN':
                 return BOOL
-            case 'INT64':
-                return INT64
-            case 'FLOAT64':
-                return FLOAT64
             case 'STRING':
                 return STRING
+            case 'JSON':
+                return JSON
             case 'DATE':
                 return DATE
+            case 'TIME':
+                return TIME
             case 'DATETIME':
                 return DATE_TIME
             case 'TIMESTAMP':
                 return TIMESTAMP
-    # Arrays are represented as a list with exactly one element representing the inner type
-    elif isinstance(data, list):
-        if len(data) == 1:
-            return Array(inner=parse_data_type(data[0]))
-        else:
-            raise ValueError(f'Array data type must have exactly one inner type: {data}')
-    # Structs are represented as a dict
+            case 'INTERVAL':
+                return INTERVAL
+    # Parse parametric type
     elif isinstance(data, dict):
-        return Struct(fields={k: parse_data_type(v) for k, v in data.items()})
+        match data['type']:
+            case 'INT':
+                return Int(bits=data['bits'])
+            case 'FLOAT':
+                return Float(bits=data['bits'])
+            case 'NUMERIC':
+                return Numeric(precision=data['precision'], scale=data['scale'])
+            case 'BIGNUMERIC':
+                return BigNumeric(precision=data['precision'], scale=data['scale'])
+            case 'RANGE':
+                return Range(kind=data['kind'])
+            case 'ARRAY':
+                return Array(inner=parse_data_type(data['inner']))
+            case 'STRUCT':
+                return Struct(fields={k: parse_data_type(v) for k, v in data['fields'].items()})
     else:
         raise ValueError(f'Cannot parse data type: {data}')
 
@@ -95,21 +151,56 @@ def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
     if isinstance(data, Bool):
         return 'BOOL'
     elif isinstance(data, Int):
-        return f'INT{data.bits}'
+        return {
+            'type': 'INT',
+            'bits': data.bits,
+        }
     elif isinstance(data, Float):
-        return f'FLOAT{data.bits}'
+        return {
+            'type': 'FLOAT',
+            'bits': data.bits,
+        }
+    elif isinstance(data, Numeric):
+        return {
+            'type': 'NUMERIC',
+            'precision': data.precision,
+            'scale': data.scale,
+        }
+    elif isinstance(data, BigNumeric):
+        return {
+            'type': 'BIGNUMERIC',
+            'precision': data.precision,
+            'scale': data.scale,
+        }
     elif isinstance(data, String):
         return 'STRING'
+    elif isinstance(data, Json):
+        return 'JSON'
     elif isinstance(data, Date):
         return 'DATE'
+    elif isinstance(data, Time):
+        return 'TIME'
     elif isinstance(data, DateTime):
         return 'DATETIME'
     elif isinstance(data, Timestamp):
         return 'TIMESTAMP'
+    elif isinstance(data, Interval):
+        return 'INTERVAL'
+    elif isinstance(data, Range):
+        return {
+            'type': 'RANGE',
+            'kind': data.kind,
+        }
     elif isinstance(data, Array):
-        return [serialize_data_type(data.inner)]
+        return {
+            'type': 'ARRAY',
+            'inner': serialize_data_type(data.inner),
+        }
     elif isinstance(data, Struct):
-        return {k: serialize_data_type(v) for k, v in data.fields.items()}
+        return {
+            'type': 'STRUCT',
+            'fields': {k: serialize_data_type(v) for k, v in data.fields.items()},
+        }
     else:
         raise ValueError(f'Cannot serialize data type: {data}')
 
@@ -118,6 +209,9 @@ BOOL = Bool()
 INT64 = Int(bits=64)
 FLOAT64 = Float(bits=64)
 STRING = String()
+JSON = Json()
 DATE = Date()
+TIME = Time()
 DATE_TIME = DateTime()
 TIMESTAMP = Timestamp()
+INTERVAL = Interval()

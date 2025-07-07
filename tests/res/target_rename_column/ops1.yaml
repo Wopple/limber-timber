@@ -9,10 +9,14 @@ operations:
         table_name: my_table_1
       columns:
       - name: col1
-        data_type: INT64
+        data_type:
+          type: INT
+          bits: 64
         nullable: false
       - name: col2
-        data_type: FLOAT64
+        data_type:
+          type: FLOAT
+          bits: 64
         nullable: true
       - name: col3
         data_type: STRING

@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from google.cloud.bigquery import DatasetReference, PartitionRange, QueryJobConfig, RangePartitioning, \
     ScalarQueryParameter, SchemaField, \
@@ -9,8 +10,12 @@ from google.cloud.bigquery.schema import _DEFAULT_VALUE
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.function import parse_operation
-from liti.core.model.v1.data_type import Array, BOOL, DataType, DATE, DATE_TIME, FLOAT64, INT64, STRING, Struct, \
-    TIMESTAMP
+from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, FLOAT64, INT64, INTERVAL, \
+    JSON, \
+    Numeric, \
+    Range, STRING, \
+    Struct, \
+    TIME, TIMESTAMP
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.schema import Column, ColumnName, Identifier, Table, TableName
 
@@ -24,22 +29,34 @@ REPEATED = 'REPEATED'
 def to_field_type(column: Column) -> str:
     data_type = column.data_type
 
-    if isinstance(data_type, Struct):
-        return 'RECORD'
-    elif data_type == BOOL:
-        return 'BOOLEAN'
+    if data_type == BOOL:
+        return 'BOOL'
     elif data_type == INT64:
         return 'INT64'
     elif data_type == FLOAT64:
         return 'FLOAT64'
+    elif isinstance(data_type, Numeric):
+        return f'NUMERIC({data_type.precision}, {data_type.scale})'
+    elif isinstance(data_type, BigNumeric):
+        return f'BIGNUMERIC({data_type.precision}, {data_type.scale})'
     elif data_type == STRING:
         return 'STRING'
+    elif data_type == JSON:
+        return 'JSON'
     elif data_type == DATE:
         return 'DATE'
+    elif data_type == TIME:
+        return 'TIME'
     elif data_type == DATE_TIME:
         return 'DATETIME'
     elif data_type == TIMESTAMP:
         return 'TIMESTAMP'
+    elif isinstance(data_type, Range):
+        return f'RANGE<{data_type.kind}>'
+    elif data_type == INTERVAL:
+        return 'INTERVAL'
+    elif isinstance(data_type, Struct):
+        return 'RECORD'
     else:
         raise ValueError(f'bigquery.field_type unrecognized data_type - {column}')
 
@@ -80,22 +97,49 @@ def to_schema_field(column: Column) -> SchemaField:
 def to_data_type(schema_field: SchemaField) -> DataType:
     field_type = schema_field.field_type
 
-    if field_type == 'RECORD':
-        return Struct(fields={f.name: to_data_type_array(f) for f in schema_field.fields})
-    elif field_type == 'BOOLEAN':
+    if field_type == 'BOOL':
         return BOOL
     elif field_type == 'INT64':
         return INT64
     elif field_type == 'FLOAT64':
         return FLOAT64
+    elif field_type.startswith('NUMERIC'):
+        matches = re.match(r'NUMERIC(?:\((\d+)(?:\s*,\s*(\d+))?\))?', field_type)
+
+        if matches.group(1) is None:
+            return Numeric()
+        elif matches.group(2) is None:
+            return Numeric(precision=int(matches.group(1)))
+        else:
+            return Numeric(precision=int(matches.group(1)), scale=int(matches.group(2)))
+    elif field_type.startswith('BIGNUMERIC'):
+        matches = re.match(r'BIGNUMERIC(?:\((\d+)(?:\s*,\s*(\d+))?\))?', field_type)
+
+        if matches.group(1) is None:
+            return BigNumeric()
+        elif matches.group(2) is None:
+            return BigNumeric(precision=int(matches.group(1)))
+        else:
+            return BigNumeric(precision=int(matches.group(1)), scale=int(matches.group(2)))
     elif field_type == 'STRING':
         return STRING
+    elif field_type == 'JSON':
+        return JSON
     elif field_type == 'DATE':
         return DATE
+    elif field_type == 'TIME':
+        return TIME
     elif field_type == 'DATETIME':
         return DATE_TIME
     elif field_type == 'TIMESTAMP':
         return TIMESTAMP
+    elif field_type.startswith('RANGE'):
+        matches = re.match(r'RANGE<(DATE|DATETIME|TIMESTAMP)>', field_type)
+        return Range(kind=matches.group(1))
+    elif field_type == 'INTERVAL':
+        return INTERVAL
+    elif field_type == 'RECORD':
+        return Struct(fields={f.name: to_data_type_array(f) for f in schema_field.fields})
     else:
         raise ValueError(f'bigquery.data_type unrecognized field_type - {schema_field}')
 
@@ -122,14 +166,26 @@ def data_type_to_sql(data_type: DataType) -> str:
         return 'INT64'
     elif data_type == FLOAT64:
         return 'FLOAT64'
+    elif isinstance(data_type, Numeric):
+        return f'NUMERIC({data_type.precision}, {data_type.scale})'
+    elif isinstance(data_type, BigNumeric):
+        return f'BIGNUMERIC({data_type.precision}, {data_type.scale})'
     elif data_type == STRING:
         return 'STRING'
+    elif data_type == JSON:
+        return 'JSON'
     elif data_type == DATE:
         return 'DATE'
+    elif data_type == TIME:
+        return 'TIME'
     elif data_type == DATE_TIME:
         return 'DATETIME'
     elif data_type == TIMESTAMP:
         return 'TIMESTAMP'
+    elif isinstance(data_type, Range):
+        return f'RANGE<{data_type.kind}>'
+    elif data_type == INTERVAL:
+        return 'INTERVAL'
     elif isinstance(data_type, Array):
         return f'ARRAY<{data_type_to_sql(data_type.inner)}>'
     elif isinstance(data_type, Struct):
