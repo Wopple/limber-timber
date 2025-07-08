@@ -61,10 +61,11 @@ def parse_json_or_yaml_file(path: Path) -> list | dict:
 
 
 def get_manifest_path(target_dir: Path) -> Path:
-    filenames = ['manifest.json', 'manifest.yaml', 'manifest.yml']
+    filenames = ('manifest.json', 'manifest.yaml', 'manifest.yml')
 
     for filename in filenames:
         candidate = target_dir.joinpath(filename)
+
         if candidate.is_file():
             return candidate
 

@@ -1,5 +1,6 @@
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
-from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, INT64, JSON, Numeric, Range, \
+from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
+    Numeric, Range, \
     STRING, \
     Struct, \
     TIME, TIMESTAMP
@@ -30,6 +31,7 @@ def test_all_data_types():
             Column(name=ColumnName('col_float_64'), data_type=FLOAT64),
             Column(name=ColumnName('col_int_64_bits'), data_type=INT64),
             Column(name=ColumnName('col_float_64_bits'), data_type=FLOAT64),
+            Column(name=ColumnName('col_geography'), data_type=GEOGRAPHY),
             Column(name=ColumnName('col_numeric'), data_type=Numeric(precision=38, scale=9)),
             Column(name=ColumnName('col_big_numeric'), data_type=BigNumeric(precision=76, scale=38)),
             Column(name=ColumnName('col_string'), data_type=STRING),

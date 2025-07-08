@@ -11,7 +11,8 @@ from google.cloud.bigquery.table import TableListItem
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.function import parse_operation
-from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, FLOAT64, INT64, INTERVAL, \
+from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, \
+    INTERVAL, \
     JSON, \
     Numeric, \
     Range, STRING, \
@@ -58,6 +59,8 @@ def to_field_type(data_type: DataType) -> str:
         return 'INT64'
     elif data_type == FLOAT64:
         return 'FLOAT64'
+    elif data_type == GEOGRAPHY:
+        return 'GEOGRAPHY'
     elif isinstance(data_type, Numeric):
         return 'NUMERIC'
     elif isinstance(data_type, BigNumeric):
@@ -158,6 +161,8 @@ def to_data_type(schema_field: SchemaField) -> DataType:
         return INT64
     elif field_type == 'FLOAT64':
         return FLOAT64
+    elif field_type == 'GEOGRAPHY':
+        return GEOGRAPHY
     elif field_type.startswith('NUMERIC'):
         matches = re.match(r'NUMERIC(?:\((\d+)(?:\s*,\s*(\d+))?\))?', field_type)
 
@@ -221,6 +226,8 @@ def data_type_to_sql(data_type: DataType) -> str:
         return 'INT64'
     elif data_type == FLOAT64:
         return 'FLOAT64'
+    elif data_type == GEOGRAPHY:
+        return 'GEOGRAPHY'
     elif isinstance(data_type, Numeric):
         return f'NUMERIC({data_type.precision}, {data_type.scale})'
     elif isinstance(data_type, BigNumeric):
@@ -309,6 +316,7 @@ class BigQueryDbBackend(DbBackend):
     def create_table(self, table: Table):
         bq_table = BqTable(table.name.string, [to_schema_field(c) for c in table.columns])
 
+        bq_table.labels
         if table.partitioning:
             if table.partitioning.kind == 'TIME':
                 bq_table.time_partitioning = TimePartitioning(

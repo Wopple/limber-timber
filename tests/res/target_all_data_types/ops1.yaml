@@ -22,6 +22,8 @@ operations:
         data_type:
           type: FLOAT
           bits: 64
+      - name: col_geography
+        data_type: GEOGRAPHY
       - name: col_numeric
         data_type:
           type: NUMERIC

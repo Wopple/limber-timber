@@ -5,6 +5,7 @@ from devtools import pformat
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.function import attach_ops, get_target_operations
+from liti.core.logger import NoOpLogger
 from liti.core.model.v1.operation.data.base import Operation
 
 log = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ class MigrateRunner:
         self,
         db_backend: DbBackend,
         meta_backend: MetaBackend,
-        target: str | list[Operation],  # either target dir or a list of the operations
+        target: str | list[Operation],  # either path to target dir or a list of the operations
     ):
         self.db_backend = db_backend
         self.meta_backend = meta_backend
@@ -27,6 +28,13 @@ class MigrateRunner:
         allow_down: bool = False,
         silent: bool = False,
     ):
+        """
+        :param wet_run: [False] True to run the migrations, False to simulate them
+        :param allow_down: [False] True to allow down migrations, False will raise if down migrations are required
+        :param silent: [False] True to suppress logging
+        """
+
+        logger = NoOpLogger() if silent else log
         target_operations: list[Operation] = self.get_target_operations()
 
         if wet_run:
@@ -48,8 +56,7 @@ class MigrateRunner:
                 up_ops = attach_ops(up_op)
 
                 if not up_ops.is_up(self.db_backend):
-                    if not silent:
-                        log.info(pformat(up_op))
+                    logger.info(pformat(up_op))
 
                     if wet_run:
                         up_ops.up(self.db_backend)
@@ -60,18 +67,11 @@ class MigrateRunner:
                     else:
                         self.meta_backend.unapply_operation(op)
 
-        if not silent:
-            log.info('Down')
-
+        logger.info('Down')
         apply_operations(migration_plan['down'], False)
-
-        if not silent:
-            log.info('Up')
-
+        logger.info('Up')
         apply_operations(migration_plan['up'], True)
-
-        if not silent:
-            log.info('Done')
+        logger.info('Done')
 
     def get_target_operations(self) -> list[Operation]:
         if isinstance(self.target, str):

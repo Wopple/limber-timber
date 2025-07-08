@@ -29,6 +29,10 @@ class Float(DataType):
         return self.bits // 8
 
 
+class Geography(DataType):
+    pass
+
+
 class Numeric(DataType):
     precision: int | None = None
     scale: int | None = None
@@ -122,6 +126,8 @@ def parse_data_type(data: DataType | str | dict[str, Any]) -> DataType:
                 return INT64
             case 'FLOAT64':
                 return FLOAT64
+            case 'GEOGRAPHY':
+                return GEOGRAPHY
             case 'STRING':
                 return STRING
             case 'JSON':
@@ -169,6 +175,8 @@ def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
             'type': 'FLOAT',
             'bits': data.bits,
         }
+    elif isinstance(data, Geography):
+        return 'GEOGRAPHY'
     elif isinstance(data, Numeric):
         return {
             'type': 'NUMERIC',
@@ -217,6 +225,7 @@ def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
 BOOL = Bool()
 INT64 = Int(bits=64)
 FLOAT64 = Float(bits=64)
+GEOGRAPHY = Geography()
 STRING = String()
 JSON = Json()
 DATE = Date()
