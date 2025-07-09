@@ -1,7 +1,7 @@
 from typing import ClassVar
 
-from pydantic import BaseModel
+from liti.core.base import LitiModel
 
 
-class Operation(BaseModel):
+class Operation(LitiModel):
     KIND: ClassVar[str]

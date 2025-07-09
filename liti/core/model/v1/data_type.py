@@ -1,11 +1,13 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
+
+from liti.core.base import LitiModel
 
 type FieldName = str
 
 
-class DataType(BaseModel):
+class DataType(LitiModel):
     pass
 
 
@@ -14,7 +16,10 @@ class Bool(DataType):
 
 
 class Int(DataType):
-    bits: int
+    bits: int | None = None
+
+    DEFAULT_METHOD = 'int_defaults'
+    VALIDATE_METHOD = 'validate_int'
 
     @property
     def bytes(self) -> int:
@@ -22,7 +27,10 @@ class Int(DataType):
 
 
 class Float(DataType):
-    bits: int
+    bits: int | None = None
+
+    DEFAULT_METHOD = 'float_defaults'
+    VALIDATE_METHOD = 'validate_float'
 
     @property
     def bytes(self) -> int:
@@ -37,30 +45,16 @@ class Numeric(DataType):
     precision: int | None = None
     scale: int | None = None
 
-    def model_post_init(self, _context: Any):
-        self.precision = self.precision or 38
-        self.scale = self.scale or 9
-
-        if not (0 <= self.scale <= 9):
-            raise ValueError(f'Scale must be between 0 and 9: {self.scale}')
-
-        if not (max(1, self.scale) <= self.precision <= self.scale + 29):
-            raise ValueError(f'Precision must be between {max(1, self.scale)} and {self.scale + 29}: {self.precision}')
+    DEFAULT_METHOD = 'numeric_defaults'
+    VALIDATE_METHOD = 'validate_numeric'
 
 
 class BigNumeric(DataType):
     precision: int | None = None
     scale: int | None = None
 
-    def model_post_init(self, _context: Any):
-        self.precision = self.precision or 76
-        self.scale = self.scale or 38
-
-        if not (0 <= self.scale <= 38):
-            raise ValueError(f'Scale must be between 0 and 38: {self.scale}')
-
-        if not (max(1, self.scale) <= self.precision <= self.scale + 38):
-            raise ValueError(f'Precision must be between {max(1, self.scale)} and {self.scale + 38}: {self.precision}')
+    DEFAULT_METHOD = 'big_numeric_defaults'
+    VALIDATE_METHOD = 'validate_big_numeric'
 
 
 class String(DataType):
@@ -104,9 +98,7 @@ class Interval(DataType):
 class Array(DataType):
     inner: DataType
 
-    def model_post_init(self, _context: Any):
-        if isinstance(self.inner, Array):
-            raise ValueError('Nested arrays are not allowed')
+    VALIDATE_METHOD = 'validate_array'
 
 
 class Struct(DataType):

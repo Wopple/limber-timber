@@ -11,7 +11,9 @@ from google.cloud.bigquery.table import TableListItem
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.function import parse_operation
-from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, \
+from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
+    Int, \
+    INT64, \
     INTERVAL, \
     JSON, \
     Numeric, \
@@ -316,7 +318,6 @@ class BigQueryDbBackend(DbBackend):
     def create_table(self, table: Table):
         bq_table = BqTable(table.name.string, [to_schema_field(c) for c in table.columns])
 
-        bq_table.labels
         if table.partitioning:
             if table.partitioning.kind == 'TIME':
                 bq_table.time_partitioning = TimePartitioning(
@@ -404,6 +405,76 @@ class BigQueryDbBackend(DbBackend):
         bq_table = self.client.get_table(to_table_ref(table_name))
         bq_table.clustering_fields = [c.string for c in columns] if columns else None
         self.client.update_table(bq_table, ['clustering_fields'])
+
+    def int_defaults(self, node: Int):
+        node.bits = node.bits or 64
+
+    def float_defaults(self, node: Float):
+        node.bits = node.bits or 64
+
+    def numeric_defaults(self, node: Numeric):
+        node.precision = node.precision or 38
+        node.scale = node.scale or 9
+
+    def big_numeric_defaults(self, node: BigNumeric):
+        node.precision = node.precision or 76
+        node.scale = node.scale or 38
+
+    def validate_int(self, node: Int):
+        if node.bits != 64:
+            raise ValueError(f'Int.bits must be 64: {node.bits}')
+
+    def validate_float(self, node: Float):
+        if node.bits != 64:
+            raise ValueError(f'Float.bits must be 64: {node.bits}')
+
+    def validate_numeric(self, node: Numeric):
+        if not (0 <= node.scale <= 9):
+            raise ValueError(f'Numeric.scale must be between 0 and 9: {node.scale}')
+
+        if not (max(1, node.scale) <= node.precision <= node.scale + 29):
+            raise ValueError(f'Numeric.precision must be between {max(1, node.scale)} and {node.scale + 29}: {node.precision}')
+
+    def validate_big_numeric(self, node: BigNumeric):
+        if not (0 <= node.scale <= 38):
+            raise ValueError(f'Scale must be between 0 and 38: {node.scale}')
+
+        if not (max(1, node.scale) <= node.precision <= node.scale + 38):
+            raise ValueError(f'Precision must be between {max(1, node.scale)} and {node.scale + 38}: {node.precision}')
+
+    def validate_array(self, node: Array):
+        if isinstance(node.inner, Array):
+            raise ValueError('Nested arrays are not allowed')
+
+    def validate_partitioning(self, node: Partitioning):
+        if node.kind == 'TIME':
+            required = ['kind', 'time_unit', 'expiration_ms', 'require_filter']
+            allowed = required + ['column']
+        elif node.kind == 'INT':
+            required = ['kind', 'column', 'int_start', 'int_end', 'int_step', 'expiration_ms', 'require_filter']
+            allowed = required
+        else:
+            raise ValueError(f'Invalid partitioning kind: {node.kind}')
+
+        missing = [
+            field_name
+            for field_name in required
+            if getattr(node, field_name) is None
+        ]
+
+        present = [
+            field_name
+            for field_name in Partitioning.model_fields.keys()
+            if field_name not in allowed and getattr(node, field_name) is not None
+        ]
+
+        errors = [
+            *[f'Missing required field for {node.kind}: {field_name}' for field_name in missing],
+            *[f'Disallowed field present for {node.kind}: {field_name}' for field_name in present],
+        ]
+
+        if errors:
+            raise ValueError('\n'.join(errors))
 
 
 class BigQueryMetaBackend(MetaBackend):

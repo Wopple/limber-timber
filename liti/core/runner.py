@@ -37,6 +37,10 @@ class MigrateRunner:
         logger = NoOpLogger() if silent else log
         target_operations: list[Operation] = self.get_target_operations()
 
+        for op in target_operations:
+            op.set_defaults(self.db_backend)
+            op.liti_validate(self.db_backend)
+
         if wet_run:
             self.meta_backend.initialize()
 

@@ -1,8 +1,9 @@
 from string import ascii_letters, digits
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, field_serializer, field_validator, model_validator
+from pydantic import field_serializer, field_validator, model_validator
 
+from liti.core.base import LitiModel
 from liti.core.model.v1.data_type import DataType, parse_data_type, serialize_data_type
 
 DATABASE_CHARS = set(ascii_letters + digits + '_-')
@@ -15,9 +16,7 @@ type RoundingMode = Literal[
 ]
 
 
-class DatabaseName(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
+class DatabaseName(LitiModel):
     string: str
 
     def __init__(self, string: str | None = None, **kwargs):
@@ -26,6 +25,9 @@ class DatabaseName(BaseModel):
             super().__init__(**kwargs)
         else:
             super().__init__(string=string)
+
+    def __hash__(self):
+        return hash((self.__class__.__name__, self.string))
 
     def __str__(self) -> str:
         return self.string
@@ -43,9 +45,7 @@ class DatabaseName(BaseModel):
             return data
 
 
-class Identifier(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
+class Identifier(LitiModel):
     string: str
 
     def __init__(self, string: str | None = None, **kwargs):
@@ -54,6 +54,9 @@ class Identifier(BaseModel):
             super().__init__(**kwargs)
         else:
             super().__init__(string=string)
+
+    def __hash__(self):
+        return hash((self.__class__.__name__, self.string))
 
     def __str__(self) -> str:
         return self.string
@@ -81,10 +84,7 @@ class ColumnName(Identifier):
         super().__init__(string, **kwargs)
 
 
-class TableName(BaseModel):
-    # Make hashable to use as a key
-    model_config = ConfigDict(frozen=True)
-
+class TableName(LitiModel):
     database: DatabaseName
     schema_name: SchemaName
     table_name: Identifier
@@ -102,6 +102,9 @@ class TableName(BaseModel):
                 schema_name=schema_name,
                 table_name=table_name,
             )
+
+    def __hash__(self):
+        return hash((self.__class__.__name__, self.database, self.schema_name, self.table_name))
 
     def __str__(self) -> str:
         return self.string
@@ -138,12 +141,12 @@ class TableName(BaseModel):
         )
 
 
-class ForeignKey(BaseModel):
+class ForeignKey(LitiModel):
     table_name: TableName
     column_name: ColumnName
 
 
-class ColumnOptions(BaseModel):
+class ColumnOptions(LitiModel):
     description: str | None = None
     rounding_mode: RoundingMode | None = None
 
@@ -153,7 +156,7 @@ class ColumnOptions(BaseModel):
         return value and value.upper()
 
 
-class Column(BaseModel):
+class Column(LitiModel):
     name: ColumnName
     data_type: DataType
     primary_key: bool = False
@@ -178,7 +181,7 @@ class Column(BaseModel):
         return self.model_copy(update={'name': name})
 
 
-class Partitioning(BaseModel):
+class Partitioning(LitiModel):
     kind: Literal['TIME', 'INT']
     column: ColumnName | None = None
     time_unit: Literal['YEAR', 'MONTH', 'DAY', 'HOUR'] | None = None
@@ -188,35 +191,7 @@ class Partitioning(BaseModel):
     expiration_ms: int | None = None
     require_filter: bool = False
 
-    def model_post_init(self, _context: Any):
-        if self.kind == 'TIME':
-            required = ['kind', 'time_unit', 'expiration_ms', 'require_filter']
-            allowed = required + ['column']
-        elif self.kind == 'INT':
-            required = ['kind', 'column', 'int_start', 'int_end', 'int_step', 'expiration_ms', 'require_filter']
-            allowed = required
-        else:
-            raise ValueError(f'Invalid partitioning kind: {self.kind}')
-
-        missing = [
-            field_name
-            for field_name in required
-            if getattr(self, field_name) is None
-        ]
-
-        present = [
-            field_name
-            for field_name in Partitioning.model_fields.keys()
-            if field_name not in allowed and getattr(self, field_name) is not None
-        ]
-
-        errors = [
-            *[f'Missing required field for {self.kind}: {field_name}' for field_name in missing],
-            *[f'Disallowed field present for {self.kind}: {field_name}' for field_name in present],
-        ]
-
-        if errors:
-            raise ValueError('\n'.join(errors))
+    VALIDATE_METHOD = 'validate_partitioning'
 
     @field_validator('kind', mode='before')
     @classmethod
@@ -229,7 +204,7 @@ class Partitioning(BaseModel):
         return value and value.upper()
 
 
-class Table(BaseModel):
+class Table(LitiModel):
     name: TableName
     columns: list[Column]
     partitioning: Partitioning | None = None

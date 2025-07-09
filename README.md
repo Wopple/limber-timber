@@ -67,10 +67,12 @@ These are listed in rough priority order if you are interested in contributing.
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table
   - ➡️ Create Table Clone
+  - ➡️ Labels
+  - ➡️ Options
 - ✅ Big Query Metadata
 - ➡️ Database Adoption
 - ➡️ JSON Schema
-- ➡️ Database Specific Validation
+- ✅ Database Specific Validation
 - ➡️ Arbitrary DML SQL Migrations
 - ➡️ File System Metadata
 - ➡️ SQLite Database

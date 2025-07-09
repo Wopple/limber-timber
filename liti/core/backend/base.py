@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 
+from liti.core.base import Defaulter, Validator
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, SchemaName, Table, TableName
 
 
-class DbBackend(ABC):
+class DbBackend(ABC, Defaulter, Validator):
     """ DB backends make changes to and read the state of the database """
 
     @abstractmethod
