@@ -1,30 +1,30 @@
 [tool.poetry]
-name = "limber-timber"
-version = "0.1.0"
-description = ""
-authors = ["Daniel Tashjian <thewopple@gmail.com>"]
-readme = "README.md"
+name = 'limber-timber'
+version = '0.1.0'
+description = ''
+authors = ['Daniel Tashjian <thewopple@gmail.com>']
+readme = 'README.md'
 packages = [
-    { include = "liti" },
+    { include = 'liti' },
 ]
 
 [tool.poetry.scripts]
-liti = "liti.cli:main"
+liti = 'liti.cli:main'
 
 [tool.poetry.dependencies]
-python = "3.12.2"
-google-cloud-bigquery = "3.34.0"
-pydantic = "2.11.4"
-pyyaml = "6.0.2"
-devtools = "0.12.2"
+python = '3.12.2'
+google-cloud-bigquery = '3.34.0'
+pydantic = '2.11.4'
+pyyaml = '6.0.2'
+devtools = '0.12.2'
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.5"
+pytest = '^8.3.5'
 
 [tool.pytest.ini_options]
-pythonpath = "liti"
-testpaths = "tests"
+pythonpath = 'liti'
+testpaths = 'tests'
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ['poetry-core']
+build-backend = 'poetry.core.masonry.api'

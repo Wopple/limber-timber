@@ -50,7 +50,7 @@ class DbBackend(ABC, Defaulter, Validator):
         pass
 
     def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
-        raise NotImplementedError("not supported")
+        raise NotImplementedError('not supported')
 
 
 class MetaBackend(ABC):

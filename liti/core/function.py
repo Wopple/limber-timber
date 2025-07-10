@@ -79,7 +79,7 @@ def parse_manifest(path: Path) -> list[Path]:
 
 def parse_operation_file(path: Path) -> list[Operation]:
     obj = parse_json_or_yaml_file(path)
-    return [parse_operation(op['kind'], op['data']) for op in obj["operations"]]
+    return [parse_operation(op['kind'], op['data']) for op in obj['operations']]
 
 
 def get_target_operations(target_dir: Path) -> list[Operation]:

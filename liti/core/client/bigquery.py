@@ -46,7 +46,7 @@ class BqClient:
         return self.client.query_and_wait(sql, job_config=job_config)
 
     def has_table(self, table_ref: TableReference) -> bool:
-        for table_item in self.client.list_tables(f"{table_ref.project}.{table_ref.dataset_id}"):
+        for table_item in self.client.list_tables(f'{table_ref.project}.{table_ref.dataset_id}'):
             if table_item.table_id == table_ref.table_id:
                 return True
 

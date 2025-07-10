@@ -105,6 +105,19 @@ class Struct(DataType):
     fields: dict[FieldName, DataType]
 
 
+BOOL = Bool()
+INT64 = Int(bits=64)
+FLOAT64 = Float(bits=64)
+GEOGRAPHY = Geography()
+STRING = String()
+JSON = Json()
+DATE = Date()
+TIME = Time()
+DATE_TIME = DateTime()
+TIMESTAMP = Timestamp()
+INTERVAL = Interval()
+
+
 def parse_data_type(data: DataType | str | dict[str, Any]) -> DataType:
     # Already parsed
     if isinstance(data, DataType):
@@ -153,6 +166,7 @@ def parse_data_type(data: DataType | str | dict[str, Any]) -> DataType:
                 return Struct(fields={k: parse_data_type(v) for k, v in data['fields'].items()})
     else:
         raise ValueError(f'Cannot parse data type: {data}')
+
 
 def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
     if isinstance(data, Bool):
@@ -214,14 +228,35 @@ def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
         raise ValueError(f'Cannot serialize data type: {data}')
 
 
-BOOL = Bool()
-INT64 = Int(bits=64)
-FLOAT64 = Float(bits=64)
-GEOGRAPHY = Geography()
-STRING = String()
-JSON = Json()
-DATE = Date()
-TIME = Time()
-DATE_TIME = DateTime()
-TIMESTAMP = Timestamp()
-INTERVAL = Interval()
+__all__ = [
+    'DataType',
+    'Bool',
+    'Int',
+    'Float',
+    'Geography',
+    'Numeric',
+    'BigNumeric',
+    'String',
+    'Json',
+    'Date',
+    'Time',
+    'DateTime',
+    'Timestamp',
+    'Range',
+    'Interval',
+    'Array',
+    'Struct',
+    'BOOL',
+    'INT64',
+    'FLOAT64',
+    'GEOGRAPHY',
+    'STRING',
+    'JSON',
+    'DATE',
+    'TIME',
+    'DATE_TIME',
+    'TIMESTAMP',
+    'INTERVAL',
+    'parse_data_type',
+    'serialize_data_type',
+]
