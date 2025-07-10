@@ -1,5 +1,5 @@
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
-from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
+from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
     Numeric, Range, \
     STRING, \
     Struct, \

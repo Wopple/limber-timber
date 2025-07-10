@@ -1,11 +1,11 @@
-from typing import Any, Callable, ClassVar, Self, TYPE_CHECKING
+from typing import Any, ClassVar, TYPE_CHECKING
 
 from pydantic import BaseModel
 
 # avoid circular import errors by delaying the import of model types
 # which need to use types from this file
 if TYPE_CHECKING:
-    from liti.core.model.v1.data_type import Array, BigNumeric, Float, Int, Numeric
+    from liti.core.model.v1.datatype import Array, BigNumeric, Float, Int, Numeric
     from liti.core.model.v1.schema import Partitioning
 
 

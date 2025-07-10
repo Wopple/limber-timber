@@ -4,7 +4,7 @@ from typing import Any, Literal, Self
 from pydantic import field_serializer, field_validator, model_validator
 
 from liti.core.base import LitiModel
-from liti.core.model.v1.data_type import DataType, parse_data_type, serialize_data_type
+from liti.core.model.v1.datatype import DataType, parse_data_type, serialize_data_type
 
 DATABASE_CHARS = set(ascii_letters + digits + '_-')
 IDENTIFIER_CHARS = set(ascii_letters + digits + '_')

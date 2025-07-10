@@ -4,7 +4,11 @@ from unittest.mock import Mock
 from pytest import fixture, mark, raises
 
 from liti.core.backend.bigquery import BigQueryDbBackend
-from liti.core.model.v1.data_type import *
+from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
+    Int, INT64, \
+    INTERVAL, JSON, \
+    Numeric, \
+    Range, STRING, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.schema import Partitioning
 from util import NoRaise
 

@@ -1,12 +1,16 @@
+import json
 import logging
 from pathlib import Path
+from typing import Literal
 
+import yaml
 from devtools import pformat
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.function import attach_ops, get_target_operations
 from liti.core.logger import NoOpLogger
 from liti.core.model.v1.operation.data.base import Operation
+from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, TableName
 
 log = logging.getLogger(__name__)
 
@@ -82,3 +86,59 @@ class MigrateRunner:
             return get_target_operations(Path(self.target))
         else:
             return self.target
+
+
+class ScanRunner:
+    def __init__(self, db_backend: DbBackend):
+        self.db_backend = db_backend
+
+    def run(
+        self,
+        database: DatabaseName,
+        schema: SchemaName,
+        table: Identifier | None = None,
+        format: Literal['json', 'yaml'] = 'yaml',
+    ):
+        """
+        :param database: database to scan
+        :param schema: schema to scan
+        :param table: [None] None scans the whole schema, otherwise scans only the provided table
+        :param format: ['yaml'] the format to use when printing the operations
+        """
+
+        database.set_defaults(self.db_backend)
+        database.liti_validate(self.db_backend)
+
+        schema.set_defaults(self.db_backend)
+        schema.liti_validate(self.db_backend)
+
+        if table:
+            table.set_defaults(self.db_backend)
+            table.liti_validate(self.db_backend)
+
+            create_table = self.db_backend.scan_table(TableName(
+                database=database,
+                schema_name=schema,
+                table_name=table,
+            ))
+
+            if create_table is None:
+                raise RuntimeError(f'Table not found: {database}.{schema}.{table}')
+
+            operations = [create_table]
+        else:
+            operations = self.db_backend.scan_schema(database, schema)
+
+        op_data = [op.to_op_data(format=format) for op in operations]
+
+        file_data = {
+            'version': 1,
+            'operations': op_data,
+        }
+
+        if format == 'json':
+            print(json.dumps(file_data, indent=4, sort_keys=False))
+        elif format == 'yaml':
+            print(yaml.dump(file_data, indent=2, sort_keys=False))
+        else:
+            raise ValueError(f'Unsupported format: {format}')

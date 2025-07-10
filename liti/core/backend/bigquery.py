@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 
 from google.cloud.bigquery import DatasetReference, PartitionRange, QueryJobConfig, RangePartitioning, \
     ScalarQueryParameter, SchemaField, \
@@ -11,7 +10,7 @@ from google.cloud.bigquery.table import TableListItem
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.function import parse_operation
-from liti.core.model.v1.data_type import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
+from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, \
     INT64, \
     INTERVAL, \
@@ -157,32 +156,24 @@ def to_schema_field(column: Column) -> SchemaField:
 def to_data_type(schema_field: SchemaField) -> DataType:
     field_type = schema_field.field_type
 
-    if field_type == 'BOOL':
+    if field_type in ('BOOL', 'BOOLEAN'):
         return BOOL
-    elif field_type == 'INT64':
+    elif field_type in ('INT64', 'INTEGER'):
         return INT64
-    elif field_type == 'FLOAT64':
+    elif field_type in ('FLOAT64', 'FLOAT'):
         return FLOAT64
     elif field_type == 'GEOGRAPHY':
         return GEOGRAPHY
-    elif field_type.startswith('NUMERIC'):
-        matches = re.match(r'NUMERIC(?:\((\d+)(?:\s*,\s*(\d+))?\))?', field_type)
-
-        if matches.group(1) is None:
-            return Numeric()
-        elif matches.group(2) is None:
-            return Numeric(precision=int(matches.group(1)))
-        else:
-            return Numeric(precision=int(matches.group(1)), scale=int(matches.group(2)))
-    elif field_type.startswith('BIGNUMERIC'):
-        matches = re.match(r'BIGNUMERIC(?:\((\d+)(?:\s*,\s*(\d+))?\))?', field_type)
-
-        if matches.group(1) is None:
-            return BigNumeric()
-        elif matches.group(2) is None:
-            return BigNumeric(precision=int(matches.group(1)))
-        else:
-            return BigNumeric(precision=int(matches.group(1)), scale=int(matches.group(2)))
+    elif field_type == 'NUMERIC':
+        return Numeric(
+            precision=schema_field.precision,
+            scale=schema_field.scale,
+        )
+    elif field_type == 'BIGNUMERIC':
+        return BigNumeric(
+            precision=schema_field.precision,
+            scale=schema_field.scale,
+        )
     elif field_type == 'STRING':
         return STRING
     elif field_type == 'JSON':
@@ -195,9 +186,8 @@ def to_data_type(schema_field: SchemaField) -> DataType:
         return DATE_TIME
     elif field_type == 'TIMESTAMP':
         return TIMESTAMP
-    elif field_type.startswith('RANGE'):
-        matches = re.match(r'RANGE<(DATE|DATETIME|TIMESTAMP)>', field_type)
-        return Range(kind=matches.group(1))
+    elif field_type == 'RANGE':
+        return Range(kind=schema_field.range_element_type.element_type)
     elif field_type == 'INTERVAL':
         return INTERVAL
     elif field_type == 'RECORD':
@@ -303,8 +293,7 @@ class BigQueryDbBackend(DbBackend):
 
     def scan_table(self, name: TableName) -> CreateTable | None:
         if self.has_table(name):
-            bq_table = self.get_table(name)
-            return CreateTable(table=to_table(bq_table))
+            return CreateTable(table=self.get_table(name))
         else:
             return None
 
@@ -313,7 +302,7 @@ class BigQueryDbBackend(DbBackend):
 
     def get_table(self, name: TableName) -> Table | None:
         bq_table = self.client.get_table(to_table_ref(name))
-        return bq_table and Table(name=name, columns=[to_column(field) for field in bq_table.schema])
+        return bq_table and to_table(bq_table)
 
     def create_table(self, table: Table):
         bq_table = BqTable(table.name.string, [to_schema_field(c) for c in table.columns])

@@ -1,5 +1,5 @@
 from liti.core.backend.memory import MemoryMetaBackend
-from liti.core.model.v1.data_type import INT64
+from liti.core.model.v1.datatype import INT64
 from liti.core.model.v1.operation.data.table import CreateTable, DropTable
 from liti.core.model.v1.schema import Column, Table, TableName
 
