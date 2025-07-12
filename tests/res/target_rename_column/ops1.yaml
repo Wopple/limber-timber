@@ -6,21 +6,15 @@ operations:
       name:
         database: my_project
         schema_name: my_dataset
-        table_name: my_table_1
+        table_name: revert_table
       columns:
-      - name: col1
-        data_type: INT64
-        nullable: false
-      - name: col2
-        data_type: FLOAT64
-        nullable: true
-      - name: col3
-        data_type: STRING
+      - name: col_bool
+        data_type: BOOL
 - kind: rename_column
   data:
     table_name:
       database: my_project
       schema_name: my_dataset
-      table_name: my_table_1
-    from_name: col3
-    to_name: col4
+      table_name: revert_table
+    from_name: col_bool
+    to_name: col_renamed

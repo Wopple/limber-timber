@@ -1,0 +1,134 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: revert_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: all_pos_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      max_staleness:
+        year: 2000
+        month: 1
+        day: 2
+        hour: 3
+        minute: 4
+        second: 5
+        microsecond: 6
+        sign: '+'
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: all_neg_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      max_staleness:
+        year: 2000
+        month: 1
+        day: 2
+        hour: 3
+        minute: 4
+        second: 5
+        microsecond: 6
+        sign: '-'
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: only_year_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      max_staleness:
+        year: 2000
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: only_month_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      max_staleness:
+        month: 1
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: only_day_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      max_staleness:
+        day: 2
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: only_hour_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      max_staleness:
+        hour: 3
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: only_minute_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      max_staleness:
+        minute: 4
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: only_second_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      max_staleness:
+        second: 5
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: only_microsecond_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      max_staleness:
+        microsecond: 6

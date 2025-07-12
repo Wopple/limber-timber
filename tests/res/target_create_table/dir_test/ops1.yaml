@@ -6,26 +6,38 @@ operations:
       name:
         database: my_project
         schema_name: my_dataset
-        table_name: my_table_1
+        table_name: revert_table
       columns:
-      - name: col1
-        data_type: INT64
-        nullable: false
-      - name: col2
-        data_type: FLOAT64
-        nullable: true
-      - name: col3
-        data_type: STRING
+      - name: col_bool
+        data_type: BOOL
 - kind: create_table
   data:
     table:
       name:
         database: my_project
         schema_name: my_dataset
-        table_name: my_table_2
+        table_name: create_table
       columns:
       - name: col1
         data_type: BOOL
         nullable: false
       - name: col2
         data_type: BOOLEAN
+      clustering:
+      - col2
+      - col1
+      friendly_name: my_friendly_name
+      description: "My description"
+      labels:
+        key_1: value_1
+        key_2: value_2
+      tags:
+        key_3: value_3
+        key_4: value_4
+      expiration_timestamp: "2000-01-02 03:04:05"
+      enable_change_history: true
+      enable_fine_grained_mutations: true
+      kms_key_name: my/kms/key/name
+      storage_uri: https://my.storage/uri
+      file_format: PARQUET
+      table_format: ICEBERG

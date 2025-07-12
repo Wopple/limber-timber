@@ -6,7 +6,17 @@ operations:
       name:
         database: my_project
         schema_name: my_dataset
-        table_name: my_table_1
+        table_name: revert_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: data_types_table
       columns:
       - name: col_bool
         data_type: BOOL

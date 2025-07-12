@@ -1,3 +1,4 @@
+from datetime import datetime
 from string import ascii_letters, digits
 from typing import Any, Literal, Self
 
@@ -14,6 +15,23 @@ type RoundingMode = Literal[
     'ROUND_HALF_AWAY_FROM_ZERO',
     'ROUND_HALF_EVEN',
 ]
+
+
+class IntervalLiteral(LitiModel):
+    year: int = 0
+    month: int = 0
+    day: int = 0
+    hour: int = 0
+    minute: int = 0
+    second: int = 0
+    microsecond: int = 0
+    sign: Literal['+', '-'] = '+'
+
+    def __str__(self):
+        date_part = f'{self.sign}{self.year}-{self.month} {self.sign}{self.day}'
+        time_part = f'{self.sign}{self.hour}:{self.minute}:{self.second}'
+        micro_part = f'.{self.microsecond}' if self.microsecond else ''
+        return f'INTERVAL "{date_part + time_part + micro_part}"'
 
 
 class DatabaseName(LitiModel):
@@ -146,16 +164,6 @@ class ForeignKey(LitiModel):
     column_name: ColumnName
 
 
-class ColumnOptions(LitiModel):
-    description: str | None = None
-    rounding_mode: RoundingMode | None = None
-
-    @field_validator('rounding_mode', mode='before')
-    @classmethod
-    def validate_rounding_mode(cls, value: str | None) -> str | None:
-        return value and value.upper()
-
-
 class Column(LitiModel):
     name: ColumnName
     data_type: DataType
@@ -165,7 +173,8 @@ class Column(LitiModel):
     foreign_enforced: bool = False
     default_expression: str | None = None
     nullable: bool = False
-    options: ColumnOptions | None = None
+    description: str | None = None
+    rounding_mode: RoundingMode | None = None
 
     @field_validator('data_type', mode='before')
     @classmethod
@@ -176,6 +185,11 @@ class Column(LitiModel):
     @classmethod
     def serialize_data_type(cls, value: DataType) -> str | dict[str, Any]:
         return serialize_data_type(value)
+
+    @field_validator('rounding_mode', mode='before')
+    @classmethod
+    def validate_upper(cls, value: str | None) -> str | None:
+        return value and value.upper()
 
     def with_name(self, name: ColumnName) -> Self:
         return self.model_copy(update={'name': name})
@@ -188,19 +202,15 @@ class Partitioning(LitiModel):
     int_start: int | None = None
     int_end: int | None = None
     int_step: int | None = None
-    expiration_ms: int | None = None
+    expiration_days: float | None = None
     require_filter: bool = False
 
+    DEFAULT_METHOD = 'partitioning_defaults'
     VALIDATE_METHOD = 'validate_partitioning'
 
-    @field_validator('kind', mode='before')
+    @field_validator('kind', 'time_unit', mode='before')
     @classmethod
-    def validate_kind(cls, value: str | None) -> str | None:
-        return value and value.upper()
-
-    @field_validator('time_unit', mode='before')
-    @classmethod
-    def validate_time_unit(cls, value: str | None) -> str | None:
+    def validate_upper(cls, value: str | None) -> str | None:
         return value and value.upper()
 
 
@@ -209,6 +219,26 @@ class Table(LitiModel):
     columns: list[Column]
     partitioning: Partitioning | None = None
     clustering: list[ColumnName] | None = None
+    friendly_name: str | None = None
+    description: str | None = None
+    labels: dict[str, str] | None = None
+    tags: dict[str, str] | None = None
+    expiration_timestamp: datetime | None = None
+    default_rounding_mode: RoundingMode | None = None
+    max_staleness: IntervalLiteral | None = None
+    enable_change_history: bool | None = None
+    enable_fine_grained_mutations: bool | None = None
+    kms_key_name: str | None = None
+    storage_uri: str | None = None
+    file_format: Literal['PARQUET'] | None = None
+    table_format: Literal['ICEBERG'] | None = None
+
+    DEFAULT_METHOD = 'table_defaults'
+
+    @field_validator('default_rounding_mode', 'file_format', 'table_format', mode='before')
+    @classmethod
+    def validate_upper(cls, value: str | None) -> str | None:
+        return value and value.upper()
 
     @property
     def column_map(self) -> dict[ColumnName, Column]:

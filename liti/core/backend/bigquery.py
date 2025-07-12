@@ -1,7 +1,9 @@
 import json
 import logging
+from datetime import datetime, timezone
 
-from google.cloud.bigquery import DatasetReference, PartitionRange, QueryJobConfig, RangePartitioning, \
+from google.cloud.bigquery import DatasetReference, EncryptionConfiguration, PartitionRange, QueryJobConfig, \
+    RangePartitioning, \
     ScalarQueryParameter, SchemaField, \
     Table as BqTable, TableReference, TimePartitioning
 from google.cloud.bigquery.schema import _DEFAULT_VALUE
@@ -10,7 +12,9 @@ from google.cloud.bigquery.table import TableListItem
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.function import parse_operation
-from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
+from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE, Date, DATE_TIME, DateTime, Float, \
+    FLOAT64, \
+    GEOGRAPHY, \
     Int, \
     INT64, \
     INTERVAL, \
@@ -18,7 +22,7 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE,
     Numeric, \
     Range, STRING, \
     Struct, \
-    TIME, TIMESTAMP
+    TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, Partitioning, SchemaName, Table, \
@@ -248,13 +252,57 @@ def data_type_to_sql(data_type: DataType) -> str:
         raise ValueError(f'bigquery.data_type_to_sql unrecognized data_type - {data_type}')
 
 
+def column_to_sql(column: Column) -> str:
+    column_schema_parts = []
+
+    if column.primary_key:
+        if column.primary_enforced:
+            # TODO? update this if Big Query ever supports enforcement
+            log.warning('Not enforcing primary key since Big Query does not support enforcement')
+            column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
+        else:
+            column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
+
+    if column.foreign_key:
+        table_name = column.foreign_key.table_name
+        column_name = column.foreign_key.column_name
+
+        if column.foreign_enforced:
+            # TODO? update this if Big Query ever supports enforcement
+            log.warning('Not enforcing foreign key since Big Query does not support enforcement')
+            column_schema_parts.append(f'REFERENCES {table_name}({column_name}) NOT ENFORCED')
+        else:
+            column_schema_parts.append(f'REFERENCES {table_name}({column_name}) NOT ENFORCED')
+
+    if column.default_expression:
+        column_schema_parts.append(f'DEFAULT {column.default_expression}')
+
+    if not column.nullable:
+        # TODO: work around this limitation with: create table > drop table > rename table
+        log.warning('Adding column as nullable since Big Query does not support adding non-nullable columns')
+
+    option_parts = []
+
+    if column.description:
+        option_parts.append(f'description = "{column.description}"')
+
+    if column.rounding_mode:
+        option_parts.append(f'rounding_mode = "{column.rounding_mode}"')
+
+    if option_parts:
+        column_schema_parts.append(f'OPTIONS({", ".join(option_parts)})')
+
+    return f'`{column.name}` {data_type_to_sql(column.data_type)} {" ".join(column_schema_parts)}'
+
+
 def to_table(table: BqTable) -> Table:
     if table.time_partitioning:
+        time_partition = table.time_partitioning
         partitioning = Partitioning(
             kind='TIME',
-            column=ColumnName(table.time_partitioning.field),
-            time_unit=table.time_partitioning.type_,
-            expiration_ms=table.time_partitioning.expiration_ms,
+            column=ColumnName(time_partition.field),
+            time_unit=time_partition.type_,
+            expiration_days=time_partition.expiration_ms and time_partition.expiration_ms / (1000 * 60 * 60 * 24),
             require_filter=table.require_partition_filter,
         )
     elif table.range_partitioning:
@@ -305,30 +353,101 @@ class BigQueryDbBackend(DbBackend):
         return bq_table and to_table(bq_table)
 
     def create_table(self, table: Table):
-        bq_table = BqTable(table.name.string, [to_schema_field(c) for c in table.columns])
+        column_sqls = [column_to_sql(column) for column in table.columns]
 
         if table.partitioning:
-            if table.partitioning.kind == 'TIME':
-                bq_table.time_partitioning = TimePartitioning(
-                    type_=table.partitioning.time_unit,
-                    field=table.partitioning.column.string if table.partitioning.column else None,
-                    expiration_ms=table.partitioning.expiration_ms,
-                    require_partition_filter=table.partitioning.require_filter,
-                )
+            partitioning = table.partitioning
+            column = partitioning.column
+
+            if partitioning.kind == 'TIME':
+                if column:
+                    data_type = table.column_map[column.string].data_type
+
+                    if isinstance(data_type, Date):
+                        partition_sql = f'PARTITION BY DATETIME_TRUNC(`{column}`, {partitioning.time_unit})\n'
+                    elif isinstance(data_type, DateTime):
+                        partition_sql = f'PARTITION BY TIMESTAMP_TRUNC(`{column}`, {partitioning.time_unit})\n'
+                    elif isinstance(data_type, Timestamp):
+                        partition_sql = f'PARTITION BY `{column}`\n'
+                    else:
+                        raise ValueError(f'Unsupported partitioning column data type: {data_type}')
+                else:
+                    partition_sql = f'PARTITION BY TIMESTAMP_TRUNC(_PARTITIONTIME, {partitioning.time_unit})\n'
             elif table.partitioning.kind == 'INT':
-                bq_table.range_partitioning = RangePartitioning(
-                    range_=PartitionRange(
-                        start=table.partitioning.int_start,
-                        end=table.partitioning.int_end,
-                        interval=table.partitioning.int_step,
-                    ),
-                    field=table.partitioning.column.string,
-                )
+                start = partitioning.int_start
+                end = partitioning.int_end
+                step = partitioning.int_step
+                partition_sql = f'PARTITION BY RANGE_BUCKET(`{column}`, GENERATE_ARRAY({start}, {end}, {step}))\n'
             else:
                 raise ValueError(f'Unsupported partitioning type: {table.partitioning.kind}')
+        else:
+            partition_sql = ''
 
-        bq_table.clustering_fields = [c.string for c in table.clustering] if table.clustering else None
-        self.client.create_table(bq_table)
+        if table.clustering:
+            cluster_sql = f'CLUSTER BY {", ".join(f"`{c}`" for c in table.clustering)}\n'
+        else:
+            cluster_sql = ''
+
+        options = []
+
+        if table.friendly_name:
+            options.append(f'friendly_name = "{table.friendly_name}"')
+
+        if table.description:
+            options.append(f'description = "{table.description}"')
+
+        if table.labels:
+            options.append(f'labels = [{", ".join(f"{k}, {v}" for k, v in table.labels.items())}]')
+
+        if table.tags:
+            options.append(f'tags = [{", ".join(f"{k}, {v}" for k, v in table.tags.items())}]')
+
+        if table.expiration_timestamp:
+            utc_ts = table.expiration_timestamp.astimezone(timezone.utc)
+            options.append(f'expiration_timestamp = TIMESTAMP "{utc_ts.strftime("%Y-%m-%d %H:%M:%S UTC")}"')
+
+        if table.default_rounding_mode:
+            options.append(f'default_rounding_mode = "{table.default_rounding_mode}"')
+
+        if table.max_staleness:
+            options.append(f'max_staleness = {table.max_staleness}')
+
+        if table.enable_change_history:
+            options.append(f'enable_change_history = TRUE')
+
+        if table.enable_fine_grained_mutations:
+            options.append(f'enable_fine_grained_mutations = TRUE')
+
+        if table.kms_key_name:
+            options.append(f'kms_key_name = "{table.kms_key_name}"')
+
+        if table.storage_uri:
+            options.append(f'storage_uri = "{table.storage_uri}"')
+
+        if table.file_format:
+            options.append(f'file_format = {table.file_format}')
+
+        if table.table_format:
+            options.append(f'table_format = {table.table_format}')
+
+        if options:
+            options_sql = (
+                f'OPTIONS(\n'
+                f'    {",\n    ".join(options)}\n'
+                f')\n'
+            )
+        else:
+            options_sql = ''
+
+        # [OPTIONS(table_option_list)]
+        self.client.query_and_wait((
+            f'CREATE TABLE `{table.name}` (\n'
+            f'    {",\n    ".join(column_sqls)}\n'
+            f')\n'
+            f'{partition_sql}'
+            f'{cluster_sql}'
+            f'{options_sql}'
+        ))
 
     def drop_table(self, name: TableName):
         self.client.delete_table(to_table_ref(name))
@@ -337,52 +456,10 @@ class BigQueryDbBackend(DbBackend):
         self.client.query_and_wait(f'ALTER TABLE `{from_name}` RENAME TO `{to_name}`')
 
     def add_column(self, table_name: TableName, column: Column):
-        column_schema_parts = []
-
-        if column.primary_key:
-            if column.primary_enforced:
-                # TODO? update this if Big Query ever supports enforcement
-                log.warning('Not enforcing primary key since Big Query does not support enforcement')
-                column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
-            else:
-                column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
-
-        if column.foreign_key:
-            table_name = column.foreign_key.table_name
-            column_name = column.foreign_key.column_name
-
-            if column.foreign_enforced:
-                # TODO? update this if Big Query ever supports enforcement
-                log.warning('Not enforcing foreign key since Big Query does not support enforcement')
-                column_schema_parts.append(f'REFERENCES {table_name}({column_name}) NOT ENFORCED')
-            else:
-                column_schema_parts.append(f'REFERENCES {table_name}({column_name}) NOT ENFORCED')
-
-        if column.default_expression:
-            column_schema_parts.append(f'DEFAULT {column.default_expression}')
-
-        if not column.nullable:
-            # TODO: work around this limitation with: create table > drop table > rename table
-            log.warning('Adding column as nullable since Big Query does not support adding non-nullable columns')
-
-        if column.options:
-            option_parts = []
-
-            if column.options.description:
-                option_parts.append(f'description = "{column.options.description}"')
-
-            if column.options.rounding_mode:
-                option_parts.append(f'rounding_mode = "{column.options.rounding_mode}"')
-
-            if option_parts:
-                column_schema_parts.append(f'OPTIONS({", ".join(option_parts)})')
-
-        self.client.query_and_wait(
-            f'''
-            ALTER TABLE `{table_name}`
-            ADD COLUMN `{column.name}` {data_type_to_sql(column.data_type)} {" ".join(column_schema_parts)}
-            '''
-        )
+        self.client.query_and_wait((
+            f'ALTER TABLE `{table_name}`\n'
+            f'ADD COLUMN {column_to_sql(column)}\n'
+        ))
 
     def drop_column(self, table_name: TableName, column_name: ColumnName):
         self.client.query_and_wait(f'ALTER TABLE `{table_name}` DROP COLUMN `{column_name}`')
@@ -409,6 +486,22 @@ class BigQueryDbBackend(DbBackend):
         node.precision = node.precision or 76
         node.scale = node.scale or 38
 
+    def partitioning_defaults(self, node: Partitioning):
+        if node.kind == 'TIME':
+            node.time_unit = node.time_unit or 'DAY'
+        elif node.kind == 'INT':
+            node.int_step = node.int_step or 1
+
+    def table_defaults(self, node: Table):
+        if node.expiration_timestamp is not None and node.expiration_timestamp.tzinfo is None:
+            node.expiration_timestamp = node.expiration_timestamp.replace(tzinfo=timezone.utc)
+
+        if node.enable_change_history is None:
+            node.enable_change_history = False
+
+        if node.enable_fine_grained_mutations is None:
+            node.enable_fine_grained_mutations = False
+
     def validate_int(self, node: Int):
         if node.bits != 64:
             raise ValueError(f'Int.bits must be 64: {node.bits}')
@@ -422,7 +515,8 @@ class BigQueryDbBackend(DbBackend):
             raise ValueError(f'Numeric.scale must be between 0 and 9: {node.scale}')
 
         if not (max(1, node.scale) <= node.precision <= node.scale + 29):
-            raise ValueError(f'Numeric.precision must be between {max(1, node.scale)} and {node.scale + 29}: {node.precision}')
+            raise ValueError(
+                f'Numeric.precision must be between {max(1, node.scale)} and {node.scale + 29}: {node.precision}')
 
     def validate_big_numeric(self, node: BigNumeric):
         if not (0 <= node.scale <= 38):
@@ -437,10 +531,10 @@ class BigQueryDbBackend(DbBackend):
 
     def validate_partitioning(self, node: Partitioning):
         if node.kind == 'TIME':
-            required = ['kind', 'time_unit', 'expiration_ms', 'require_filter']
+            required = ['kind', 'time_unit', 'expiration_days', 'require_filter']
             allowed = required + ['column']
         elif node.kind == 'INT':
-            required = ['kind', 'column', 'int_start', 'int_end', 'int_step', 'expiration_ms', 'require_filter']
+            required = ['kind', 'column', 'int_start', 'int_end', 'int_step', 'expiration_days', 'require_filter']
             allowed = required
         else:
             raise ValueError(f'Invalid partitioning kind: {node.kind}')

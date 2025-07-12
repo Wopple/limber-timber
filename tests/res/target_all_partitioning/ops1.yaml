@@ -1,0 +1,97 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: revert_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: time_all_table
+      columns:
+      - name: col_date
+        data_type: DATE
+      partitioning:
+        kind: TIME
+        column: col_date
+        time_unit: YEAR
+        expiration_days: 1
+        require_filter: true
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: year_ingest_table
+      columns:
+      - name: col_date
+        data_type: DATE
+      partitioning:
+        kind: TIME
+        time_unit: YEAR
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: month_ingest_table
+      columns:
+      - name: col_date
+        data_type: DATE
+      partitioning:
+        kind: TIME
+        time_unit: MONTH
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: day_ingest_table
+      columns:
+      - name: col_date
+        data_type: DATE
+      partitioning:
+        kind: TIME
+        time_unit: DAY
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: hour_ingest_table
+      columns:
+      - name: col_date
+        data_type: DATE
+      partitioning:
+        kind: TIME
+        time_unit: HOUR
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: int_all_table
+      columns:
+      - name: col_int
+        data_type: INT64
+      partitioning:
+        kind: INT
+        column: col_int
+        int_start: 0
+        int_end: 8
+        int_step: 2
+        require_filter: true
