@@ -252,7 +252,7 @@ def data_type_to_sql(data_type: DataType) -> str:
         raise ValueError(f'bigquery.data_type_to_sql unrecognized data_type - {data_type}')
 
 
-def column_to_sql(column: Column) -> str:
+def column_to_sql(column: Column, mode: str | None = None) -> str:
     column_schema_parts = []
 
     if column.primary_key:
@@ -277,7 +277,7 @@ def column_to_sql(column: Column) -> str:
     if column.default_expression:
         column_schema_parts.append(f'DEFAULT {column.default_expression}')
 
-    if not column.nullable:
+    if mode == 'add' and not column.nullable:
         # TODO: work around this limitation with: create table > drop table > rename table
         log.warning('Adding column as nullable since Big Query does not support adding non-nullable columns')
 
@@ -361,14 +361,14 @@ class BigQueryDbBackend(DbBackend):
 
             if partitioning.kind == 'TIME':
                 if column:
-                    data_type = table.column_map[column.string].data_type
+                    data_type = table.column_map[column].data_type
 
                     if isinstance(data_type, Date):
-                        partition_sql = f'PARTITION BY DATETIME_TRUNC(`{column}`, {partitioning.time_unit})\n'
-                    elif isinstance(data_type, DateTime):
-                        partition_sql = f'PARTITION BY TIMESTAMP_TRUNC(`{column}`, {partitioning.time_unit})\n'
-                    elif isinstance(data_type, Timestamp):
                         partition_sql = f'PARTITION BY `{column}`\n'
+                    elif isinstance(data_type, DateTime):
+                        partition_sql = f'PARTITION BY DATETIME_TRUNC(`{column}`, {partitioning.time_unit})\n'
+                    elif isinstance(data_type, Timestamp):
+                        partition_sql = f'PARTITION BY TIMESTAMP_TRUNC(`{column}`, {partitioning.time_unit})\n'
                     else:
                         raise ValueError(f'Unsupported partitioning column data type: {data_type}')
                 else:
@@ -458,7 +458,7 @@ class BigQueryDbBackend(DbBackend):
     def add_column(self, table_name: TableName, column: Column):
         self.client.query_and_wait((
             f'ALTER TABLE `{table_name}`\n'
-            f'ADD COLUMN {column_to_sql(column)}\n'
+            f'ADD COLUMN {column_to_sql(column, 'add')}\n'
         ))
 
     def drop_column(self, table_name: TableName, column_name: ColumnName):
@@ -531,10 +531,10 @@ class BigQueryDbBackend(DbBackend):
 
     def validate_partitioning(self, node: Partitioning):
         if node.kind == 'TIME':
-            required = ['kind', 'time_unit', 'expiration_days', 'require_filter']
-            allowed = required + ['column']
+            required = ['kind', 'time_unit', 'require_filter']
+            allowed = required + ['column', 'expiration_days']
         elif node.kind == 'INT':
-            required = ['kind', 'column', 'int_start', 'int_end', 'int_step', 'expiration_days', 'require_filter']
+            required = ['kind', 'column', 'int_start', 'int_end', 'int_step', 'require_filter']
             allowed = required
         else:
             raise ValueError(f'Invalid partitioning kind: {node.kind}')
@@ -606,14 +606,13 @@ class BigQueryMetaBackend(MetaBackend):
 
     def unapply_operation(self, operation: Operation):
         results = self.client.query_and_wait(
-            f'''
-            DELETE FROM `{self.table_name}`
-            WHERE idx = (SELECT MAX(idx) FROM `{self.table_name}`)
-                AND op_kind = @op_kind
-
-                -- ensure normalized comparison, cannot compare JSON types
-                AND TO_JSON_STRING(op_data) = TO_JSON_STRING(@op_data)
-            ''',
+            (
+                f'DELETE FROM `{self.table_name}`\n'
+                f'WHERE idx = (SELECT MAX(idx) FROM `{self.table_name}`)\n'
+                f'    AND op_kind = @op_kind\n'
+                # ensure normalized comparison, cannot compare JSON types
+                f'    AND TO_JSON_STRING(op_data) = TO_JSON_STRING(@op_data)\n'
+            ),
             job_config=QueryJobConfig(
                 query_parameters=[
                     ScalarQueryParameter('op_kind', 'STRING', operation.KIND),

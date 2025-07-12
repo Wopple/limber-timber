@@ -167,34 +167,34 @@ def test_all_max_staleness(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
     assert len(meta_backend.get_applied_operations()) == 10
 
     assert all_pos_table.max_staleness == IntervalLiteral(
-        year=2000,
-        month=1,
-        day=2,
-        hour=3,
-        minute=4,
-        second=5,
-        microsecond=6,
+        year=1,
+        month=2,
+        day=3,
+        hour=4,
+        minute=5,
+        second=6,
+        microsecond=7,
         sign='+',
     )
 
     assert all_neg_table.max_staleness == IntervalLiteral(
-        year=2000,
-        month=1,
-        day=2,
-        hour=3,
-        minute=4,
-        second=5,
-        microsecond=6,
+        year=1,
+        month=2,
+        day=3,
+        hour=4,
+        minute=5,
+        second=6,
+        microsecond=7,
         sign='-',
     )
 
-    assert only_year_table.max_staleness == IntervalLiteral(year=2000)
+    assert only_year_table.max_staleness == IntervalLiteral(year=1)
     assert only_month_table.max_staleness == IntervalLiteral(month=1)
-    assert only_day_table.max_staleness == IntervalLiteral(day=2)
-    assert only_hour_table.max_staleness == IntervalLiteral(hour=3)
-    assert only_minute_table.max_staleness == IntervalLiteral(minute=4)
-    assert only_second_table.max_staleness == IntervalLiteral(second=5)
-    assert only_microsecond_table.max_staleness == IntervalLiteral(microsecond=6)
+    assert only_day_table.max_staleness == IntervalLiteral(day=1)
+    assert only_hour_table.max_staleness == IntervalLiteral(hour=1)
+    assert only_minute_table.max_staleness == IntervalLiteral(minute=1)
+    assert only_second_table.max_staleness == IntervalLiteral(second=1)
+    assert only_microsecond_table.max_staleness == IntervalLiteral(microsecond=1)
 
     down_runner = MigrateRunner(
         db_backend=db_backend,
@@ -298,14 +298,12 @@ def test_all_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
     )
 
     up_runner.run(wet_run=True)
-    rounding_mode_unspecified_table = db_backend.get_table(TableName('my_project.my_dataset.rounding_mode_unspecified_table'))
     round_half_away_from_zero_table = db_backend.get_table(TableName('my_project.my_dataset.round_half_away_from_zero_table'))
     round_half_even_table = db_backend.get_table(TableName('my_project.my_dataset.round_half_even_table'))
 
-    assert len(db_backend.tables) == 4
-    assert len(meta_backend.get_applied_operations()) == 4
+    assert len(db_backend.tables) == 3
+    assert len(meta_backend.get_applied_operations()) == 3
 
-    assert rounding_mode_unspecified_table.default_rounding_mode == 'ROUNDING_MODE_UNSPECIFIED'
     assert round_half_away_from_zero_table.default_rounding_mode == 'ROUND_HALF_AWAY_FROM_ZERO'
     assert round_half_even_table.default_rounding_mode == 'ROUND_HALF_EVEN'
 
@@ -319,7 +317,6 @@ def test_all_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.rounding_mode_unspecified_table')) is None
     assert db_backend.get_table(TableName('my_project.my_dataset.round_half_away_from_zero_table')) is None
     assert db_backend.get_table(TableName('my_project.my_dataset.round_half_even_table')) is None
 

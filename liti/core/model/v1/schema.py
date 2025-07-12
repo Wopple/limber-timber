@@ -11,7 +11,6 @@ DATABASE_CHARS = set(ascii_letters + digits + '_-')
 IDENTIFIER_CHARS = set(ascii_letters + digits + '_')
 
 type RoundingMode = Literal[
-    'ROUNDING_MODE_UNSPECIFIED',
     'ROUND_HALF_AWAY_FROM_ZERO',
     'ROUND_HALF_EVEN',
 ]
@@ -28,10 +27,117 @@ class IntervalLiteral(LitiModel):
     sign: Literal['+', '-'] = '+'
 
     def __str__(self):
-        date_part = f'{self.sign}{self.year}-{self.month} {self.sign}{self.day}'
-        time_part = f'{self.sign}{self.hour}:{self.minute}:{self.second}'
-        micro_part = f'.{self.microsecond}' if self.microsecond else ''
-        return f'INTERVAL "{date_part + time_part + micro_part}"'
+        from_str: str = next(filter(lambda x: x[0] != 0, [
+            (self.year, 'YEAR'),
+            (self.month, 'MONTH'),
+            (self.day, 'DAY'),
+            (self.hour, 'HOUR'),
+            (self.minute, 'MINUTE'),
+            (self.second, 'SECOND'),
+            (self.microsecond, 'SECOND'),
+        ]))[1]
+
+        to_str: str = next(filter(lambda x: x[0] != 0, [
+            (self.microsecond, 'MICROSECOND'),
+            (self.second, 'SECOND'),
+            (self.minute, 'MINUTE'),
+            (self.hour, 'HOUR'),
+            (self.day, 'DAY'),
+            (self.month, 'MONTH'),
+            (self.year, 'YEAR'),
+        ]))[1]
+
+        if self.year > 0:
+            if to_str == 'YEAR':
+                year_part = f'{self.year}'
+            else:
+                year_part = f'{self.year}-'
+        else:
+            year_part = ''
+
+        if self.month > 0:
+            if to_str == 'MONTH':
+                month_part = f'{self.month}'
+            else:
+                month_part = f'{self.month} '
+        else:
+            month_part = ''
+
+        if self.month > 0:
+            if to_str == 'MONTH':
+                month_part = f'{self.month}'
+            else:
+                month_part = f'{self.month} '
+        else:
+            month_part = ''
+
+        if self.day > 0:
+            if to_str == 'DAY':
+                day_part = f'{self.day}'
+            else:
+                day_part = f'{self.day} '
+        else:
+            day_part = ''
+
+        if self.hour > 0:
+            if to_str == 'HOUR':
+                hour_part = f'{self.hour}'
+            else:
+                hour_part = f'{self.hour}:'
+        else:
+            hour_part = ''
+
+        if self.minute > 0:
+            if to_str == 'MINUTE':
+                minute_part = f'{self.minute}'
+            else:
+                minute_part = f'{self.minute}:'
+        else:
+            minute_part = ''
+
+        if self.second > 0:
+            if to_str == 'SECOND':
+                second_part = f'{self.second}'
+            else:
+                second_part = f'{self.second}.'
+        else:
+            second_part = ''
+
+        if self.microsecond > 0:
+            microsecond_part = f'{self.microsecond}'
+        else:
+            microsecond_part = ''
+
+        year_month_part = f'{year_part}{month_part}'
+        time_part = f'{hour_part}{minute_part}{second_part}{microsecond_part}'
+        sign_part = '-' if self.sign == '-' else ''
+
+        if year_month_part:
+            year_month_part = f'{sign_part}{year_month_part}'
+
+        if day_part:
+            day_part = f'{sign_part}{day_part}'
+
+        if time_part:
+            time_part = f'{sign_part}{time_part}'
+
+        if to_str == 'MICROSECOND':
+            to_str = 'SECOND'
+
+        if from_str == to_str:
+            range_part = from_str
+        else:
+            range_part = f'{from_str} TO {to_str}'
+
+        return f'INTERVAL "{year_month_part}{day_part}{time_part}" {range_part}'
+
+    @field_validator('year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond', mode='before')
+    @classmethod
+    def validate_not_negative(cls, value: int):
+        if value >= 0:
+            return value
+        else:
+            raise ValueError(f'Interval values must be non-negative: {value}')
 
 
 class DatabaseName(LitiModel):
@@ -225,7 +331,10 @@ class Table(LitiModel):
     tags: dict[str, str] | None = None
     expiration_timestamp: datetime | None = None
     default_rounding_mode: RoundingMode | None = None
+
+    # TODO validate milliseconds between 0 and 86400000 for big query
     max_staleness: IntervalLiteral | None = None
+
     enable_change_history: bool | None = None
     enable_fine_grained_mutations: bool | None = None
     kms_key_name: str | None = None

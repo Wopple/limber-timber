@@ -21,13 +21,13 @@ operations:
       - name: col_bool
         data_type: BOOL
       max_staleness:
-        year: 2000
-        month: 1
-        day: 2
-        hour: 3
-        minute: 4
-        second: 5
-        microsecond: 6
+        year: 1
+        month: 2
+        day: 3
+        hour: 4
+        minute: 5
+        second: 6
+        microsecond: 7
         sign: '+'
 - kind: create_table
   data:
@@ -40,13 +40,13 @@ operations:
       - name: col_bool
         data_type: BOOL
       max_staleness:
-        year: 2000
-        month: 1
-        day: 2
-        hour: 3
-        minute: 4
-        second: 5
-        microsecond: 6
+        year: 1
+        month: 2
+        day: 3
+        hour: 4
+        minute: 5
+        second: 6
+        microsecond: 7
         sign: '-'
 - kind: create_table
   data:
@@ -59,7 +59,7 @@ operations:
       - name: col_bool
         data_type: BOOL
       max_staleness:
-        year: 2000
+        year: 1
 - kind: create_table
   data:
     table:
@@ -83,7 +83,7 @@ operations:
       - name: col_bool
         data_type: BOOL
       max_staleness:
-        day: 2
+        day: 1
 - kind: create_table
   data:
     table:
@@ -95,7 +95,7 @@ operations:
       - name: col_bool
         data_type: BOOL
       max_staleness:
-        hour: 3
+        hour: 1
 - kind: create_table
   data:
     table:
@@ -107,7 +107,7 @@ operations:
       - name: col_bool
         data_type: BOOL
       max_staleness:
-        minute: 4
+        minute: 1
 - kind: create_table
   data:
     table:
@@ -119,7 +119,7 @@ operations:
       - name: col_bool
         data_type: BOOL
       max_staleness:
-        second: 5
+        second: 1
 - kind: create_table
   data:
     table:
@@ -131,4 +131,4 @@ operations:
       - name: col_bool
         data_type: BOOL
       max_staleness:
-        microsecond: 6
+        microsecond: 1
