@@ -349,6 +349,52 @@ def test_rename_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
     assert db_backend.get_table(TableName('my_project.my_dataset.renamed_table')) is None
 
 
+def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_set_clustering',
+    )
+
+    set_runner.run(wet_run=True)
+
+    assert len(db_backend.tables) == 2
+    assert len(meta_backend.get_applied_operations()) == 3
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.clustering_table')).clustering == [
+        ColumnName('col_int'),
+        ColumnName('col_bool'),
+    ]
+
+    unset_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_unset_clustering',
+    )
+
+    unset_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 2
+    assert len(meta_backend.get_applied_operations()) == 2
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.clustering_table')).clustering == [
+        ColumnName('col_bool'),
+        ColumnName('col_int'),
+    ]
+
+    down_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_revert',
+    )
+
+    down_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert db_backend.get_table(TableName('my_project.my_dataset.clustering_table')) is None
+
+
 def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
     up_runner = MigrateRunner(
         db_backend=db_backend,

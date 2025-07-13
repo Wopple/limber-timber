@@ -1,0 +1,27 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: revert_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: clustering_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+      - name: col_int
+        data_type: INT64
+      clustering:
+      - col_bool
+      - col_int

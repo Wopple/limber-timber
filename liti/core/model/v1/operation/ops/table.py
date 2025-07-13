@@ -1,6 +1,6 @@
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.table import AddColumn, CreateTable, DropColumn, DropTable, RenameColumn, \
-    RenameTable
+    RenameTable, SetClustering
 from liti.core.model.v1.operation.ops.base import OperationOps
 
 
@@ -32,6 +32,25 @@ class DropTableOps(OperationOps):
 
         # Recreate the table in that state
         return CreateTable(table=sim_table)
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        return not db_backend.has_table(self.op.table_name)
+
+
+class SetClusteringOps(OperationOps):
+    def __init__(self, op: SetClustering):
+        self.op = op
+
+    def up(self, db_backend: DbBackend):
+        db_backend.set_clustering(self.op.table_name, self.op.columns)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetClustering:
+        # Get the table in the state before the clustering was set
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+
+        # Reset the clustering to that state
+        return SetClustering(table_name=self.op.table_name, columns=sim_table.clustering)
 
     def is_up(self, db_backend: DbBackend) -> bool:
         return not db_backend.has_table(self.op.table_name)

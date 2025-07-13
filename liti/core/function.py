@@ -5,10 +5,10 @@ import yaml
 
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import AddColumn, CreateTable, DropColumn, DropTable, RenameColumn, \
-    RenameTable
+    RenameTable, SetClustering
 from liti.core.model.v1.operation.ops.base import OperationOps
 from liti.core.model.v1.operation.ops.table import AddColumnOps, CreateTableOps, DropColumnOps, DropTableOps, \
-    RenameColumnOps, RenameTableOps
+    RenameColumnOps, RenameTableOps, SetClusteringOps
 
 
 def parse_operation(op_kind: str, op_data: dict) -> Operation:
@@ -19,6 +19,8 @@ def parse_operation(op_kind: str, op_data: dict) -> Operation:
             return DropTable(**op_data)
         case 'rename_table':
             return RenameTable(**op_data)
+        case 'set_clustering':
+            return SetClustering(**op_data)
         case 'add_column':
             return AddColumn(**op_data)
         case 'drop_column':
@@ -36,6 +38,8 @@ def attach_ops(operation: Operation) -> OperationOps:
         return DropTableOps(operation)
     elif isinstance(operation, RenameTable):
         return RenameTableOps(operation)
+    elif isinstance(operation, SetClustering):
+        return SetClusteringOps(operation)
     elif isinstance(operation, AddColumn):
         return AddColumnOps(operation)
     elif isinstance(operation, DropColumn):
