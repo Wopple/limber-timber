@@ -7,7 +7,8 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME
     STRING, \
     Struct, \
     TIME, TIMESTAMP
-from liti.core.model.v1.schema import Column, ColumnName, IntervalLiteral, Partitioning, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, IntervalLiteral, Partitioning, RoundingModeLiteral, Table, \
+    TableName
 from liti.core.runner import MigrateRunner
 
 @fixture
@@ -304,8 +305,8 @@ def test_all_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
     assert len(db_backend.tables) == 3
     assert len(meta_backend.get_applied_operations()) == 3
 
-    assert round_half_away_from_zero_table.default_rounding_mode == 'ROUND_HALF_AWAY_FROM_ZERO'
-    assert round_half_even_table.default_rounding_mode == 'ROUND_HALF_EVEN'
+    assert round_half_away_from_zero_table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO')
+    assert round_half_even_table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_EVEN')
 
     down_runner = MigrateRunner(
         db_backend=db_backend,
@@ -393,6 +394,86 @@ def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
     assert db_backend.get_table(TableName('my_project.my_dataset.clustering_table')) is None
+
+
+def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_set_description',
+    )
+
+    set_runner.run(wet_run=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).description == 'bar'
+
+    unset_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_unset_description',
+    )
+
+    unset_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).description == 'foo'
+
+    down_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_revert',
+    )
+
+    down_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).description is None
+
+
+def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_set_default_rounding_mode',
+    )
+
+    set_runner.run(wet_run=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).default_rounding_mode == RoundingModeLiteral('ROUND_HALF_EVEN')
+
+    unset_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_unset_default_rounding_mode',
+    )
+
+    unset_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).default_rounding_mode == RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO')
+
+    down_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_revert',
+    )
+
+    down_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).default_rounding_mode == RoundingModeLiteral()
 
 
 def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):

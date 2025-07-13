@@ -1,0 +1,19 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: revert_table
+      columns:
+      - name: col_bool
+        data_type: BOOL
+- kind: set_default_rounding_mode
+  data:
+    table_name:
+      database: my_project
+      schema_name: my_dataset
+      table_name: revert_table
+    rounding_mode: ROUND_HALF_AWAY_FROM_ZERO

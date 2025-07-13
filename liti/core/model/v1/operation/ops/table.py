@@ -82,7 +82,7 @@ class SetDescriptionOps(OperationOps):
         self.op = op
 
     def up(self, db_backend: DbBackend):
-        db_backend.set_column_description(self.op.table_name, self.op.columns)
+        db_backend.set_description(self.op.table_name, self.op.description)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetDescription:
         sim_db = self.simulate(meta_backend.get_previous_operations())

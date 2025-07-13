@@ -1,11 +1,10 @@
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import timezone
 
-from google.cloud.bigquery import DatasetReference, EncryptionConfiguration, PartitionRange, QueryJobConfig, \
-    RangePartitioning, \
+from google.cloud.bigquery import DatasetReference, PartitionRange, QueryJobConfig, \
     ScalarQueryParameter, SchemaField, \
-    Table as BqTable, TableReference, TimePartitioning
+    Table as BqTable, TableReference
 from google.cloud.bigquery.schema import _DEFAULT_VALUE
 from google.cloud.bigquery.table import TableListItem
 
@@ -25,7 +24,7 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE,
     TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, Partitioning, RoundingMode, \
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, Partitioning, RoundingModeLiteral, \
     SchemaName, Table, \
     TableName
 
@@ -465,7 +464,7 @@ class BigQueryDbBackend(DbBackend):
     def set_description(self, table_name: TableName, description: str | None):
         self.set_option(table_name, 'description', f'"{description}"' if description else 'NULL')
 
-    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode):
+    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
         self.set_option(table_name, 'default_rounding_mode', f'"{rounding_mode}"')
 
     def add_column(self, table_name: TableName, column: Column):
@@ -483,7 +482,7 @@ class BigQueryDbBackend(DbBackend):
     def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
         self.set_column_option(table_name, column_name, 'description', f'"{description}"' if description else 'NULL')
 
-    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingMode):
+    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingModeLiteral):
         self.set_column_option(table_name, column_name, 'rounding_mode', f'"{rounding_mode}"')
 
     # default methods
@@ -507,6 +506,10 @@ class BigQueryDbBackend(DbBackend):
             node.time_unit = node.time_unit or 'DAY'
         elif node.kind == 'INT':
             node.int_step = node.int_step or 1
+
+    def rounding_mode_defaults(self, node: RoundingModeLiteral):
+        if node.string is None:
+            node.string = 'ROUND_HALF_EVEN'
 
     def table_defaults(self, node: Table):
         if node.expiration_timestamp is not None and node.expiration_timestamp.tzinfo is None:

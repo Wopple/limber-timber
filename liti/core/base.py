@@ -6,7 +6,7 @@ from pydantic import BaseModel
 # which need to use types from this file
 if TYPE_CHECKING:
     from liti.core.model.v1.datatype import Array, BigNumeric, Float, Int, Numeric
-    from liti.core.model.v1.schema import Partitioning, Table
+    from liti.core.model.v1.schema import Partitioning, RoundingModeLiteral, Table
 
 
 class Defaulter:
@@ -31,6 +31,9 @@ class Defaulter:
         pass
 
     def partitioning_defaults(self, node: 'Partitioning'):
+        pass
+
+    def rounding_mode_defaults(self, node: 'RoundingModeLiteral'):
         pass
 
     def table_defaults(self, node: 'Table'):

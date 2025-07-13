@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from liti.core.base import Defaulter, Validator
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, RoundingMode, SchemaName, Table, \
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, RoundingModeLiteral, \
+    SchemaName, Table, \
     TableName
 
 
@@ -46,7 +47,7 @@ class DbBackend(ABC, Defaulter, Validator):
         raise NotImplementedError('not supported')
 
     @abstractmethod
-    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode):
+    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
         raise NotImplementedError('not supported')
 
     @abstractmethod
@@ -66,7 +67,7 @@ class DbBackend(ABC, Defaulter, Validator):
         raise NotImplementedError('not supported')
 
     @abstractmethod
-    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingMode):
+    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingModeLiteral):
         raise NotImplementedError('not supported')
 
 

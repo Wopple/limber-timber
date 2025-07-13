@@ -1,8 +1,8 @@
 from datetime import datetime
 from string import ascii_letters, digits
-from typing import Any, Literal, Self
+from typing import Any, ClassVar, Literal, Self
 
-from pydantic import field_serializer, field_validator, model_validator
+from pydantic import Field, field_serializer, field_validator, model_validator
 
 from liti.core.base import LitiModel
 from liti.core.model.v1.datatype import DataType, parse_data_type, serialize_data_type
@@ -138,6 +138,35 @@ class IntervalLiteral(LitiModel):
             return value
         else:
             raise ValueError(f'Interval values must be non-negative: {value}')
+
+
+class RoundingModeLiteral(LitiModel):
+    string: RoundingMode | None = None
+
+    DEFAULT_METHOD: ClassVar[str] = 'rounding_mode_defaults'
+
+    def __init__(self, string: RoundingMode | None = None, **kwargs):
+        """ Allows RoundingModeLiteral('rounding_mode') """
+        if string is None:
+            super().__init__(**kwargs)
+        else:
+            super().__init__(string=string)
+
+    def __str__(self) -> str:
+        return str(self.string)
+
+    @model_validator(mode='before')
+    @classmethod
+    def allow_string_init(cls, data: RoundingMode | dict[str, RoundingMode]) -> dict[str, str]:
+        if isinstance(data, str):
+            return {'string': data}
+        else:
+            return data
+
+    @field_validator('string', mode='before')
+    @classmethod
+    def validate_upper(cls, value: str | None) -> str | None:
+        return value and value.upper()
 
 
 class DatabaseName(LitiModel):
@@ -280,7 +309,7 @@ class Column(LitiModel):
     default_expression: str | None = None
     nullable: bool = False
     description: str | None = None
-    rounding_mode: RoundingMode | None = None
+    rounding_mode: RoundingModeLiteral | None = None
 
     @field_validator('data_type', mode='before')
     @classmethod
@@ -291,11 +320,6 @@ class Column(LitiModel):
     @classmethod
     def serialize_data_type(cls, value: DataType) -> str | dict[str, Any]:
         return serialize_data_type(value)
-
-    @field_validator('rounding_mode', mode='before')
-    @classmethod
-    def validate_upper(cls, value: str | None) -> str | None:
-        return value and value.upper()
 
     def with_name(self, name: ColumnName) -> Self:
         return self.model_copy(update={'name': name})
@@ -330,7 +354,7 @@ class Table(LitiModel):
     labels: dict[str, str] | None = None
     tags: dict[str, str] | None = None
     expiration_timestamp: datetime | None = None
-    default_rounding_mode: RoundingMode | None = None
+    default_rounding_mode: RoundingModeLiteral = Field(default_factory=RoundingModeLiteral)
 
     # TODO validate milliseconds between 0 and 86400000 for big query
     max_staleness: IntervalLiteral | None = None
@@ -344,7 +368,7 @@ class Table(LitiModel):
 
     DEFAULT_METHOD = 'table_defaults'
 
-    @field_validator('default_rounding_mode', 'file_format', 'table_format', mode='before')
+    @field_validator('file_format', 'table_format', mode='before')
     @classmethod
     def validate_upper(cls, value: str | None) -> str | None:
         return value and value.upper()

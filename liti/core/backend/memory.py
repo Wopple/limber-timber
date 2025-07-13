@@ -1,7 +1,8 @@
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, RoundingMode, SchemaName, Table, \
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, RoundingModeLiteral, \
+    SchemaName, Table, \
     TableName
 
 
@@ -43,7 +44,7 @@ class MemoryDbBackend(DbBackend):
     def set_description(self, table_name: TableName, description: str | None):
         self.tables[table_name].description = description
 
-    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode):
+    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
         self.tables[table_name].default_rounding_mode = rounding_mode
 
     def add_column(self, table_name: TableName, column: Column):
@@ -62,7 +63,7 @@ class MemoryDbBackend(DbBackend):
         column = table.column_map[column_name]
         column.description = description
 
-    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingMode):
+    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingModeLiteral):
         table = self.get_table(table_name)
         column = table.column_map[column_name]
         column.rounding_mode = rounding_mode
