@@ -41,12 +41,12 @@ class BqClient:
         return job_config
 
     def query(self, sql: str, job_config: QueryJobConfig | None = None) -> QueryJob:
-        log.info(f'query:\n{sql}')
+        log.info(f'query:\n{sql.strip()}')
         job_config = self.setup_config(job_config)
         return self.client.query(sql, job_config=job_config)
 
     def query_and_wait(self, sql: str, job_config: QueryJobConfig | None = None) -> RowIterator:
-        log.info(f'query_and_wait:\n{sql}')
+        log.info(f'query_and_wait:\n{sql.strip()}')
         job_config = self.setup_config(job_config)
         return self.client.query_and_wait(sql, job_config=job_config)
 

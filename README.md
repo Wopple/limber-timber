@@ -74,6 +74,8 @@ These are listed in rough priority order if you are interested in contributing.
 - ➡️ JSON Schema
 - ✅ Database Specific Validation
 - ➡️ Templating
+- ➡️ Expand Grouped Operations
+- ➡️ Grouped Operation Application
 - ➡️ Minimize Scan Output
 - ➡️ Arbitrary DML SQL Migrations
 - ➡️ File System Metadata

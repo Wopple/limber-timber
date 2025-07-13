@@ -112,8 +112,11 @@ def build_meta_backend(args: Namespace, clients: Clients) -> MetaBackend:
 
 def migrate():
     args = parse_migrate_arguments()
+    silent = args.wet and not args.verbose
 
-    if not args.wet or args.verbose:
+    if silent:
+        logging.basicConfig(level=logging.ERROR)
+    else:
         logging.basicConfig(level=logging.INFO)
 
     clients = build_clients(args)
@@ -129,15 +132,14 @@ def migrate():
     runner.run(
         wet_run=args.wet,
         allow_down=args.down,
+        silent=silent,
     )
 
 
 def scan():
     args = parse_scan_arguments()
-
     clients = build_clients(args)
     db_backend = build_db_backend(args, clients)
-
     runner = ScanRunner(db_backend)
 
     runner.run(

@@ -5,6 +5,8 @@ from liti.core.model.v1.operation.data.base import Operation
 
 
 class OperationOps(ABC):
+    op: Operation
+
     @staticmethod
     def simulate(operations: list[Operation]) -> DbBackend:
         # circular imports
@@ -16,6 +18,13 @@ class OperationOps(ABC):
         sim_runner = MigrateRunner(db_backend=sim_db, meta_backend=sim_meta, target=operations)
         sim_runner.run(wet_run=True, silent=True)
         return sim_db
+
+    @classmethod
+    def get_attachment(cls, op: Operation) -> type:
+        return {
+            getattr(subclass, '__annotations__')['op']: subclass
+            for subclass in OperationOps.__subclasses__()
+        }[type(op)]
 
     @abstractmethod
     def up(self, db_backend: DbBackend):

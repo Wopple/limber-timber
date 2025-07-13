@@ -25,7 +25,8 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE,
     TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, Partitioning, SchemaName, Table, \
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, Partitioning, RoundingMode, \
+    SchemaName, Table, \
     TableName
 
 log = logging.getLogger(__name__)
@@ -333,6 +334,8 @@ class BigQueryDbBackend(DbBackend):
     def __init__(self, client: BqClient):
         self.client = client
 
+    # backend methods
+
     def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
         dataset = to_dataset_ref(database, schema)
         table_items = self.client.list_tables(dataset)
@@ -439,7 +442,6 @@ class BigQueryDbBackend(DbBackend):
         else:
             options_sql = ''
 
-        # [OPTIONS(table_option_list)]
         self.client.query_and_wait((
             f'CREATE TABLE `{table.name}` (\n'
             f'    {",\n    ".join(column_sqls)}\n'
@@ -455,6 +457,17 @@ class BigQueryDbBackend(DbBackend):
     def rename_table(self, from_name: TableName, to_name: Identifier):
         self.client.query_and_wait(f'ALTER TABLE `{from_name}` RENAME TO `{to_name}`')
 
+    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
+        bq_table = self.client.get_table(to_table_ref(table_name))
+        bq_table.clustering_fields = [c.string for c in columns] if columns else None
+        self.client.update_table(bq_table, ['clustering_fields'])
+
+    def set_description(self, table_name: TableName, description: str | None):
+        self.set_option(table_name, 'description', f'"{description}"' if description else 'NULL')
+
+    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode):
+        self.set_option(table_name, 'default_rounding_mode', f'"{rounding_mode}"')
+
     def add_column(self, table_name: TableName, column: Column):
         self.client.query_and_wait((
             f'ALTER TABLE `{table_name}`\n'
@@ -467,10 +480,13 @@ class BigQueryDbBackend(DbBackend):
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
         self.client.query_and_wait(f'ALTER TABLE `{table_name}` RENAME COLUMN `{from_name}` TO `{to_name}`')
 
-    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
-        bq_table = self.client.get_table(to_table_ref(table_name))
-        bq_table.clustering_fields = [c.string for c in columns] if columns else None
-        self.client.update_table(bq_table, ['clustering_fields'])
+    def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
+        self.set_column_option(table_name, column_name, 'description', f'"{description}"' if description else 'NULL')
+
+    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingMode):
+        self.set_column_option(table_name, column_name, 'rounding_mode', f'"{rounding_mode}"')
+
+    # default methods
 
     def int_defaults(self, node: Int):
         node.bits = node.bits or 64
@@ -501,6 +517,8 @@ class BigQueryDbBackend(DbBackend):
 
         if node.enable_fine_grained_mutations is None:
             node.enable_fine_grained_mutations = False
+
+    # validation methods
 
     def validate_int(self, node: Int):
         if node.bits != 64:
@@ -558,6 +576,20 @@ class BigQueryDbBackend(DbBackend):
 
         if errors:
             raise ValueError('\n'.join(errors))
+
+    # class methods
+    def set_option(self, table_name: TableName, key: str, value: str):
+        self.client.query_and_wait((
+            f'ALTER TABLE `{table_name}`\n'
+            f'SET OPTIONS({key} = {value})\n'
+        ))
+
+    def set_column_option(self, table_name: TableName, column_name: ColumnName, key: str, value: str):
+        self.client.query_and_wait((
+            f'ALTER TABLE `{table_name}`\n'
+            f'ALTER COLUMN `{column_name}`\n'
+            f'SET OPTIONS({key} = {value})\n'
+        ))
 
 
 class BigQueryMetaBackend(MetaBackend):

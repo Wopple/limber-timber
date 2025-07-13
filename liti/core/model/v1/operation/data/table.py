@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, Identifier, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, Identifier, RoundingMode, Table, TableName
 
 
 class CreateTable(Operation):
@@ -30,6 +30,20 @@ class SetClustering(Operation):
     KIND: ClassVar[str] = 'set_clustering'
 
 
+class SetDescription(Operation):
+    table_name: TableName
+    description: str | None = None
+
+    KIND: ClassVar[str] = 'set_description'
+
+
+class SetDefaultRoundingMode(Operation):
+    table_name: TableName
+    rounding_mode: RoundingMode
+
+    KIND: ClassVar[str] = 'set_default_rounding_mode'
+
+
 class AddColumn(Operation):
     table_name: TableName
     column: Column
@@ -50,3 +64,19 @@ class RenameColumn(Operation):
     to_name: ColumnName
 
     KIND: ClassVar[str] = 'rename_column'
+
+
+class SetColumnDescription(Operation):
+    table_name: TableName
+    column_name: ColumnName
+    description: str | None = None
+
+    KIND: ClassVar[str] = 'set_column_description'
+
+
+class SetColumnRoundingMode(Operation):
+    table_name: TableName
+    column_name: ColumnName
+    rounding_mode: RoundingMode
+
+    KIND: ClassVar[str] = 'set_column_rounding_mode'

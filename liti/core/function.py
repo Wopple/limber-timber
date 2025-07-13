@@ -4,50 +4,19 @@ from pathlib import Path
 import yaml
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.operation.data.table import AddColumn, CreateTable, DropColumn, DropTable, RenameColumn, \
-    RenameTable, SetClustering
 from liti.core.model.v1.operation.ops.base import OperationOps
-from liti.core.model.v1.operation.ops.table import AddColumnOps, CreateTableOps, DropColumnOps, DropTableOps, \
-    RenameColumnOps, RenameTableOps, SetClusteringOps
 
 
 def parse_operation(op_kind: str, op_data: dict) -> Operation:
-    match op_kind.lower():
-        case 'create_table':
-            return CreateTable(**op_data)
-        case 'drop_table':
-            return DropTable(**op_data)
-        case 'rename_table':
-            return RenameTable(**op_data)
-        case 'set_clustering':
-            return SetClustering(**op_data)
-        case 'add_column':
-            return AddColumn(**op_data)
-        case 'drop_column':
-            return DropColumn(**op_data)
-        case 'rename_column':
-            return RenameColumn(**op_data)
-        case _:
-            raise ValueError(f'Unknown operation kind: {op_kind}')
+    # hack to import OperationOps subclasses
+    # noinspection PyUnresolvedReferences
+    from liti.core.model.v1.operation.ops.table import CreateTable
+
+    return Operation.get_kind(op_kind)(**op_data)
 
 
 def attach_ops(operation: Operation) -> OperationOps:
-    if isinstance(operation, CreateTable):
-        return CreateTableOps(operation)
-    elif isinstance(operation, DropTable):
-        return DropTableOps(operation)
-    elif isinstance(operation, RenameTable):
-        return RenameTableOps(operation)
-    elif isinstance(operation, SetClustering):
-        return SetClusteringOps(operation)
-    elif isinstance(operation, AddColumn):
-        return AddColumnOps(operation)
-    elif isinstance(operation, DropColumn):
-        return DropColumnOps(operation)
-    elif isinstance(operation, RenameColumn):
-        return RenameColumnOps(operation)
-    else:
-        raise ValueError(f'Unhandled operation kind: {operation.KIND}')
+    return OperationOps.get_attachment(operation)(operation)
 
 
 def parse_json_or_yaml_file(path: Path) -> list | dict:

@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from liti.core.base import Defaulter, Validator
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, SchemaName, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, RoundingMode, SchemaName, Table, \
+    TableName
 
 
 class DbBackend(ABC, Defaulter, Validator):
@@ -37,6 +38,17 @@ class DbBackend(ABC, Defaulter, Validator):
     def rename_table(self, from_name: TableName, to_name: Identifier):
         pass
 
+    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
+        raise NotImplementedError('not supported')
+
+    @abstractmethod
+    def set_description(self, table_name: TableName, description: str | None):
+        raise NotImplementedError('not supported')
+
+    @abstractmethod
+    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode):
+        raise NotImplementedError('not supported')
+
     @abstractmethod
     def add_column(self, table_name: TableName, column: Column):
         pass
@@ -49,7 +61,12 @@ class DbBackend(ABC, Defaulter, Validator):
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
         pass
 
-    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
+    @abstractmethod
+    def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
+        raise NotImplementedError('not supported')
+
+    @abstractmethod
+    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingMode):
         raise NotImplementedError('not supported')
 
 
