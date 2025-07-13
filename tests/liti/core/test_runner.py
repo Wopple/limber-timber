@@ -436,6 +436,98 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
     assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).description is None
 
 
+def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_set_labels',
+    )
+
+    set_runner.run(wet_run=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).labels == {
+        "l2": "v2",
+        "l3": "v3",
+    }
+
+    unset_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_unset_labels',
+    )
+
+    unset_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).labels == {
+        "l1": "v1",
+        "l2": "v2",
+    }
+
+    down_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_revert',
+    )
+
+    down_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).labels is None
+
+
+def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_set_tags',
+    )
+
+    set_runner.run(wet_run=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).tags == {
+        "t2": "v2",
+        "t3": "v3",
+    }
+
+    unset_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_unset_tags',
+    )
+
+    unset_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).tags == {
+        "t1": "v1",
+        "t2": "v2",
+    }
+
+    down_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_revert',
+    )
+
+    down_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).tags is None
+
+
 def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
     set_runner = MigrateRunner(
         db_backend=db_backend,

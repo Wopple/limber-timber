@@ -1,6 +1,7 @@
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.table import AddColumn, CreateTable, DropColumn, DropTable, RenameColumn, \
-    RenameTable, SetClustering, SetColumnDescription, SetColumnRoundingMode, SetDefaultRoundingMode, SetDescription
+    RenameTable, SetClustering, SetColumnDescription, SetColumnRoundingMode, SetDefaultRoundingMode, SetDescription, \
+    SetLabels, SetTags
 from liti.core.model.v1.operation.ops.base import OperationOps
 
 
@@ -91,6 +92,42 @@ class SetDescriptionOps(OperationOps):
 
     def is_up(self, db_backend: DbBackend) -> bool:
         return db_backend.get_table(self.op.table_name).description == self.op.description
+
+
+class SetLabelsOps(OperationOps):
+    op: SetLabels
+
+    def __init__(self, op: SetLabels):
+        self.op = op
+
+    def up(self, db_backend: DbBackend):
+        db_backend.set_labels(self.op.table_name, self.op.labels)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetLabels:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+        return SetLabels(table_name=self.op.table_name, labels=sim_table.labels)
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        return db_backend.get_table(self.op.table_name).labels == self.op.labels
+
+
+class SetTagsOps(OperationOps):
+    op: SetTags
+
+    def __init__(self, op: SetTags):
+        self.op = op
+
+    def up(self, db_backend: DbBackend):
+        db_backend.set_tags(self.op.table_name, self.op.tags)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetTags:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+        return SetTags(table_name=self.op.table_name, tags=sim_table.tags)
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        return db_backend.get_table(self.op.table_name).tags == self.op.tags
 
 
 class SetDefaultRoundingModeOps(OperationOps):

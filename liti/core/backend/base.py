@@ -47,6 +47,14 @@ class DbBackend(ABC, Defaulter, Validator):
         raise NotImplementedError('not supported')
 
     @abstractmethod
+    def set_labels(self, table_name: TableName, labels: dict[str, str] | None):
+        raise NotImplementedError('not supported')
+
+    @abstractmethod
+    def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
+        raise NotImplementedError('not supported')
+
+    @abstractmethod
     def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
         raise NotImplementedError('not supported')
 

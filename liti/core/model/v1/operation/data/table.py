@@ -40,6 +40,20 @@ class SetDescription(Operation):
     KIND: ClassVar[str] = 'set_description'
 
 
+class SetLabels(Operation):
+    table_name: TableName
+    labels: dict[str, str] | None = None
+
+    KIND: ClassVar[str] = 'set_labels'
+
+
+class SetTags(Operation):
+    table_name: TableName
+    tags: dict[str, str] | None = None
+
+    KIND: ClassVar[str] = 'set_tags'
+
+
 class SetDefaultRoundingMode(Operation):
     table_name: TableName
     rounding_mode: RoundingModeLiteral = Field(default_factory=RoundingModeLiteral)

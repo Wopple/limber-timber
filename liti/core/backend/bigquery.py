@@ -24,7 +24,8 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE,
     TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, Partitioning, RoundingModeLiteral, \
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, IntervalLiteral, Partitioning, \
+    RoundingModeLiteral, \
     SchemaName, Table, \
     TableName
 
@@ -252,6 +253,104 @@ def data_type_to_sql(data_type: DataType) -> str:
         raise ValueError(f'bigquery.data_type_to_sql unrecognized data_type - {data_type}')
 
 
+def interval_literal_to_sql(interval: IntervalLiteral) -> str:
+    from_str: str = next(filter(lambda x: x[0] != 0, [
+        (interval.year, 'YEAR'),
+        (interval.month, 'MONTH'),
+        (interval.day, 'DAY'),
+        (interval.hour, 'HOUR'),
+        (interval.minute, 'MINUTE'),
+        (interval.second, 'SECOND'),
+        (interval.microsecond, 'SECOND'),
+    ]))[1]
+
+    to_str: str = next(filter(lambda x: x[0] != 0, [
+        (interval.microsecond, 'MICROSECOND'),
+        (interval.second, 'SECOND'),
+        (interval.minute, 'MINUTE'),
+        (interval.hour, 'HOUR'),
+        (interval.day, 'DAY'),
+        (interval.month, 'MONTH'),
+        (interval.year, 'YEAR'),
+    ]))[1]
+
+    if interval.year > 0:
+        if to_str == 'YEAR':
+            year_part = f'{interval.year}'
+        else:
+            year_part = f'{interval.year}-'
+    else:
+        year_part = ''
+
+    if interval.month > 0:
+        if to_str == 'MONTH':
+            month_part = f'{interval.month}'
+        else:
+            month_part = f'{interval.month} '
+    else:
+        month_part = ''
+
+    if interval.day > 0:
+        if to_str == 'DAY':
+            day_part = f'{interval.day}'
+        else:
+            day_part = f'{interval.day} '
+    else:
+        day_part = ''
+
+    if interval.hour > 0:
+        if to_str == 'HOUR':
+            hour_part = f'{interval.hour}'
+        else:
+            hour_part = f'{interval.hour}:'
+    else:
+        hour_part = ''
+
+    if interval.minute > 0:
+        if to_str == 'MINUTE':
+            minute_part = f'{interval.minute}'
+        else:
+            minute_part = f'{interval.minute}:'
+    else:
+        minute_part = ''
+
+    if interval.second > 0:
+        if to_str == 'SECOND':
+            second_part = f'{interval.second}'
+        else:
+            second_part = f'{interval.second}.'
+    else:
+        second_part = ''
+
+    if interval.microsecond > 0:
+        microsecond_part = f'{interval.microsecond}'
+    else:
+        microsecond_part = ''
+
+    year_month_part = f'{year_part}{month_part}'
+    time_part = f'{hour_part}{minute_part}{second_part}{microsecond_part}'
+    sign_part = '-' if interval.sign == '-' else ''
+
+    if year_month_part:
+        year_month_part = f'{sign_part}{year_month_part}'
+
+    if day_part:
+        day_part = f'{sign_part}{day_part}'
+
+    if time_part:
+        time_part = f'{sign_part}{time_part}'
+
+    if to_str == 'MICROSECOND':
+        to_str = 'SECOND'
+
+    if from_str == to_str:
+        range_part = from_str
+    else:
+        range_part = f'{from_str} TO {to_str}'
+
+    return f'INTERVAL "{year_month_part}{day_part}{time_part}" {range_part}'
+
+
 def column_to_sql(column: Column, mode: str | None = None) -> str:
     column_schema_parts = []
 
@@ -293,6 +392,11 @@ def column_to_sql(column: Column, mode: str | None = None) -> str:
         column_schema_parts.append(f'OPTIONS({", ".join(option_parts)})')
 
     return f'`{column.name}` {data_type_to_sql(column.data_type)} {" ".join(column_schema_parts)}'
+
+
+def option_dict_to_sql(option: dict[str, str]) -> str:
+    join_sql = ', '.join(f'("{k}", "{v}")' for k, v in option.items())
+    return f'[{join_sql}]'
 
 
 def to_table(table: BqTable) -> Table:
@@ -399,10 +503,10 @@ class BigQueryDbBackend(DbBackend):
             options.append(f'description = "{table.description}"')
 
         if table.labels:
-            options.append(f'labels = [{", ".join(f"{k}, {v}" for k, v in table.labels.items())}]')
+            options.append(f'labels = [{option_dict_to_sql(table.labels)}]')
 
         if table.tags:
-            options.append(f'tags = [{", ".join(f"{k}, {v}" for k, v in table.tags.items())}]')
+            options.append(f'tags = [{option_dict_to_sql(table.tags)}]')
 
         if table.expiration_timestamp:
             utc_ts = table.expiration_timestamp.astimezone(timezone.utc)
@@ -412,7 +516,7 @@ class BigQueryDbBackend(DbBackend):
             options.append(f'default_rounding_mode = "{table.default_rounding_mode}"')
 
         if table.max_staleness:
-            options.append(f'max_staleness = {table.max_staleness}')
+            options.append(f'max_staleness = {interval_literal_to_sql(table.max_staleness)}')
 
         if table.enable_change_history:
             options.append(f'enable_change_history = TRUE')
@@ -463,6 +567,12 @@ class BigQueryDbBackend(DbBackend):
 
     def set_description(self, table_name: TableName, description: str | None):
         self.set_option(table_name, 'description', f'"{description}"' if description else 'NULL')
+
+    def set_labels(self, table_name: TableName, labels: dict[str, str] | None):
+        self.set_option(table_name, 'labels', option_dict_to_sql(labels) if labels else 'NULL')
+
+    def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
+        self.set_option(table_name, 'tags', option_dict_to_sql(tags) if tags else 'NULL')
 
     def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
         self.set_option(table_name, 'default_rounding_mode', f'"{rounding_mode}"')

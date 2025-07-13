@@ -44,6 +44,12 @@ class MemoryDbBackend(DbBackend):
     def set_description(self, table_name: TableName, description: str | None):
         self.tables[table_name].description = description
 
+    def set_labels(self, table_name: TableName, labels: dict[str, str] | None):
+        self.tables[table_name].labels = labels
+
+    def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
+        self.tables[table_name].tags = tags
+
     def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
         self.tables[table_name].default_rounding_mode = rounding_mode
 
