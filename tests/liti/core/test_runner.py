@@ -25,7 +25,7 @@ def test_all_data_types(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_all_data_types',
+        target='tests/res/target_all_data_types',
     )
 
     up_runner.run(wet_run=True)
@@ -65,7 +65,7 @@ def test_all_data_types(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -79,7 +79,7 @@ def test_create_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_create_table',
+        target='tests/res/target_create_table',
     )
 
     up_runner.run(wet_run=True)
@@ -104,7 +104,7 @@ def test_create_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -118,7 +118,7 @@ def test_drop_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_drop_table',
+        target='tests/res/target_drop_table',
     )
 
     up_runner.run(wet_run=True)
@@ -129,7 +129,7 @@ def test_drop_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -150,7 +150,7 @@ def test_all_max_staleness(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_all_max_staleness',
+        target='tests/res/target_all_max_staleness',
     )
 
     up_runner.run(wet_run=True)
@@ -200,7 +200,7 @@ def test_all_max_staleness(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -222,7 +222,7 @@ def test_all_partitioning(db_backend: MemoryDbBackend, meta_backend: MemoryMetaB
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_all_partitioning',
+        target='tests/res/target_all_partitioning',
     )
 
     up_runner.run(wet_run=True)
@@ -276,7 +276,7 @@ def test_all_partitioning(db_backend: MemoryDbBackend, meta_backend: MemoryMetaB
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -295,7 +295,7 @@ def test_all_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_all_rounding_mode',
+        target='tests/res/target_all_rounding_mode',
     )
 
     up_runner.run(wet_run=True)
@@ -310,7 +310,7 @@ def test_all_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -325,7 +325,7 @@ def test_rename_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_rename_table',
+        target='tests/res/target_rename_table',
     )
 
     up_runner.run(wet_run=True)
@@ -338,7 +338,7 @@ def test_rename_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -353,7 +353,7 @@ def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_set_clustering',
+        target='tests/res/target_set_clustering',
     )
 
     set_runner.run(wet_run=True)
@@ -369,7 +369,7 @@ def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
     unset_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_unset_clustering',
+        target='tests/res/target_unset_clustering',
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
@@ -385,7 +385,7 @@ def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -399,7 +399,7 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_set_description',
+        target='tests/res/target_set_description',
     )
 
     set_runner.run(wet_run=True)
@@ -411,7 +411,7 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
     unset_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_unset_description',
+        target='tests/res/target_unset_description',
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
@@ -423,7 +423,7 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -437,7 +437,7 @@ def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_set_labels',
+        target='tests/res/target_set_labels',
     )
 
     set_runner.run(wet_run=True)
@@ -453,7 +453,7 @@ def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     unset_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_unset_labels',
+        target='tests/res/target_unset_labels',
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
@@ -469,7 +469,7 @@ def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -483,7 +483,7 @@ def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_set_tags',
+        target='tests/res/target_set_tags',
     )
 
     set_runner.run(wet_run=True)
@@ -499,7 +499,7 @@ def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
     unset_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_unset_tags',
+        target='tests/res/target_unset_tags',
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
@@ -515,7 +515,7 @@ def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -529,7 +529,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_set_default_rounding_mode',
+        target='tests/res/target_set_default_rounding_mode',
     )
 
     set_runner.run(wet_run=True)
@@ -542,7 +542,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
     unset_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_unset_default_rounding_mode',
+        target='tests/res/target_unset_default_rounding_mode',
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
@@ -555,7 +555,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -570,7 +570,7 @@ def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_add_column',
+        target='tests/res/target_add_column',
     )
 
     up_runner.run(wet_run=True)
@@ -582,7 +582,7 @@ def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -596,7 +596,7 @@ def test_drop_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_drop_column',
+        target='tests/res/target_drop_column',
     )
 
     up_runner.run(wet_run=True)
@@ -608,7 +608,7 @@ def test_drop_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -622,7 +622,7 @@ def test_rename_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_rename_column',
+        target='tests/res/target_rename_column',
     )
 
     up_runner.run(wet_run=True)
@@ -635,7 +635,7 @@ def test_rename_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -650,7 +650,7 @@ def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMe
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_set_column_nullable',
+        target='tests/res/target_set_column_nullable',
     )
 
     set_runner.run(wet_run=True)
@@ -663,7 +663,7 @@ def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMe
     unset_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_unset_column_nullable',
+        target='tests/res/target_unset_column_nullable',
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
@@ -676,7 +676,7 @@ def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMe
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)
@@ -691,7 +691,7 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_set_column_description',
+        target='tests/res/target_set_column_description',
     )
 
     set_runner.run(wet_run=True)
@@ -704,7 +704,7 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     unset_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_unset_column_description',
+        target='tests/res/target_unset_column_description',
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
@@ -717,7 +717,7 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     down_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='res/target_revert',
+        target='tests/res/target_revert',
     )
 
     down_runner.run(wet_run=True, allow_down=True)

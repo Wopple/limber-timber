@@ -10,7 +10,7 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE,
     Numeric, \
     Range, STRING, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.schema import Partitioning
-from util import NoRaise
+from tests.liti.util import NoRaise
 
 
 @fixture
