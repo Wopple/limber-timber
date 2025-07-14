@@ -83,6 +83,14 @@ class RenameColumn(Operation):
     KIND: ClassVar[str] = 'rename_column'
 
 
+class SetColumnNullable(Operation):
+    table_name: TableName
+    column_name: ColumnName
+    nullable: bool
+
+    KIND: ClassVar[str] = 'set_column_nullable'
+
+
 class SetColumnDescription(Operation):
     table_name: TableName
     column_name: ColumnName

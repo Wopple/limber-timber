@@ -363,22 +363,22 @@ def column_to_sql(column: Column, mode: str | None = None) -> str:
             column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
 
     if column.foreign_key:
-        table_name = column.foreign_key.table_name
-        column_name = column.foreign_key.column_name
+        foreign_table_name = column.foreign_key.table_name
+        foreign_column_name = column.foreign_key.column_name
 
         if column.foreign_enforced:
             # TODO? update this if Big Query ever supports enforcement
             log.warning('Not enforcing foreign key since Big Query does not support enforcement')
-            column_schema_parts.append(f'REFERENCES {table_name}({column_name}) NOT ENFORCED')
+            column_schema_parts.append(f'REFERENCES `{foreign_table_name}` (`{foreign_column_name}`) NOT ENFORCED')
         else:
-            column_schema_parts.append(f'REFERENCES {table_name}({column_name}) NOT ENFORCED')
+            column_schema_parts.append(f'REFERENCES `{foreign_table_name}` (`{foreign_column_name}`) NOT ENFORCED')
 
     if column.default_expression:
         column_schema_parts.append(f'DEFAULT {column.default_expression}')
 
     if mode == 'add' and not column.nullable:
         # TODO: work around this limitation with: create table > drop table > rename table
-        log.warning('Adding column as nullable since Big Query does not support adding non-nullable columns')
+        log.warning(f'Adding column {column.name} as nullable since Big Query does not support adding non-nullable columns')
 
     option_parts = []
 
@@ -588,6 +588,12 @@ class BigQueryDbBackend(DbBackend):
 
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
         self.client.query_and_wait(f'ALTER TABLE `{table_name}` RENAME COLUMN `{from_name}` TO `{to_name}`')
+
+    def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
+        if nullable:
+            self.client.query_and_wait(f'ALTER TABLE `{table_name}` ALTER COLUMN `{column_name}` DROP NOT NULL')
+        else:
+            log.warning(f'Not making column {column_name} nullable since Big Query does not support it')
 
     def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
         self.set_column_option(table_name, column_name, 'description', f'"{description}"' if description else 'NULL')

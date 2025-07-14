@@ -64,7 +64,10 @@ class MigrateRunner:
                 up_ops = attach_ops(up_op)
 
                 if not up_ops.is_up(self.db_backend):
-                    logger.info(pformat(up_op))
+                    if up:
+                        logger.info(f'\033[32m{pformat(up_op)}\033[0m')
+                    else:
+                        logger.info(f'\033[31m{pformat(up_op)}\033[0m')
 
                     if wet_run:
                         up_ops.up(self.db_backend)

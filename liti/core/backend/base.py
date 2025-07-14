@@ -13,31 +13,31 @@ class DbBackend(ABC, Defaulter, Validator):
 
     @abstractmethod
     def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
-        pass
+        raise NotImplementedError('not supported')
 
     @abstractmethod
     def scan_table(self, name: TableName) -> CreateTable | None:
-        pass
+        raise NotImplementedError('not supported')
 
     @abstractmethod
     def has_table(self, name: TableName) -> bool:
-        pass
+        raise NotImplementedError('not supported')
 
     @abstractmethod
     def get_table(self, name: TableName) -> Table | None:
-        pass
+        raise NotImplementedError('not supported')
 
     @abstractmethod
     def create_table(self, table: Table):
-        pass
+        raise NotImplementedError('not supported')
 
     @abstractmethod
     def drop_table(self, name: TableName):
-        pass
+        raise NotImplementedError('not supported')
 
     @abstractmethod
     def rename_table(self, from_name: TableName, to_name: Identifier):
-        pass
+        raise NotImplementedError('not supported')
 
     def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
         raise NotImplementedError('not supported')
@@ -60,15 +60,19 @@ class DbBackend(ABC, Defaulter, Validator):
 
     @abstractmethod
     def add_column(self, table_name: TableName, column: Column):
-        pass
+        raise NotImplementedError('not supported')
 
     @abstractmethod
     def drop_column(self, table_name: TableName, column_name: ColumnName):
-        pass
+        raise NotImplementedError('not supported')
 
     @abstractmethod
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
-        pass
+        raise NotImplementedError('not supported')
+
+    @abstractmethod
+    def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
+        raise NotImplementedError('not supported')
 
     @abstractmethod
     def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):

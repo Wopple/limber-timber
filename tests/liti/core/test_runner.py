@@ -304,7 +304,6 @@ def test_all_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
 
     assert len(db_backend.tables) == 3
     assert len(meta_backend.get_applied_operations()) == 3
-
     assert round_half_away_from_zero_table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO')
     assert round_half_even_table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_EVEN')
 
@@ -407,7 +406,6 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
-
     assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).description == 'bar'
 
     unset_runner = MigrateRunner(
@@ -420,7 +418,6 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
-
     assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).description == 'foo'
 
     down_runner = MigrateRunner(
@@ -536,11 +533,11 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
     )
 
     set_runner.run(wet_run=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
-
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).default_rounding_mode == RoundingModeLiteral('ROUND_HALF_EVEN')
+    assert table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_EVEN')
 
     unset_runner = MigrateRunner(
         db_backend=db_backend,
@@ -549,11 +546,11 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
-
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).default_rounding_mode == RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO')
+    assert table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO')
 
     down_runner = MigrateRunner(
         db_backend=db_backend,
@@ -562,10 +559,11 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
     )
 
     down_runner.run(wet_run=True, allow_down=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).default_rounding_mode == RoundingModeLiteral()
+    assert table.default_rounding_mode == RoundingModeLiteral()
 
 
 def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
@@ -646,3 +644,85 @@ def test_rename_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
     assert len(meta_backend.get_applied_operations()) == 1
     assert ColumnName('col_bool') in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
     assert ColumnName('col_renamed') not in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
+
+
+def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_set_column_nullable',
+    )
+
+    set_runner.run(wet_run=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+    assert table.column_map[ColumnName('col_bool')].nullable == False
+
+    unset_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_unset_column_nullable',
+    )
+
+    unset_runner.run(wet_run=True, allow_down=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+    assert table.column_map[ColumnName('col_bool')].nullable == True
+
+    down_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_revert',
+    )
+
+    down_runner.run(wet_run=True, allow_down=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert table.column_map[ColumnName('col_bool')].nullable == False
+
+
+def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_set_column_description',
+    )
+
+    set_runner.run(wet_run=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+    assert table.column_map[ColumnName('col_bool')].description == 'bar'
+
+    unset_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_unset_column_description',
+    )
+
+    unset_runner.run(wet_run=True, allow_down=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+    assert table.column_map[ColumnName('col_bool')].description == 'foo'
+
+    down_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='res/target_revert',
+    )
+
+    down_runner.run(wet_run=True, allow_down=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert table.column_map[ColumnName('col_bool')].description is None

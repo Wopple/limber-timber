@@ -64,6 +64,11 @@ class MemoryDbBackend(DbBackend):
         table = self.get_table(table_name)
         table.columns = [col if col.name != from_name else col.with_name(to_name) for col in table.columns]
 
+    def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
+        table = self.get_table(table_name)
+        column = table.column_map[column_name]
+        column.nullable = nullable
+
     def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
         table = self.get_table(table_name)
         column = table.column_map[column_name]

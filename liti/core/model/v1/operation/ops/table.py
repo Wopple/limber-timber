@@ -1,6 +1,7 @@
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.table import AddColumn, CreateTable, DropColumn, DropTable, RenameColumn, \
-    RenameTable, SetClustering, SetColumnDescription, SetColumnRoundingMode, SetDefaultRoundingMode, SetDescription, \
+    RenameTable, SetClustering, SetColumnDescription, SetColumnNullable, SetColumnRoundingMode, SetDefaultRoundingMode, \
+    SetDescription, \
     SetLabels, SetTags
 from liti.core.model.v1.operation.ops.base import OperationOps
 
@@ -200,6 +201,29 @@ class RenameColumnOps(OperationOps):
 
     def is_up(self, db_backend: DbBackend) -> bool:
         return self.op.to_name in db_backend.get_table(self.op.table_name).column_map
+
+
+class SetColumnNullableOps(OperationOps):
+    op: SetColumnNullable
+
+    def __init__(self, op: SetColumnNullable):
+        self.op = op
+
+    def up(self, db_backend: DbBackend):
+        db_backend.set_column_nullable(self.op.table_name, self.op.column_name, self.op.nullable)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetColumnNullable:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_column = sim_db.get_table(self.op.table_name).column_map[self.op.column_name]
+
+        return SetColumnNullable(
+            table_name=self.op.table_name,
+            column_name=self.op.column_name,
+            nullable=sim_column.nullable,
+        )
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        return db_backend.get_table(self.op.table_name).column_map[self.op.column_name].nullable == self.op.nullable
 
 
 class SetColumnDescriptionOps(OperationOps):
