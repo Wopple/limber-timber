@@ -5,7 +5,7 @@ description = ''
 authors = ['Daniel Tashjian <thewopple@gmail.com>']
 readme = 'README.md'
 packages = [
-    { include = 'liti' },
+    { include = 'liti', from = 'src' },
 ]
 
 [tool.poetry.scripts]
@@ -22,7 +22,7 @@ devtools = '0.12.2'
 pytest = '^8.3.5'
 
 [tool.pytest.ini_options]
-pythonpath = 'liti'
+pythonpath = 'src'
 testpaths = 'tests'
 
 [build-system]

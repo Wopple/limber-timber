@@ -23,7 +23,7 @@ class Clients(BaseModel):
 
 
 def parse_all_arguments() -> Namespace:
-    parser = ArgumentParser(prog='Limber Timber')
+    parser = ArgumentParser(prog='liti')
     parser.add_argument('command', help='action to perform')
     parser.add_argument('-t', '--target', help='directory with migration files')
     parser.add_argument('-w', '--wet', action=BooleanOptionalAction, default=False, help='[False] should perform migration side effects')
@@ -40,7 +40,7 @@ def parse_all_arguments() -> Namespace:
 
 
 def parse_migrate_arguments() -> Namespace:
-    parser = ArgumentParser(prog='Limber Timber')
+    parser = ArgumentParser(prog='liti')
     parser.add_argument('command', help='action to perform')
     parser.add_argument('-t', '--target', required=True, help='directory with migration files')
     parser.add_argument('-w', '--wet', action=BooleanOptionalAction, default=False, help='[False] should perform migration side effects')
@@ -54,7 +54,7 @@ def parse_migrate_arguments() -> Namespace:
 
 
 def parse_scan_arguments() -> Namespace:
-    parser = ArgumentParser(prog='Limber Timber')
+    parser = ArgumentParser(prog='liti')
     parser.add_argument('command', help='action to perform')
     parser.add_argument('--db', required=True, help='type of database backend (e.g. bigquery)')
     parser.add_argument('--scan-database', required=True, help='database to scan')
