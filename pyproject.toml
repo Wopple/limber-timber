@@ -1,43 +1,40 @@
 [tool.poetry]
-name = 'limber-timber'
-version = '0.0.1'
-description = 'Database Migrations Made Easy'
-authors = ['Daniel Tashjian <thewopple@gmail.com>']
-readme = 'README.md'
-requires-python = '>=3.10'
+name = "limber-timber"
+version = "0.0.1"
+description = "Database Migrations Made Easy"
+authors = ["Daniel Tashjian <thewopple@gmail.com>"]
+readme = "README.md"
 classifiers = [
-    'Programming Language :: Python :: 3',
-    'Operating System :: OS Independent',
-    'Development Status :: 2 - Pre-Alpha',
-    'Framework :: Pytest',
-    'Framework :: Pydantic :: 2',
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 2 - Pre-Alpha",
+    "Framework :: Pytest",
+    "Framework :: Pydantic :: 2",
 ]
-license = 'MIT'
-license-files = ['LICENSE']
+license = "MIT"
 packages = [
-    { include = 'liti', from = 'src' },
+    { include = "liti", from = "src" },
 ]
-
-[project.urls]
-Homepage = 'https://github.com/Wopple/limber-timber'
+homepage = "https://github.com/Wopple/limber-timber"
+repository = "https://github.com/Wopple/limber-timber"
 
 [tool.poetry.scripts]
-liti = 'liti.cli:main'
+liti = "liti.cli:main"
 
 [tool.poetry.dependencies]
-python = '>=3.10'
-devtools = '0.12.2'
-google-cloud-bigquery = '3.34.0'
-pydantic = '2.11.4'
-pyyaml = '6.0.2'
+python = ">=3.10"
+devtools = "0.12.2"
+google-cloud-bigquery = "3.34.0"
+pydantic = "2.11.4"
+pyyaml = "6.0.2"
 
 [tool.poetry.group.dev.dependencies]
-pytest = '^8.3.5'
+pytest = "^8.3.5"
 
 [tool.pytest.ini_options]
-pythonpath = 'src'
-testpaths = 'tests'
+pythonpath = "src"
+testpaths = "tests"
 
 [build-system]
-requires = ['poetry-core']
-build-backend = 'poetry.core.masonry.api'
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
