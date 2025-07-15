@@ -1,6 +1,6 @@
 from datetime import datetime
 from string import ascii_letters, digits
-from typing import Any, ClassVar, Literal, Self
+from typing import Any, ClassVar, Literal
 
 from pydantic import Field, field_serializer, field_validator, model_validator
 
@@ -10,7 +10,7 @@ from liti.core.model.v1.datatype import DataType, parse_data_type, serialize_dat
 DATABASE_CHARS = set(ascii_letters + digits + '_-')
 IDENTIFIER_CHARS = set(ascii_letters + digits + '_')
 
-type RoundingMode = Literal[
+RoundingMode = Literal[
     'ROUND_HALF_AWAY_FROM_ZERO',
     'ROUND_HALF_EVEN',
 ]
@@ -181,7 +181,7 @@ class TableName(LitiModel):
         else:
             return data
 
-    def with_table_name(self, table_name: Identifier) -> Self:
+    def with_table_name(self, table_name: Identifier) -> "TableName":
         return TableName(
             database=self.database,
             schema_name=self.schema_name,
@@ -216,7 +216,7 @@ class Column(LitiModel):
     def serialize_data_type(cls, value: DataType) -> str | dict[str, Any]:
         return serialize_data_type(value)
 
-    def with_name(self, name: ColumnName) -> Self:
+    def with_name(self, name: ColumnName) -> "Column":
         return self.model_copy(update={'name': name})
 
 

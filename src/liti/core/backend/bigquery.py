@@ -537,17 +537,21 @@ class BigQueryDbBackend(DbBackend):
             options.append(f'table_format = {table.table_format}')
 
         if options:
+            joined_options = ",\n    ".join(options)
+
             options_sql = (
                 f'OPTIONS(\n'
-                f'    {",\n    ".join(options)}\n'
+                f'    {joined_options}\n'
                 f')\n'
             )
         else:
             options_sql = ''
 
+        joined_columns = ",\n    ".join(column_sqls)
+
         self.client.query_and_wait((
             f'CREATE TABLE `{table.name}` (\n'
-            f'    {",\n    ".join(column_sqls)}\n'
+            f'    {joined_columns}\n'
             f')\n'
             f'{partition_sql}'
             f'{cluster_sql}'
@@ -578,9 +582,11 @@ class BigQueryDbBackend(DbBackend):
         self.set_option(table_name, 'default_rounding_mode', f'"{rounding_mode}"')
 
     def add_column(self, table_name: TableName, column: Column):
+        column_sql = column_to_sql(column, 'add')
+
         self.client.query_and_wait((
             f'ALTER TABLE `{table_name}`\n'
-            f'ADD COLUMN {column_to_sql(column, 'add')}\n'
+            f'ADD COLUMN {column_sql}\n'
         ))
 
     def drop_column(self, table_name: TableName, column_name: ColumnName):

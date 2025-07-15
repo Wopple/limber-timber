@@ -1,7 +1,7 @@
 .DS_Store
 *.pyc
 .idea/
-.venv/
+/.venv/
 /build/
 /dist/
 /pytest.xml

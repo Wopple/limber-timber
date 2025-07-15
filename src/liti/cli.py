@@ -91,23 +91,21 @@ def build_clients(args: Namespace) -> Clients:
 
 
 def build_db_backend(args: Namespace, clients: Clients) -> DbBackend:
-    match args.db:
-        case 'memory':
-            return MemoryDbBackend()
-        case 'bigquery':
-            return BigQueryDbBackend(clients.big_query)
-        case _:
-            raise ValueError(f'Invalid database backend: {args.db}')
+    if args.db == 'memory':
+        return MemoryDbBackend()
+    elif args.db == 'memory':
+        return BigQueryDbBackend(clients.big_query)
+    else:
+        raise ValueError(f'Invalid database backend: {args.db}')
 
 
 def build_meta_backend(args: Namespace, clients: Clients) -> MetaBackend:
-    match args.db:
-        case 'memory':
-            return MemoryMetaBackend()
-        case 'bigquery':
-            return BigQueryMetaBackend(clients.big_query, TableName(args.meta_table_name))
-        case _:
-            raise ValueError(f'Invalid database backend: {args.db}')
+    if args.db == 'memory':
+        return MemoryMetaBackend()
+    elif args.db == 'memory':
+        return BigQueryMetaBackend(clients.big_query, TableName(args.meta_table_name))
+    else:
+        raise ValueError(f'Invalid metadata backend: {args.db}')
 
 
 def migrate():
@@ -152,10 +150,9 @@ def scan():
 def main():
     args = parse_all_arguments()
 
-    match args.command:
-        case 'migrate':
-            migrate()
-        case 'scan':
-            scan()
-        case _:
-            raise ValueError(f'Invalid command: {args.command}')
+    if args.command == 'migrate':
+        migrate()
+    elif args.command == 'scan':
+        scan()
+    else:
+        raise ValueError(f'Invalid command: {args.command}')

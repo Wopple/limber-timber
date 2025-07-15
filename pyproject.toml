@@ -1,7 +1,7 @@
 [tool.poetry]
 name = 'limber-timber'
-version = '0.1.0'
-description = ''
+version = '0.0.1'
+description = 'Database Migrations Made Easy'
 authors = ['Daniel Tashjian <thewopple@gmail.com>']
 readme = 'README.md'
 packages = [
@@ -12,7 +12,7 @@ packages = [
 liti = 'liti.cli:main'
 
 [tool.poetry.dependencies]
-python = '3.12.2'
+python = ">=3.10"
 google-cloud-bigquery = '3.34.0'
 pydantic = '2.11.4'
 pyyaml = '6.0.2'

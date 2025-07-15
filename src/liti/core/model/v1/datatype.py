@@ -4,7 +4,7 @@ from pydantic import field_validator
 
 from liti.core.base import LitiModel
 
-type FieldName = str
+FieldName = str
 
 
 class DataType(LitiModel):
@@ -124,48 +124,50 @@ def parse_data_type(data: DataType | str | dict[str, Any]) -> DataType:
         return data
     # Map string value to type
     elif isinstance(data, str):
-        match data.upper():
-            case 'BOOL' | 'BOOLEAN':
-                return BOOL
-            case 'INT64':
-                return INT64
-            case 'FLOAT64':
-                return FLOAT64
-            case 'GEOGRAPHY':
-                return GEOGRAPHY
-            case 'STRING':
-                return STRING
-            case 'JSON':
-                return JSON
-            case 'DATE':
-                return DATE
-            case 'TIME':
-                return TIME
-            case 'DATETIME':
-                return DATE_TIME
-            case 'TIMESTAMP':
-                return TIMESTAMP
-            case 'INTERVAL':
-                return INTERVAL
+        data = data.upper()
+
+        if data in ('BOOL', 'BOOLEAN'):
+            return BOOL
+        elif data == 'INT64':
+            return INT64
+        elif data == 'FLOAT64':
+            return FLOAT64
+        elif data == 'GEOGRAPHY':
+            return GEOGRAPHY
+        elif data == 'STRING':
+            return STRING
+        elif data == 'JSON':
+            return JSON
+        elif data == 'DATE':
+            return DATE
+        elif data == 'TIME':
+            return TIME
+        elif data == 'DATETIME':
+            return DATE_TIME
+        elif data == 'TIMESTAMP':
+            return TIMESTAMP
+        elif data == 'INTERVAL':
+            return INTERVAL
     # Parse parametric type
     elif isinstance(data, dict):
-        match data['type'].upper():
-            case 'INT':
-                return Int(bits=data['bits'])
-            case 'FLOAT':
-                return Float(bits=data['bits'])
-            case 'NUMERIC':
-                return Numeric(precision=data['precision'], scale=data['scale'])
-            case 'BIGNUMERIC':
-                return BigNumeric(precision=data['precision'], scale=data['scale'])
-            case 'RANGE':
-                return Range(kind=data['kind'])
-            case 'ARRAY':
-                return Array(inner=parse_data_type(data['inner']))
-            case 'STRUCT':
-                return Struct(fields={k: parse_data_type(v) for k, v in data['fields'].items()})
-    else:
-        raise ValueError(f'Cannot parse data type: {data}')
+        type_ = data['type'].upper()
+
+        if type_ == 'INT':
+            return Int(bits=data['bits'])
+        elif type_ == 'FLOAT':
+            return Float(bits=data['bits'])
+        elif type_ == 'NUMERIC':
+            return Numeric(precision=data['precision'], scale=data['scale'])
+        elif type_ == 'BIGNUMERIC':
+            return BigNumeric(precision=data['precision'], scale=data['scale'])
+        elif type_ == 'RANGE':
+            return Range(kind=data['kind'])
+        elif type_ == 'ARRAY':
+            return Array(inner=parse_data_type(data['inner']))
+        elif type_ == 'STRUCT':
+            return Struct(fields={k: parse_data_type(v) for k, v in data['fields'].items()})
+
+    raise ValueError(f'Cannot parse data type: {data}')
 
 
 def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
