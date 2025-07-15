@@ -47,7 +47,7 @@ I am writing the migration system I always wanted but does not exist (yet).
 These are listed in rough priority order if you are interested in contributing.
 
 - ✅ CLI
-- ➡️ Publish to PyPI
+- ✅ Publish to PyPI
 - ➡️ Github Actions
   - ➡️ Unit Tests
   - ➡️ Release
@@ -67,10 +67,10 @@ These are listed in rough priority order if you are interested in contributing.
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table
   - ➡️ Create Table Clone
-  - ➡️ Labels
-  - ➡️ Options
+  - ✅ Labels
+  - ✅ Tags
 - ✅ Big Query Metadata
-- ➡️ Database Adoption
+- ✅ Database Adoption
 - ➡️ JSON Schema
 - ✅ Database Specific Validation
 - ➡️ Templating
