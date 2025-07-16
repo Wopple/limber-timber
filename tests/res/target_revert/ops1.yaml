@@ -9,4 +9,4 @@ operations:
         table_name: revert_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL

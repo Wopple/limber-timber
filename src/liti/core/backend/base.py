@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from liti.core.base import Defaulter, Validator
+from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, RoundingModeLiteral, \
@@ -68,6 +69,10 @@ class DbBackend(ABC, Defaulter, Validator):
 
     @abstractmethod
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
+        raise NotImplementedError('not supported')
+
+    @abstractmethod
+    def set_column_datatype(self, table_name: TableName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
         raise NotImplementedError('not supported')
 
     @abstractmethod

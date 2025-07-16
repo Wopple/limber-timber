@@ -27,7 +27,7 @@ class OperationOps(ABC):
         }[type(op)]
 
     @abstractmethod
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         """ Apply the operation """
         pass
 

@@ -9,7 +9,7 @@ operations:
         table_name: revert_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
 - kind: create_table
   data:
     table:
@@ -19,7 +19,7 @@ operations:
         table_name: round_half_away_from_zero_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       default_rounding_mode: ROUND_HALF_AWAY_FROM_ZERO
 - kind: create_table
   data:
@@ -30,5 +30,5 @@ operations:
         table_name: round_half_even_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       default_rounding_mode: ROUND_HALF_EVEN

@@ -9,7 +9,7 @@ operations:
         table_name: revert_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
 - kind: create_table
   data:
     table:
@@ -19,7 +19,7 @@ operations:
         table_name: all_pos_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       max_staleness:
         year: 1
         month: 2
@@ -38,7 +38,7 @@ operations:
         table_name: all_neg_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       max_staleness:
         year: 1
         month: 2
@@ -57,7 +57,7 @@ operations:
         table_name: only_year_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       max_staleness:
         year: 1
 - kind: create_table
@@ -69,7 +69,7 @@ operations:
         table_name: only_month_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       max_staleness:
         month: 1
 - kind: create_table
@@ -81,7 +81,7 @@ operations:
         table_name: only_day_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       max_staleness:
         day: 1
 - kind: create_table
@@ -93,7 +93,7 @@ operations:
         table_name: only_hour_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       max_staleness:
         hour: 1
 - kind: create_table
@@ -105,7 +105,7 @@ operations:
         table_name: only_minute_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       max_staleness:
         minute: 1
 - kind: create_table
@@ -117,7 +117,7 @@ operations:
         table_name: only_second_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       max_staleness:
         second: 1
 - kind: create_table
@@ -129,6 +129,6 @@ operations:
         table_name: only_microsecond_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       max_staleness:
         microsecond: 1

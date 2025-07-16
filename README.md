@@ -62,7 +62,8 @@ These are listed in rough priority order if you are interested in contributing.
   - ✅ Add Column
   - ✅ Drop Column
   - ✅ Rename Column
-  - ➡️ Alter Column
+  - ✅ Set Data Type
+  - ➡️ Add Struct Field
   - ➡️ Create View
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table
@@ -71,12 +72,18 @@ These are listed in rough priority order if you are interested in contributing.
   - ✅ Tags
 - ✅ Big Query Metadata
 - ✅ Database Adoption
+- ➡️ Raise Unsupported Operations
 - ➡️ JSON Schema
+  - To validate and auto complete migration files in IDEs
 - ✅ Database Specific Validation
 - ➡️ Templating
+  - To make it easy to swap out repeated values by making a change in one place
 - ➡️ Expand Grouped Operations
+  - To handle complex operations that do not have atomic support in the backend
 - ➡️ Grouped Operation Application
+  - To reduce round trips with the backend and reduce migration time
 - ➡️ Minimize Scan Output
+  - To generate a more human readable operation file
 - ➡️ Arbitrary DML SQL Migrations
 - ➡️ File System Metadata
 - ➡️ SQLite Database
@@ -104,7 +111,7 @@ Create a target directory with a manifest file named `manifest.yaml`.
 version: 1
 operation_files:
 - path/to/create_user_table.yaml
-- path/to/enrich_user_name.json
+- path/to/enrich_user_name.yaml
 ```
 
 2. Create your target migration operations
@@ -126,9 +133,9 @@ operations:
         table_name: users
       columns:
       - name: id
-        data_type: INT64
+        datatype: INT64
       - name: name
-        data_type: STRING
+        datatype: STRING
 ```
 
 ```yaml
@@ -151,7 +158,7 @@ operations:
       table_name: users
     column:
       name: lastname
-      data_type: STRING
+      datatype: STRING
 ```
 
 3. Check what migrations will run

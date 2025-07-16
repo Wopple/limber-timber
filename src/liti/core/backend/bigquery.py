@@ -10,8 +10,9 @@ from google.cloud.bigquery.table import TableListItem
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
+from liti.core.error import Unsupported, UnsupportedError
 from liti.core.function import parse_operation
-from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE, Date, DATE_TIME, DateTime, Float, \
+from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, Date, DATE_TIME, DateTime, Float, \
     FLOAT64, \
     GEOGRAPHY, \
     Int, \
@@ -20,11 +21,12 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE,
     JSON, \
     Numeric, \
     Range, STRING, \
-    Struct, \
+    String, Struct, \
     TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, IntervalLiteral, Partitioning, \
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, IntervalLiteral, \
+    Partitioning, \
     RoundingModeLiteral, \
     SchemaName, Table, \
     TableName
@@ -58,57 +60,57 @@ def to_table_ref(name: TableName | TableListItem) -> TableReference:
         raise ValueError(f'Invalid table ref type: {type(name)}')
 
 
-def to_field_type(data_type: DataType) -> str:
-    if data_type == BOOL:
+def to_field_type(datatype: Datatype) -> str:
+    if datatype == BOOL:
         return 'BOOL'
-    elif data_type == INT64:
+    elif datatype == INT64:
         return 'INT64'
-    elif data_type == FLOAT64:
+    elif datatype == FLOAT64:
         return 'FLOAT64'
-    elif data_type == GEOGRAPHY:
+    elif datatype == GEOGRAPHY:
         return 'GEOGRAPHY'
-    elif isinstance(data_type, Numeric):
+    elif isinstance(datatype, Numeric):
         return 'NUMERIC'
-    elif isinstance(data_type, BigNumeric):
+    elif isinstance(datatype, BigNumeric):
         return 'BIGNUMERIC'
-    elif data_type == STRING:
+    elif datatype == STRING:
         return 'STRING'
-    elif data_type == JSON:
+    elif datatype == JSON:
         return 'JSON'
-    elif data_type == DATE:
+    elif datatype == DATE:
         return 'DATE'
-    elif data_type == TIME:
+    elif datatype == TIME:
         return 'TIME'
-    elif data_type == DATE_TIME:
+    elif datatype == DATE_TIME:
         return 'DATETIME'
-    elif data_type == TIMESTAMP:
+    elif datatype == TIMESTAMP:
         return 'TIMESTAMP'
-    elif isinstance(data_type, Range):
+    elif isinstance(datatype, Range):
         return 'RANGE'
-    elif data_type == INTERVAL:
+    elif datatype == INTERVAL:
         return 'INTERVAL'
-    elif isinstance(data_type, Array):
-        return to_field_type(data_type.inner)
-    elif isinstance(data_type, Struct):
+    elif isinstance(datatype, Array):
+        return to_field_type(datatype.inner)
+    elif isinstance(datatype, Struct):
         return 'RECORD'
     else:
-        raise ValueError(f'bigquery.to_field_type unrecognized data_type - {data_type}')
+        raise ValueError(f'bigquery.to_field_type unrecognized datatype - {datatype}')
 
 
-def to_fields(data_type: DataType) -> tuple[SchemaField, ...]:
-    if isinstance(data_type, Array):
-        return to_fields(data_type.inner)
-    if isinstance(data_type, Struct):
+def to_fields(datatype: Datatype) -> tuple[SchemaField, ...]:
+    if isinstance(datatype, Array):
+        return to_fields(datatype.inner)
+    if isinstance(datatype, Struct):
         return tuple(
-            to_schema_field(Column(name=n, data_type=t, nullable=True))
-            for n, t in data_type.fields.items()
+            to_schema_field(Column(name=n, datatype=t, nullable=True))
+            for n, t in datatype.fields.items()
         )
     else:
         return ()
 
 
 def to_mode(column: Column) -> str:
-    if isinstance(column.data_type, Array):
+    if isinstance(column.datatype, Array):
         return REPEATED
     elif column.nullable:
         return NULLABLE
@@ -116,29 +118,38 @@ def to_mode(column: Column) -> str:
         return REQUIRED
 
 
-def to_precision(data_type: DataType) -> int | None:
-    if isinstance(data_type, Array):
-        return to_precision(data_type.inner)
-    elif isinstance(data_type, Numeric | BigNumeric):
-        return data_type.precision
+def to_precision(datatype: Datatype) -> int | None:
+    if isinstance(datatype, Array):
+        return to_precision(datatype.inner)
+    elif isinstance(datatype, Numeric | BigNumeric):
+        return datatype.precision
     else:
         return None
 
 
-def to_scale(data_type: DataType) -> int | None:
-    if isinstance(data_type, Array):
-        return to_scale(data_type.inner)
-    elif isinstance(data_type, Numeric | BigNumeric):
-        return data_type.scale
+def to_scale(datatype: Datatype) -> int | None:
+    if isinstance(datatype, Array):
+        return to_scale(datatype.inner)
+    elif isinstance(datatype, Numeric | BigNumeric):
+        return datatype.scale
     else:
         return None
 
 
-def to_range_element_type(data_type: DataType) -> str | None:
-    if isinstance(data_type, Array):
-        return to_range_element_type(data_type.inner)
-    elif isinstance(data_type, Range):
-        return data_type.kind
+def to_max_length(datatype: Datatype) -> int | None:
+    if isinstance(datatype, Array):
+        return to_max_length(datatype.inner)
+    elif isinstance(datatype, String):
+        return datatype.characters
+    else:
+        return None
+
+
+def to_range_element_type(datatype: Datatype) -> str | None:
+    if isinstance(datatype, Array):
+        return to_range_element_type(datatype.inner)
+    elif isinstance(datatype, Range):
+        return datatype.kind
     else:
         return None
 
@@ -146,19 +157,20 @@ def to_range_element_type(data_type: DataType) -> str | None:
 def to_schema_field(column: Column) -> SchemaField:
     return SchemaField(
         name=column.name.string,
-        field_type=to_field_type(column.data_type),
+        field_type=to_field_type(column.datatype),
         mode=to_mode(column),
         default_value_expression=column.default_expression,
-        description=(column.options.description if column.options else None) or _DEFAULT_VALUE,
-        fields=to_fields(column.data_type),
-        precision=to_precision(column.data_type),
-        scale=to_scale(column.data_type),
-        range_element_type=to_range_element_type(column.data_type),
-        rounding_mode=column.options.rounding_mode if column.options else None,
+        description=column.description or _DEFAULT_VALUE,
+        fields=to_fields(column.datatype),
+        precision=to_precision(column.datatype),
+        scale=to_scale(column.datatype),
+        max_length=to_max_length(column.datatype),
+        range_element_type=to_range_element_type(column.datatype),
+        rounding_mode=column.rounding_mode and column.rounding_mode.string,
     )
 
 
-def to_data_type(schema_field: SchemaField) -> DataType:
+def to_datatype(schema_field: SchemaField) -> Datatype:
     field_type = schema_field.field_type
 
     if field_type in ('BOOL', 'BOOLEAN'):
@@ -196,61 +208,74 @@ def to_data_type(schema_field: SchemaField) -> DataType:
     elif field_type == 'INTERVAL':
         return INTERVAL
     elif field_type == 'RECORD':
-        return Struct(fields={f.name: to_data_type_array(f) for f in schema_field.fields})
+        return Struct(fields={f.name: to_datatype_array(f) for f in schema_field.fields})
     else:
-        raise ValueError(f'bigquery.to_data_type unrecognized field_type - {schema_field}')
+        raise ValueError(f'bigquery.to_datatype unrecognized field_type - {schema_field}')
 
 
-def to_data_type_array(schema_field: SchemaField) -> DataType:
+def to_datatype_array(schema_field: SchemaField) -> Datatype:
     if schema_field.mode == REPEATED:
-        return Array(inner=to_data_type(schema_field))
+        return Array(inner=to_datatype(schema_field))
     else:
-        return to_data_type(schema_field)
+        return to_datatype(schema_field)
 
 
-def to_column(schema_field: SchemaField) -> Column:
+def to_column(schema_field: SchemaField, table: BqTable) -> Column:
+    primary_key_columns = set()
+
+    if table.table_constraints:
+        if table.table_constraints.primary_key and table.table_constraints.primary_key.columns:
+            primary_key_columns = set(table.table_constraints.primary_key.columns)
+
     return Column(
         name=schema_field.name,
-        data_type=to_data_type_array(schema_field),
+        datatype=to_datatype_array(schema_field),
+        primary_key=schema_field.name in primary_key_columns,
+        default_expression=schema_field.default_value_expression,
         nullable=schema_field.mode != REQUIRED,
+        description=schema_field.description,
+        rounding_mode=schema_field.rounding_mode,
     )
 
 
-def data_type_to_sql(data_type: DataType) -> str:
-    if data_type == BOOL:
+def datatype_to_sql(datatype: Datatype) -> str:
+    if datatype == BOOL:
         return 'BOOL'
-    elif data_type == INT64:
+    elif datatype == INT64:
         return 'INT64'
-    elif data_type == FLOAT64:
+    elif datatype == FLOAT64:
         return 'FLOAT64'
-    elif data_type == GEOGRAPHY:
+    elif datatype == GEOGRAPHY:
         return 'GEOGRAPHY'
-    elif isinstance(data_type, Numeric):
-        return f'NUMERIC({data_type.precision}, {data_type.scale})'
-    elif isinstance(data_type, BigNumeric):
-        return f'BIGNUMERIC({data_type.precision}, {data_type.scale})'
-    elif data_type == STRING:
-        return 'STRING'
-    elif data_type == JSON:
+    elif isinstance(datatype, Numeric):
+        return f'NUMERIC({datatype.precision}, {datatype.scale})'
+    elif isinstance(datatype, BigNumeric):
+        return f'BIGNUMERIC({datatype.precision}, {datatype.scale})'
+    elif isinstance(datatype, String):
+        if datatype.characters is None:
+            return 'STRING'
+        else:
+            return f'STRING({datatype.characters})'
+    elif datatype == JSON:
         return 'JSON'
-    elif data_type == DATE:
+    elif datatype == DATE:
         return 'DATE'
-    elif data_type == TIME:
+    elif datatype == TIME:
         return 'TIME'
-    elif data_type == DATE_TIME:
+    elif datatype == DATE_TIME:
         return 'DATETIME'
-    elif data_type == TIMESTAMP:
+    elif datatype == TIMESTAMP:
         return 'TIMESTAMP'
-    elif isinstance(data_type, Range):
-        return f'RANGE<{data_type.kind}>'
-    elif data_type == INTERVAL:
+    elif isinstance(datatype, Range):
+        return f'RANGE<{datatype.kind}>'
+    elif datatype == INTERVAL:
         return 'INTERVAL'
-    elif isinstance(data_type, Array):
-        return f'ARRAY<{data_type_to_sql(data_type.inner)}>'
-    elif isinstance(data_type, Struct):
-        return f'STRUCT<{", ".join(f"{n} {data_type_to_sql(t)}" for n, t in data_type.fields.items())}>'
+    elif isinstance(datatype, Array):
+        return f'ARRAY<{datatype_to_sql(datatype.inner)}>'
+    elif isinstance(datatype, Struct):
+        return f'STRUCT<{", ".join(f"{n} {datatype_to_sql(t)}" for n, t in datatype.fields.items())}>'
     else:
-        raise ValueError(f'bigquery.data_type_to_sql unrecognized data_type - {data_type}')
+        raise ValueError(f'bigquery.datatype_to_sql unrecognized datatype - {datatype}')
 
 
 def interval_literal_to_sql(interval: IntervalLiteral) -> str:
@@ -351,34 +376,19 @@ def interval_literal_to_sql(interval: IntervalLiteral) -> str:
     return f'INTERVAL "{year_month_part}{day_part}{time_part}" {range_part}'
 
 
-def column_to_sql(column: Column, mode: str | None = None) -> str:
+def column_to_sql(column: Column) -> str:
     column_schema_parts = []
 
     if column.primary_key:
-        if column.primary_enforced:
-            # TODO? update this if Big Query ever supports enforcement
-            log.warning('Not enforcing primary key since Big Query does not support enforcement')
-            column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
-        else:
-            column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
+        column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
 
     if column.foreign_key:
         foreign_table_name = column.foreign_key.table_name
         foreign_column_name = column.foreign_key.column_name
-
-        if column.foreign_enforced:
-            # TODO? update this if Big Query ever supports enforcement
-            log.warning('Not enforcing foreign key since Big Query does not support enforcement')
-            column_schema_parts.append(f'REFERENCES `{foreign_table_name}` (`{foreign_column_name}`) NOT ENFORCED')
-        else:
-            column_schema_parts.append(f'REFERENCES `{foreign_table_name}` (`{foreign_column_name}`) NOT ENFORCED')
+        column_schema_parts.append(f'REFERENCES `{foreign_table_name}` (`{foreign_column_name}`) NOT ENFORCED')
 
     if column.default_expression:
         column_schema_parts.append(f'DEFAULT {column.default_expression}')
-
-    if mode == 'add' and not column.nullable:
-        # TODO: work around this limitation with: create table > drop table > rename table
-        log.warning(f'Adding column {column.name} as nullable since Big Query does not support adding non-nullable columns')
 
     option_parts = []
 
@@ -391,7 +401,7 @@ def column_to_sql(column: Column, mode: str | None = None) -> str:
     if option_parts:
         column_schema_parts.append(f'OPTIONS({", ".join(option_parts)})')
 
-    return f'`{column.name}` {data_type_to_sql(column.data_type)} {" ".join(column_schema_parts)}'
+    return f'`{column.name}` {datatype_to_sql(column.datatype)} {" ".join(column_schema_parts)}'
 
 
 def option_dict_to_sql(option: dict[str, str]) -> str:
@@ -425,7 +435,7 @@ def to_table(table: BqTable) -> Table:
 
     return Table(
         name=TableName(table.full_table_id.replace(':', '.')),
-        columns=[to_column(f) for f in table.schema],
+        columns=[to_column(f, table) for f in table.schema],
         partitioning=partitioning,
         clustering=table.clustering_fields,
     )
@@ -434,8 +444,9 @@ def to_table(table: BqTable) -> Table:
 class BigQueryDbBackend(DbBackend):
     """ Big Query "client" that adapts terms between liti and google.cloud.bigquery """
 
-    def __init__(self, client: BqClient):
+    def __init__(self, client: BqClient, raise_unsupported: set[Unsupported]):
         self.client = client
+        self.raise_unsupported = raise_unsupported
 
     # backend methods
 
@@ -459,6 +470,21 @@ class BigQueryDbBackend(DbBackend):
         return bq_table and to_table(bq_table)
 
     def create_table(self, table: Table):
+        for column in table.columns:
+            # TODO? update this if Big Query ever supports enforcement
+            if column.primary_key and column.primary_enforced:
+                self.handle_unsupported(
+                    Unsupported.ENFORCE_PRIMARY_KEY,
+                    'Not enforcing primary key since Big Query does not support enforcement',
+                )
+
+            # TODO? update this if Big Query ever supports enforcement
+            if column.foreign_key and column.foreign_enforced:
+                self.handle_unsupported(
+                    Unsupported.ENFORCE_FOREIGN_KEY,
+                    'Not enforcing foreign key since Big Query does not support enforcement',
+                )
+
         column_sqls = [column_to_sql(column) for column in table.columns]
 
         if table.partitioning:
@@ -467,16 +493,16 @@ class BigQueryDbBackend(DbBackend):
 
             if partitioning.kind == 'TIME':
                 if column:
-                    data_type = table.column_map[column].data_type
+                    datatype = table.column_map[column].datatype
 
-                    if isinstance(data_type, Date):
+                    if isinstance(datatype, Date):
                         partition_sql = f'PARTITION BY `{column}`\n'
-                    elif isinstance(data_type, DateTime):
+                    elif isinstance(datatype, DateTime):
                         partition_sql = f'PARTITION BY DATETIME_TRUNC(`{column}`, {partitioning.time_unit})\n'
-                    elif isinstance(data_type, Timestamp):
+                    elif isinstance(datatype, Timestamp):
                         partition_sql = f'PARTITION BY TIMESTAMP_TRUNC(`{column}`, {partitioning.time_unit})\n'
                     else:
-                        raise ValueError(f'Unsupported partitioning column data type: {data_type}')
+                        raise ValueError(f'Unsupported partitioning column data type: {datatype}')
                 else:
                     partition_sql = f'PARTITION BY TIMESTAMP_TRUNC(_PARTITIONTIME, {partitioning.time_unit})\n'
             elif table.partitioning.kind == 'INT':
@@ -582,24 +608,90 @@ class BigQueryDbBackend(DbBackend):
         self.set_option(table_name, 'default_rounding_mode', f'"{rounding_mode}"')
 
     def add_column(self, table_name: TableName, column: Column):
-        column_sql = column_to_sql(column, 'add')
+        # TODO? update this if Big Query ever supports enforcement
+        if column.primary_key and column.primary_enforced:
+            self.handle_unsupported(
+                Unsupported.ENFORCE_PRIMARY_KEY,
+                'Not enforcing primary key since Big Query does not support enforcement',
+            )
+
+        # TODO? update this if Big Query ever supports enforcement
+        if column.foreign_key and column.foreign_enforced:
+            self.handle_unsupported(
+                Unsupported.ENFORCE_FOREIGN_KEY,
+                'Not enforcing foreign key since Big Query does not support enforcement',
+            )
 
         self.client.query_and_wait((
             f'ALTER TABLE `{table_name}`\n'
-            f'ADD COLUMN {column_sql}\n'
+            f'ADD COLUMN {column_to_sql(column)}\n'
         ))
 
     def drop_column(self, table_name: TableName, column_name: ColumnName):
-        self.client.query_and_wait(f'ALTER TABLE `{table_name}` DROP COLUMN `{column_name}`')
+        self.client.query_and_wait((
+            f'ALTER TABLE `{table_name}`\n'
+            f'DROP COLUMN `{column_name}`\n'
+        ))
 
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
-        self.client.query_and_wait(f'ALTER TABLE `{table_name}` RENAME COLUMN `{from_name}` TO `{to_name}`')
+        self.client.query_and_wait((
+            f'ALTER TABLE `{table_name}`\n'
+            f'RENAME COLUMN `{from_name}` TO `{to_name}`\n'
+        ))
+
+    def set_column_datatype(self, table_name: TableName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
+        # TODO: work around these limitations by:
+        #     1. create a new table with the new datatype
+        #     2. copy data from the old table to the new table truncating values
+        #     3. drop the old table
+        #     4. rename the new table to the old table name
+        def unsupported():
+            self.handle_unsupported(
+                Unsupported.SET_COLUMN_DATATYPE,
+                f'Not updating column {column_name} datatype from INT64 to {to_datatype} since Big Query does not support it',
+            )
+
+        if from_datatype == INT64:
+            if not (isinstance(to_datatype, Numeric | BigNumeric) or to_datatype == FLOAT64):
+                unsupported()
+        elif isinstance(from_datatype, Numeric):
+            if not (
+                to_datatype == FLOAT64 or
+                (
+                    isinstance(to_datatype, Numeric | BigNumeric) and
+                    from_datatype.precision <= to_datatype.precision and
+                    from_datatype.scale <= to_datatype.scale
+                )
+            ):
+                unsupported()
+        elif isinstance(from_datatype, String):
+            if not (
+                isinstance(to_datatype, String) and
+                to_datatype.characters is None or
+                (from_datatype.characters is not None and from_datatype.characters <= to_datatype.characters)
+            ):
+                unsupported()
+        else:
+            unsupported()
+
+        self.client.query_and_wait((
+            f'ALTER TABLE `{table_name}`\n'
+            f'ALTER COLUMN `{column_name}\n`'
+            f'SET DATA TYPE {datatype_to_sql(to_datatype)}\n'
+        ))
 
     def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
         if nullable:
-            self.client.query_and_wait(f'ALTER TABLE `{table_name}` ALTER COLUMN `{column_name}` DROP NOT NULL')
+            self.client.query_and_wait((
+                f'ALTER TABLE `{table_name}`\n'
+                f'ALTER COLUMN `{column_name}`\n'
+                f'DROP NOT NULL\n'
+            ))
         else:
-            log.warning(f'Not making column {column_name} nullable since Big Query does not support it')
+            self.handle_unsupported(
+                Unsupported.ADD_NON_NULLABLE_COLUMN,
+                f'Not adding column {column_name} as non-nullable since Big Query does not support it',
+            )
 
     def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
         self.set_column_option(table_name, column_name, 'description', f'"{description}"' if description else 'NULL')
@@ -703,6 +795,13 @@ class BigQueryDbBackend(DbBackend):
             raise ValueError('\n'.join(errors))
 
     # class methods
+
+    def handle_unsupported(self, unsupported: Unsupported, message: str):
+        if unsupported in self.raise_unsupported:
+            raise UnsupportedError(message)
+        else:
+            log.warning(message)
+
     def set_option(self, table_name: TableName, key: str, value: str):
         self.client.query_and_wait((
             f'ALTER TABLE `{table_name}`\n'
@@ -723,18 +822,16 @@ class BigQueryMetaBackend(MetaBackend):
         self.table_name = table_name
 
     def initialize(self):
-        self.client.query_and_wait(
-            f'''
-            CREATE SCHEMA IF NOT EXISTS `{self.table_name.database}.{self.table_name.schema_name}`;
-
-            CREATE TABLE IF NOT EXISTS `{self.table_name}` (
-                idx INT64 NOT NULL,
-                op_kind STRING NOT NULL,
-                op_data JSON NOT NULL,
-                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL
-            )
-            '''
-        )
+        self.client.query_and_wait((
+            f'CREATE SCHEMA IF NOT EXISTS `{self.table_name.database}.{self.table_name.schema_name}`;\n'
+            f'\n'
+            f'CREATE TABLE IF NOT EXISTS `{self.table_name}` (\n'
+            f'    idx INT64 NOT NULL,\n'
+            f'    op_kind STRING NOT NULL,\n'
+            f'    op_data JSON NOT NULL,\n'
+            f'    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL\n'
+            f')\n'
+        ))
 
     def get_applied_operations(self) -> list[Operation]:
         rows = self.client.query_and_wait(f'SELECT op_kind, op_data FROM `{self.table_name}` ORDER BY idx')

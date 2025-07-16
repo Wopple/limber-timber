@@ -9,74 +9,74 @@ operations:
         table_name: revert_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
 - kind: create_table
   data:
     table:
       name:
         database: my_project
         schema_name: my_dataset
-        table_name: data_types_table
+        table_name: datatypes_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       - name: col_int_64
-        data_type: INT64
+        datatype: INT64
       - name: col_float_64
-        data_type: FLOAT64
+        datatype: FLOAT64
       - name: col_int_64_bits
-        data_type:
+        datatype:
           type: INT
           bits: 64
       - name: col_float_64_bits
-        data_type:
+        datatype:
           type: FLOAT
           bits: 64
       - name: col_geography
-        data_type: GEOGRAPHY
+        datatype: GEOGRAPHY
       - name: col_numeric
-        data_type:
+        datatype:
           type: NUMERIC
           precision: 38
           scale: 9
       - name: col_big_numeric
-        data_type:
+        datatype:
           type: BIGNUMERIC
           precision: 76
           scale: 38
       - name: col_string
-        data_type: STRING
+        datatype: STRING
       - name: col_json
-        data_type: JSON
+        datatype: JSON
       - name: col_date
-        data_type: DATE
+        datatype: DATE
       - name: col_time
-        data_type: TIME
+        datatype: TIME
       - name: col_date_time
-        data_type: DATETIME
+        datatype: DATETIME
       - name: col_timestamp
-        data_type: TIMESTAMP
+        datatype: TIMESTAMP
       - name: col_range_date
-        data_type:
+        datatype:
           type: RANGE
           kind: DATE
       - name: col_range_datetime
-        data_type:
+        datatype:
           type: RANGE
           kind: DATETIME
       - name: col_range_timestamp
-        data_type:
+        datatype:
           type: RANGE
           kind: TIMESTAMP
       - name: col_array
-        data_type:
+        datatype:
           type: ARRAY
           inner:
             type: STRUCT
             fields:
               field_bool: BOOL
       - name: col_struct
-        data_type:
+        datatype:
           type: STRUCT
           fields:
             field_bool: BOOL

@@ -1,4 +1,5 @@
 from liti.core.backend.base import DbBackend, MetaBackend
+from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, RoundingModeLiteral, \
@@ -63,6 +64,11 @@ class MemoryDbBackend(DbBackend):
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
         table = self.get_table(table_name)
         table.columns = [col if col.name != from_name else col.with_name(to_name) for col in table.columns]
+
+    def set_column_datatype(self, table_name: TableName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
+        table = self.get_table(table_name)
+        column = table.column_map[column_name]
+        column.datatype = to_datatype
 
     def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
         table = self.get_table(table_name)

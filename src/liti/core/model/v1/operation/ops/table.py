@@ -1,6 +1,7 @@
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.table import AddColumn, CreateTable, DropColumn, DropTable, RenameColumn, \
-    RenameTable, SetClustering, SetColumnDescription, SetColumnNullable, SetColumnRoundingMode, SetDefaultRoundingMode, \
+    RenameTable, SetClustering, SetColumnDatatype, SetColumnDescription, SetColumnNullable, SetColumnRoundingMode, \
+    SetDefaultRoundingMode, \
     SetDescription, \
     SetLabels, SetTags
 from liti.core.model.v1.operation.ops.base import OperationOps
@@ -12,10 +13,10 @@ class CreateTableOps(OperationOps):
     def __init__(self, op: CreateTable):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.create_table(self.op.table)
 
-    def down(self, db_backend: DbBackend, _meta_backend: MetaBackend) -> DropTable:
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> DropTable:
         return DropTable(table_name=self.op.table.name)
 
     def is_up(self, db_backend: DbBackend) -> bool:
@@ -28,7 +29,7 @@ class DropTableOps(OperationOps):
     def __init__(self, op: DropTable):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.drop_table(self.op.table_name)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> CreateTable:
@@ -46,10 +47,10 @@ class RenameTableOps(OperationOps):
     def __init__(self, op: RenameTable):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.rename_table(self.op.from_name, self.op.to_name)
 
-    def down(self, db_backend: DbBackend, _meta_backend: MetaBackend) -> RenameTable:
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> RenameTable:
         return RenameTable(
             from_name=self.op.from_name.with_table_name(self.op.to_name),
             to_name=self.op.from_name.table_name,
@@ -65,7 +66,7 @@ class SetClusteringOps(OperationOps):
     def __init__(self, op: SetClustering):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.set_clustering(self.op.table_name, self.op.columns)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetClustering:
@@ -83,7 +84,7 @@ class SetDescriptionOps(OperationOps):
     def __init__(self, op: SetDescription):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.set_description(self.op.table_name, self.op.description)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetDescription:
@@ -101,7 +102,7 @@ class SetLabelsOps(OperationOps):
     def __init__(self, op: SetLabels):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.set_labels(self.op.table_name, self.op.labels)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetLabels:
@@ -119,7 +120,7 @@ class SetTagsOps(OperationOps):
     def __init__(self, op: SetTags):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.set_tags(self.op.table_name, self.op.tags)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetTags:
@@ -137,7 +138,7 @@ class SetDefaultRoundingModeOps(OperationOps):
     def __init__(self, op: SetDefaultRoundingMode):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.set_default_rounding_mode(self.op.table_name, self.op.rounding_mode)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetDefaultRoundingMode:
@@ -155,10 +156,10 @@ class AddColumnOps(OperationOps):
     def __init__(self, op: AddColumn):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.add_column(self.op.table_name, self.op.column)
 
-    def down(self, db_backend: DbBackend, _meta_backend: MetaBackend) -> DropColumn:
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> DropColumn:
         return DropColumn(table_name=self.op.table_name, column_name=self.op.column.name)
 
     def is_up(self, db_backend: DbBackend) -> bool:
@@ -171,7 +172,7 @@ class DropColumnOps(OperationOps):
     def __init__(self, op: DropColumn):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.drop_column(self.op.table_name, self.op.column_name)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> AddColumn:
@@ -189,10 +190,10 @@ class RenameColumnOps(OperationOps):
     def __init__(self, op: RenameColumn):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.rename_column(self.op.table_name, self.op.from_name, self.op.to_name)
 
-    def down(self, db_backend: DbBackend, _meta_backend: MetaBackend) -> RenameColumn:
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> RenameColumn:
         return RenameColumn(
             table_name=self.op.table_name,
             from_name=self.op.to_name,
@@ -203,13 +204,44 @@ class RenameColumnOps(OperationOps):
         return self.op.to_name in db_backend.get_table(self.op.table_name).column_map
 
 
+class SetColumnDatatypeOps(OperationOps):
+    op: SetColumnDatatype
+
+    def __init__(self, op: SetColumnDatatype):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
+        sim_db = self.simulate(meta_backend.get_applied_operations())
+        sim_column = sim_db.get_table(self.op.table_name).column_map[self.op.column_name]
+
+        db_backend.set_column_datatype(
+            table_name=self.op.table_name,
+            column_name=self.op.column_name,
+            from_datatype=sim_column.datatype,
+            to_datatype=self.op.datatype,
+        )
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetColumnDatatype:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_column = sim_db.get_table(self.op.table_name).column_map[self.op.column_name]
+
+        return SetColumnDatatype(
+            table_name=self.op.table_name,
+            column_name=self.op.column_name,
+            datatype=sim_column.datatype,
+        )
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        return db_backend.get_table(self.op.table_name).column_map[self.op.column_name].datatype == self.op.datatype
+
+
 class SetColumnNullableOps(OperationOps):
     op: SetColumnNullable
 
     def __init__(self, op: SetColumnNullable):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.set_column_nullable(self.op.table_name, self.op.column_name, self.op.nullable)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetColumnNullable:
@@ -232,7 +264,7 @@ class SetColumnDescriptionOps(OperationOps):
     def __init__(self, op: SetColumnDescription):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.set_column_description(self.op.table_name, self.op.column_name, self.op.description)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetColumnDescription:
@@ -255,7 +287,7 @@ class SetColumnRoundingModeOps(OperationOps):
     def __init__(self, op: SetColumnRoundingMode):
         self.op = op
 
-    def up(self, db_backend: DbBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
         db_backend.set_column_rounding_mode(self.op.table_name, self.op.column_name, self.op.rounding_mode)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetColumnRoundingMode:

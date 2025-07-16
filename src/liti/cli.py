@@ -93,8 +93,9 @@ def build_clients(args: Namespace) -> Clients:
 def build_db_backend(args: Namespace, clients: Clients) -> DbBackend:
     if args.db == 'memory':
         return MemoryDbBackend()
-    elif args.db == 'memory':
-        return BigQueryDbBackend(clients.big_query)
+    elif args.db == 'bigquery':
+        # TODO: allow flags to raise unsupported operations
+        return BigQueryDbBackend(clients.big_query, raise_unsupported=set())
     else:
         raise ValueError(f'Invalid database backend: {args.db}')
 
@@ -102,7 +103,7 @@ def build_db_backend(args: Namespace, clients: Clients) -> DbBackend:
 def build_meta_backend(args: Namespace, clients: Clients) -> MetaBackend:
     if args.db == 'memory':
         return MemoryMetaBackend()
-    elif args.db == 'memory':
+    elif args.db == 'bigquery':
         return BigQueryMetaBackend(clients.big_query, TableName(args.meta_table_name))
     else:
         raise ValueError(f'Invalid metadata backend: {args.db}')

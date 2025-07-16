@@ -9,7 +9,7 @@ operations:
         table_name: revert_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
 - kind: create_table
   data:
     table:
@@ -19,9 +19,9 @@ operations:
         table_name: clustering_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
       - name: col_int
-        data_type: INT64
+        datatype: INT64
       clustering:
       - col_bool
       - col_int

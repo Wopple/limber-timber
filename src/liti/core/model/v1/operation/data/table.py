@@ -1,7 +1,8 @@
-from typing import ClassVar
+from typing import Any, ClassVar
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
+from liti.core.model.v1.datatype import Datatype, parse_datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.schema import Column, ColumnName, Identifier, RoundingModeLiteral, Table, \
     TableName
@@ -81,6 +82,19 @@ class RenameColumn(Operation):
     to_name: ColumnName
 
     KIND: ClassVar[str] = 'rename_column'
+
+
+class SetColumnDatatype(Operation):
+    table_name: TableName
+    column_name: ColumnName
+    datatype: Datatype
+
+    KIND: ClassVar[str] = 'set_column_datatype'
+
+    @field_validator('datatype', mode='before')
+    @classmethod
+    def validate_datatype(cls, value: Datatype | str | dict[str, Any]) -> Datatype:
+        return parse_datatype(value)
 
 
 class SetColumnNullable(Operation):

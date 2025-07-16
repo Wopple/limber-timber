@@ -4,7 +4,7 @@ from unittest.mock import Mock
 from pytest import fixture, mark, raises
 
 from liti.core.backend.bigquery import BigQueryDbBackend
-from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DataType, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
+from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, \
     INTERVAL, JSON, \
     Numeric, \
@@ -20,7 +20,7 @@ def bq_client():
 
 @fixture
 def db_backend(bq_client):
-    return BigQueryDbBackend(bq_client)
+    return BigQueryDbBackend(bq_client, raise_unsupported=set())
 
 
 def test_int_defaults(db_backend: BigQueryDbBackend):
@@ -172,7 +172,7 @@ def test_validate_big_numeric(db_backend: BigQueryDbBackend, precision: int, sca
         (Struct(fields={'field': BOOL}), NoRaise()),
     ],
 )
-def test_validate_array(db_backend: BigQueryDbBackend, inner: DataType, raise_ctx):
+def test_validate_array(db_backend: BigQueryDbBackend, inner: Datatype, raise_ctx):
     node = Array(inner=inner)
 
     with raise_ctx:

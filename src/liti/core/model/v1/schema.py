@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Literal
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from liti.core.base import LitiModel
-from liti.core.model.v1.datatype import DataType, parse_data_type, serialize_data_type
+from liti.core.model.v1.datatype import Datatype, parse_datatype, serialize_datatype
 
 DATABASE_CHARS = set(ascii_letters + digits + '_-')
 IDENTIFIER_CHARS = set(ascii_letters + digits + '_')
@@ -80,7 +80,7 @@ class DatabaseName(LitiModel):
     def __str__(self) -> str:
         return self.string
 
-    def model_post_init(self, _context: Any):
+    def model_post_init(self, context: Any):
         if any(c not in DATABASE_CHARS for c in self.string):
             raise ValueError(f'Invalid database name: {self.string}')
 
@@ -109,7 +109,7 @@ class Identifier(LitiModel):
     def __str__(self) -> str:
         return self.string
 
-    def model_post_init(self, _context: Any):
+    def model_post_init(self, context: Any):
         if any(c not in IDENTIFIER_CHARS for c in self.string):
             raise ValueError(f'Invalid identifier: {self.string}')
 
@@ -189,6 +189,7 @@ class TableName(LitiModel):
         )
 
 
+# TODO: fix foreign key to be a property of a table and support multiple foreign columns
 class ForeignKey(LitiModel):
     table_name: TableName
     column_name: ColumnName
@@ -196,7 +197,8 @@ class ForeignKey(LitiModel):
 
 class Column(LitiModel):
     name: ColumnName
-    data_type: DataType
+    datatype: Datatype
+    # TODO: move primary key to be a property of a table
     primary_key: bool = False
     primary_enforced: bool = False
     foreign_key: ForeignKey | None = None
@@ -206,15 +208,15 @@ class Column(LitiModel):
     description: str | None = None
     rounding_mode: RoundingModeLiteral | None = None
 
-    @field_validator('data_type', mode='before')
+    @field_validator('datatype', mode='before')
     @classmethod
-    def validate_data_type(cls, value: DataType | str | dict[str, Any]) -> DataType:
-        return parse_data_type(value)
+    def validate_datatype(cls, value: Datatype | str | dict[str, Any]) -> Datatype:
+        return parse_datatype(value)
 
-    @field_serializer('data_type')
+    @field_serializer('datatype')
     @classmethod
-    def serialize_data_type(cls, value: DataType) -> str | dict[str, Any]:
-        return serialize_data_type(value)
+    def serialize_datatype(cls, value: Datatype) -> str | dict[str, Any]:
+        return serialize_datatype(value)
 
     def with_name(self, name: ColumnName) -> "Column":
         return self.model_copy(update={'name': name})
@@ -251,7 +253,7 @@ class Table(LitiModel):
     expiration_timestamp: datetime | None = None
     default_rounding_mode: RoundingModeLiteral = Field(default_factory=RoundingModeLiteral)
 
-    # TODO validate milliseconds between 0 and 86400000 for big query
+    # TODO: validate milliseconds between 0 and 86400000 for big query
     max_staleness: IntervalLiteral | None = None
 
     enable_change_history: bool | None = None

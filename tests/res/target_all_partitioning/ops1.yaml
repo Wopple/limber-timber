@@ -9,7 +9,7 @@ operations:
         table_name: revert_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
 - kind: create_table
   data:
     table:
@@ -19,7 +19,7 @@ operations:
         table_name: time_all_table
       columns:
       - name: col_date
-        data_type: DATE
+        datatype: DATE
       partitioning:
         kind: TIME
         column: col_date
@@ -35,7 +35,7 @@ operations:
         table_name: year_ingest_table
       columns:
       - name: col_date
-        data_type: DATE
+        datatype: DATE
       partitioning:
         kind: TIME
         time_unit: YEAR
@@ -48,7 +48,7 @@ operations:
         table_name: month_ingest_table
       columns:
       - name: col_date
-        data_type: DATE
+        datatype: DATE
       partitioning:
         kind: TIME
         time_unit: MONTH
@@ -61,7 +61,7 @@ operations:
         table_name: day_ingest_table
       columns:
       - name: col_date
-        data_type: DATE
+        datatype: DATE
       partitioning:
         kind: TIME
         time_unit: DAY
@@ -74,7 +74,7 @@ operations:
         table_name: hour_ingest_table
       columns:
       - name: col_date
-        data_type: DATE
+        datatype: DATE
       partitioning:
         kind: TIME
         time_unit: HOUR
@@ -87,7 +87,7 @@ operations:
         table_name: int_all_table
       columns:
       - name: col_int
-        data_type: INT64
+        datatype: INT64
       partitioning:
         kind: INT
         column: col_int

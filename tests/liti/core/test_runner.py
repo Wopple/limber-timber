@@ -11,6 +11,7 @@ from liti.core.model.v1.schema import Column, ColumnName, IntervalLiteral, Parti
     TableName
 from liti.core.runner import MigrateRunner
 
+
 @fixture
 def db_backend() -> MemoryDbBackend:
     return MemoryDbBackend()
@@ -21,43 +22,43 @@ def meta_backend() -> MemoryMetaBackend:
     return MemoryMetaBackend()
 
 
-def test_all_data_types(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+def test_all_datatypes(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target='tests/res/target_all_data_types',
+        target='tests/res/target_all_datatypes',
     )
 
     up_runner.run(wet_run=True)
-    data_types_table = db_backend.get_table(TableName('my_project.my_dataset.data_types_table'))
+    datatypes_table = db_backend.get_table(TableName('my_project.my_dataset.datatypes_table'))
 
     assert len(db_backend.tables) == 2
     assert len(meta_backend.get_applied_operations()) == 2
 
-    assert data_types_table == Table(
-        name=TableName('my_project.my_dataset.data_types_table'),
+    assert datatypes_table == Table(
+        name=TableName('my_project.my_dataset.datatypes_table'),
         columns=[
-            Column(name=ColumnName('col_bool'), data_type=BOOL),
-            Column(name=ColumnName('col_int_64'), data_type=INT64),
-            Column(name=ColumnName('col_float_64'), data_type=FLOAT64),
-            Column(name=ColumnName('col_int_64_bits'), data_type=INT64),
-            Column(name=ColumnName('col_float_64_bits'), data_type=FLOAT64),
-            Column(name=ColumnName('col_geography'), data_type=GEOGRAPHY),
-            Column(name=ColumnName('col_numeric'), data_type=Numeric(precision=38, scale=9)),
-            Column(name=ColumnName('col_big_numeric'), data_type=BigNumeric(precision=76, scale=38)),
-            Column(name=ColumnName('col_string'), data_type=STRING),
-            Column(name=ColumnName('col_json'), data_type=JSON),
-            Column(name=ColumnName('col_date'), data_type=DATE),
-            Column(name=ColumnName('col_time'), data_type=TIME),
-            Column(name=ColumnName('col_date_time'), data_type=DATE_TIME),
-            Column(name=ColumnName('col_timestamp'), data_type=TIMESTAMP),
-            Column(name=ColumnName('col_range_date'), data_type=Range(kind='DATE')),
-            Column(name=ColumnName('col_range_datetime'), data_type=Range(kind='DATETIME')),
-            Column(name=ColumnName('col_range_timestamp'), data_type=Range(kind='TIMESTAMP')),
-            Column(name=ColumnName('col_array'), data_type=Array(inner=Struct(fields={'field_bool': BOOL}))),
+            Column(name=ColumnName('col_bool'), datatype=BOOL),
+            Column(name=ColumnName('col_int_64'), datatype=INT64),
+            Column(name=ColumnName('col_float_64'), datatype=FLOAT64),
+            Column(name=ColumnName('col_int_64_bits'), datatype=INT64),
+            Column(name=ColumnName('col_float_64_bits'), datatype=FLOAT64),
+            Column(name=ColumnName('col_geography'), datatype=GEOGRAPHY),
+            Column(name=ColumnName('col_numeric'), datatype=Numeric(precision=38, scale=9)),
+            Column(name=ColumnName('col_big_numeric'), datatype=BigNumeric(precision=76, scale=38)),
+            Column(name=ColumnName('col_string'), datatype=STRING),
+            Column(name=ColumnName('col_json'), datatype=JSON),
+            Column(name=ColumnName('col_date'), datatype=DATE),
+            Column(name=ColumnName('col_time'), datatype=TIME),
+            Column(name=ColumnName('col_date_time'), datatype=DATE_TIME),
+            Column(name=ColumnName('col_timestamp'), datatype=TIMESTAMP),
+            Column(name=ColumnName('col_range_date'), datatype=Range(kind='DATE')),
+            Column(name=ColumnName('col_range_datetime'), datatype=Range(kind='DATETIME')),
+            Column(name=ColumnName('col_range_timestamp'), datatype=Range(kind='TIMESTAMP')),
+            Column(name=ColumnName('col_array'), datatype=Array(inner=Struct(fields={'field_bool': BOOL}))),
             Column(
                 name=ColumnName('col_struct'),
-                data_type=Struct(fields={'field_bool': BOOL, 'field_array': Array(inner=BOOL)}),
+                datatype=Struct(fields={'field_bool': BOOL, 'field_array': Array(inner=BOOL)}),
             ),
         ],
     )
@@ -72,7 +73,7 @@ def test_all_data_types(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.data_types_table')) is None
+    assert db_backend.get_table(TableName('my_project.my_dataset.datatypes_table')) is None
 
 
 def test_create_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
@@ -141,7 +142,7 @@ def test_drop_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     assert revert_table == Table(
         name=TableName('my_project.my_dataset.revert_table'),
         columns=[
-            Column(name='col_bool', data_type=BOOL),
+            Column(name='col_bool', datatype=BOOL),
         ],
     )
 
@@ -644,6 +645,38 @@ def test_rename_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
     assert len(meta_backend.get_applied_operations()) == 1
     assert ColumnName('col_bool') in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
     assert ColumnName('col_renamed') not in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
+
+
+def test_set_column_datatype(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_set_column_datatype',
+    )
+
+    set_runner.run(wet_run=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.datatype_table'))
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 4
+    assert table.column_map[ColumnName('col_int')].datatype == Numeric(precision=1, scale=1)
+    assert table.column_map[ColumnName('col_numeric')].datatype == FLOAT64
+    assert table.column_map[ColumnName('col_bignumeric')].datatype == BigNumeric(precision=12, scale=8)
+
+    unset_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_unset_column_datatype',
+    )
+
+    unset_runner.run(wet_run=True, allow_down=True)
+    table = db_backend.get_table(TableName('my_project.my_dataset.datatype_table'))
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert table.column_map[ColumnName('col_int')].datatype == INT64
+    assert table.column_map[ColumnName('col_numeric')].datatype == Numeric(precision=4, scale=2)
+    assert table.column_map[ColumnName('col_bignumeric')].datatype == BigNumeric(precision=8, scale=4)
 
 
 def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):

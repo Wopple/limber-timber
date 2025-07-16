@@ -1,0 +1,22 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: datatype_table
+      columns:
+      - name: col_int
+        datatype: INT64
+      - name: col_numeric
+        datatype:
+          type: NUMERIC
+          precision: 4
+          scale: 2
+      - name: col_bignumeric
+        datatype:
+          type: BIGNUMERIC
+          precision: 8
+          scale: 4

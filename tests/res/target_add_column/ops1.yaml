@@ -9,7 +9,7 @@ operations:
         table_name: revert_table
       columns:
       - name: col_bool
-        data_type: BOOL
+        datatype: BOOL
 - kind: add_column
   data:
     table_name:
@@ -18,4 +18,4 @@ operations:
       table_name: revert_table
     column:
       name: add_col
-      data_type: BOOL
+      datatype: BOOL

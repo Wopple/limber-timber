@@ -70,7 +70,7 @@ class MigrateRunner:
                         logger.info(f'\033[31m{pformat(up_op)}\033[0m')
 
                     if wet_run:
-                        up_ops.up(self.db_backend)
+                        up_ops.up(self.db_backend, self.meta_backend)
 
                 if wet_run:
                     if up:
@@ -78,6 +78,8 @@ class MigrateRunner:
                     else:
                         self.meta_backend.unapply_operation(op)
 
+        # TODO: only check is_up() on the first operation since that is
+        #    the only case where we need to recover from a possible failure
         logger.info('Down')
         apply_operations(migration_plan['down'], False)
         logger.info('Up')

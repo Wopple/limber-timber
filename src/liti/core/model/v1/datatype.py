@@ -7,15 +7,15 @@ from liti.core.base import LitiModel
 FieldName = str
 
 
-class DataType(LitiModel):
+class Datatype(LitiModel):
     pass
 
 
-class Bool(DataType):
+class Bool(Datatype):
     pass
 
 
-class Int(DataType):
+class Int(Datatype):
     bits: int | None = None
 
     DEFAULT_METHOD = 'int_defaults'
@@ -26,7 +26,7 @@ class Int(DataType):
         return self.bits // 8
 
 
-class Float(DataType):
+class Float(Datatype):
     bits: int | None = None
 
     DEFAULT_METHOD = 'float_defaults'
@@ -37,11 +37,11 @@ class Float(DataType):
         return self.bits // 8
 
 
-class Geography(DataType):
+class Geography(Datatype):
     pass
 
 
-class Numeric(DataType):
+class Numeric(Datatype):
     precision: int | None = None
     scale: int | None = None
 
@@ -49,7 +49,7 @@ class Numeric(DataType):
     VALIDATE_METHOD = 'validate_numeric'
 
 
-class BigNumeric(DataType):
+class BigNumeric(Datatype):
     precision: int | None = None
     scale: int | None = None
 
@@ -57,32 +57,31 @@ class BigNumeric(DataType):
     VALIDATE_METHOD = 'validate_big_numeric'
 
 
-class String(DataType):
+class String(Datatype):
     characters: int | None = None
-    collate: str | None = None
 
 
-class Json(DataType):
+class Json(Datatype):
     pass
 
 
-class Date(DataType):
+class Date(Datatype):
     pass
 
 
-class Time(DataType):
+class Time(Datatype):
     pass
 
 
-class DateTime(DataType):
+class DateTime(Datatype):
     pass
 
 
-class Timestamp(DataType):
+class Timestamp(Datatype):
     pass
 
 
-class Range(DataType):
+class Range(Datatype):
     kind: Literal['DATE', 'DATETIME', 'TIMESTAMP']
 
     @field_validator('kind', mode='before')
@@ -91,18 +90,18 @@ class Range(DataType):
         return value.upper()
 
 
-class Interval(DataType):
+class Interval(Datatype):
     pass
 
 
-class Array(DataType):
-    inner: DataType
+class Array(Datatype):
+    inner: Datatype
 
     VALIDATE_METHOD = 'validate_array'
 
 
-class Struct(DataType):
-    fields: dict[FieldName, DataType]
+class Struct(Datatype):
+    fields: dict[FieldName, Datatype]
 
 
 BOOL = Bool()
@@ -118,9 +117,9 @@ TIMESTAMP = Timestamp()
 INTERVAL = Interval()
 
 
-def parse_data_type(data: DataType | str | dict[str, Any]) -> DataType:
+def parse_datatype(data: Datatype | str | dict[str, Any]) -> Datatype:
     # Already parsed
-    if isinstance(data, DataType):
+    if isinstance(data, Datatype):
         return data
     # Map string value to type
     elif isinstance(data, str):
@@ -163,14 +162,14 @@ def parse_data_type(data: DataType | str | dict[str, Any]) -> DataType:
         elif type_ == 'RANGE':
             return Range(kind=data['kind'])
         elif type_ == 'ARRAY':
-            return Array(inner=parse_data_type(data['inner']))
+            return Array(inner=parse_datatype(data['inner']))
         elif type_ == 'STRUCT':
-            return Struct(fields={k: parse_data_type(v) for k, v in data['fields'].items()})
+            return Struct(fields={k: parse_datatype(v) for k, v in data['fields'].items()})
 
     raise ValueError(f'Cannot parse data type: {data}')
 
 
-def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
+def serialize_datatype(data: Datatype) -> str | list[Any] | dict[str, Any]:
     if isinstance(data, Bool):
         return 'BOOL'
     elif isinstance(data, Int):
@@ -219,46 +218,12 @@ def serialize_data_type(data: DataType) -> str | list[Any] | dict[str, Any]:
     elif isinstance(data, Array):
         return {
             'type': 'ARRAY',
-            'inner': serialize_data_type(data.inner),
+            'inner': serialize_datatype(data.inner),
         }
     elif isinstance(data, Struct):
         return {
             'type': 'STRUCT',
-            'fields': {k: serialize_data_type(v) for k, v in data.fields.items()},
+            'fields': {k: serialize_datatype(v) for k, v in data.fields.items()},
         }
     else:
         raise ValueError(f'Cannot serialize data type: {data}')
-
-
-__all__ = [
-    'DataType',
-    'Bool',
-    'Int',
-    'Float',
-    'Geography',
-    'Numeric',
-    'BigNumeric',
-    'String',
-    'Json',
-    'Date',
-    'Time',
-    'DateTime',
-    'Timestamp',
-    'Range',
-    'Interval',
-    'Array',
-    'Struct',
-    'BOOL',
-    'INT64',
-    'FLOAT64',
-    'GEOGRAPHY',
-    'STRING',
-    'JSON',
-    'DATE',
-    'TIME',
-    'DATE_TIME',
-    'TIMESTAMP',
-    'INTERVAL',
-    'parse_data_type',
-    'serialize_data_type',
-]
