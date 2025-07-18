@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
 
 from liti.core.base import Defaulter, Validator
-from liti.core.model.v1.datatype import Datatype
+from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, RoundingModeLiteral, \
-    SchemaName, Table, \
-    TableName
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, Identifier, RoundingModeLiteral, \
+    SchemaName, Table, TableName
 
 
 class DbBackend(ABC, Defaulter, Validator):
@@ -74,6 +73,46 @@ class DbBackend(ABC, Defaulter, Validator):
     @abstractmethod
     def set_column_datatype(self, table_name: TableName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
         raise NotImplementedError('not supported')
+
+    def add_column_field(self, table_name: TableName, field_path: FieldPath, datatype: Datatype) -> Table:
+        # circular imports
+        from liti.core.function import extract_nested_datatype
+
+        *path_fields, new_field = field_path.segments
+        table = self.get_table(table_name)
+        struct = extract_nested_datatype(table, FieldPath('.'.join(path_fields)))
+
+        if isinstance(struct, Array):
+            struct = struct.inner
+
+        if isinstance(struct, Struct):
+            if new_field not in struct.fields:
+                struct.fields[new_field] = datatype
+                return table
+            else:
+                raise ValueError(f'Field path {field_path} already exists in table {table_name}')
+        else:
+            raise ValueError(f'Expected struct datatype for {struct}')
+
+    def drop_column_field(self, table_name: TableName, field_path: FieldPath) -> Table:
+        # circular imports
+        from liti.core.function import extract_nested_datatype
+
+        *path_fields, new_field = field_path.segments
+        table = self.get_table(table_name)
+        struct = extract_nested_datatype(table, FieldPath('.'.join(path_fields)))
+
+        if isinstance(struct, Array):
+            struct = struct.inner
+
+        if isinstance(struct, Struct):
+            if new_field in struct.fields:
+                del struct.fields[new_field]
+                return table
+            else:
+                raise ValueError(f'Field path {field_path} does not exist in table {table_name}')
+        else:
+            raise ValueError(f'Expected struct datatype for {struct}')
 
     @abstractmethod
     def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):

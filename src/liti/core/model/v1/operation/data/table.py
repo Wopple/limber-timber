@@ -4,7 +4,7 @@ from pydantic import Field, field_validator
 
 from liti.core.model.v1.datatype import Datatype, parse_datatype
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, Identifier, RoundingModeLiteral, Table, \
+from liti.core.model.v1.schema import Column, ColumnName, FieldPath, Identifier, RoundingModeLiteral, Table, \
     TableName
 
 
@@ -95,6 +95,26 @@ class SetColumnDatatype(Operation):
     @classmethod
     def validate_datatype(cls, value: Datatype | str | dict[str, Any]) -> Datatype:
         return parse_datatype(value)
+
+
+class AddColumnField(Operation):
+    table_name: TableName
+    field_path: FieldPath
+    datatype: Datatype
+
+    KIND: ClassVar[str] = 'add_column_field'
+
+    @field_validator('datatype', mode='before')
+    @classmethod
+    def validate_datatype(cls, value: Datatype | str | dict[str, Any]) -> Datatype:
+        return parse_datatype(value)
+
+
+class DropColumnField(Operation):
+    table_name: TableName
+    field_path: FieldPath
+
+    KIND: ClassVar[str] = 'drop_column_field'
 
 
 class SetColumnNullable(Operation):

@@ -2,40 +2,29 @@ import json
 import logging
 from datetime import timezone
 
-from google.cloud.bigquery import DatasetReference, PartitionRange, QueryJobConfig, \
-    ScalarQueryParameter, SchemaField, \
-    Table as BqTable, TableReference
+from google.cloud.bigquery import DatasetReference, PartitionRange, QueryJobConfig, RangePartitioning, \
+    ScalarQueryParameter, SchemaField, Table as BqTable, TableReference
 from google.cloud.bigquery.schema import _DEFAULT_VALUE
-from google.cloud.bigquery.table import TableListItem
+from google.cloud.bigquery.table import TableListItem, TimePartitioning
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.error import Unsupported, UnsupportedError
 from liti.core.function import parse_operation
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, Date, DATE_TIME, DateTime, Float, \
-    FLOAT64, \
-    GEOGRAPHY, \
-    Int, \
-    INT64, \
-    INTERVAL, \
-    JSON, \
-    Numeric, \
-    Range, STRING, \
-    String, Struct, \
-    TIME, TIMESTAMP, Timestamp
+    FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, IntervalLiteral, \
-    Partitioning, \
-    RoundingModeLiteral, \
-    SchemaName, Table, \
-    TableName
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, Identifier, \
+    IntervalLiteral, Partitioning, RoundingModeLiteral, SchemaName, Table, TableName
 
 log = logging.getLogger(__name__)
 
 REQUIRED = 'REQUIRED'
 NULLABLE = 'NULLABLE'
 REPEATED = 'REPEATED'
+
+ONE_DAY_IN_MILLIS = 1000 * 60 * 60 * 24
 
 
 def to_dataset_ref(database: DatabaseName, schema: SchemaName) -> DatasetReference:
@@ -170,72 +159,42 @@ def to_schema_field(column: Column) -> SchemaField:
     )
 
 
-def to_datatype(schema_field: SchemaField) -> Datatype:
-    field_type = schema_field.field_type
-
-    if field_type in ('BOOL', 'BOOLEAN'):
-        return BOOL
-    elif field_type in ('INT64', 'INTEGER'):
-        return INT64
-    elif field_type in ('FLOAT64', 'FLOAT'):
-        return FLOAT64
-    elif field_type == 'GEOGRAPHY':
-        return GEOGRAPHY
-    elif field_type == 'NUMERIC':
-        return Numeric(
-            precision=schema_field.precision,
-            scale=schema_field.scale,
-        )
-    elif field_type == 'BIGNUMERIC':
-        return BigNumeric(
-            precision=schema_field.precision,
-            scale=schema_field.scale,
-        )
-    elif field_type == 'STRING':
-        return STRING
-    elif field_type == 'JSON':
-        return JSON
-    elif field_type == 'DATE':
-        return DATE
-    elif field_type == 'TIME':
-        return TIME
-    elif field_type == 'DATETIME':
-        return DATE_TIME
-    elif field_type == 'TIMESTAMP':
-        return TIMESTAMP
-    elif field_type == 'RANGE':
-        return Range(kind=schema_field.range_element_type.element_type)
-    elif field_type == 'INTERVAL':
-        return INTERVAL
-    elif field_type == 'RECORD':
-        return Struct(fields={f.name: to_datatype_array(f) for f in schema_field.fields})
+def to_bq_table(table: Table) -> BqTable:
+    if table.partitioning:
+        if table.partitioning.kind == 'TIME':
+            partitioning = TimePartitioning(
+                type_=table.partitioning.time_unit,
+                field=table.partitioning.column.string if table.partitioning.column else None,
+                expiration_ms=table.partitioning.expiration_days and int(table.partitioning.expiration_days * ONE_DAY_IN_MILLIS),
+                require_partition_filter=table.partitioning.require_filter,
+            )
+        elif table.partitioning.kind == 'INT':
+            partitioning = RangePartitioning(
+                field=table.partitioning.column.string,
+                range_=PartitionRange(
+                    start=table.partitioning.int_start,
+                    end=table.partitioning.int_end,
+                    interval=table.partitioning.int_step,
+                ),
+            )
+        else:
+            raise ValueError(f'Unrecognized partitioning kind: {table.partitioning}')
     else:
-        raise ValueError(f'bigquery.to_datatype unrecognized field_type - {schema_field}')
+        partitioning = None
 
-
-def to_datatype_array(schema_field: SchemaField) -> Datatype:
-    if schema_field.mode == REPEATED:
-        return Array(inner=to_datatype(schema_field))
-    else:
-        return to_datatype(schema_field)
-
-
-def to_column(schema_field: SchemaField, table: BqTable) -> Column:
-    primary_key_columns = set()
-
-    if table.table_constraints:
-        if table.table_constraints.primary_key and table.table_constraints.primary_key.columns:
-            primary_key_columns = set(table.table_constraints.primary_key.columns)
-
-    return Column(
-        name=schema_field.name,
-        datatype=to_datatype_array(schema_field),
-        primary_key=schema_field.name in primary_key_columns,
-        default_expression=schema_field.default_value_expression,
-        nullable=schema_field.mode != REQUIRED,
-        description=schema_field.description,
-        rounding_mode=schema_field.rounding_mode,
+    bq_table = BqTable(
+        to_table_ref(table.name),
+        schema=[to_schema_field(column) for column in table.columns],
     )
+
+    bq_table.partitioning = partitioning
+    bq_table.clustering_fields = [field.string for field in table.clustering] if table.clustering else None
+    bq_table.friendly_name = table.friendly_name
+    bq_table.description = table.description
+    bq_table.labels = table.labels
+    bq_table.resource_tags = table.tags
+    bq_table.expires = table.expiration_timestamp
+    # TODO: figure out what to do about BqTable missing rounding mode
 
 
 def datatype_to_sql(datatype: Datatype) -> str:
@@ -409,14 +368,82 @@ def option_dict_to_sql(option: dict[str, str]) -> str:
     return f'[{join_sql}]'
 
 
-def to_table(table: BqTable) -> Table:
+def to_datatype(schema_field: SchemaField) -> Datatype:
+    field_type = schema_field.field_type
+
+    if field_type in ('BOOL', 'BOOLEAN'):
+        return BOOL
+    elif field_type in ('INT64', 'INTEGER'):
+        return INT64
+    elif field_type in ('FLOAT64', 'FLOAT'):
+        return FLOAT64
+    elif field_type == 'GEOGRAPHY':
+        return GEOGRAPHY
+    elif field_type == 'NUMERIC':
+        return Numeric(
+            precision=schema_field.precision,
+            scale=schema_field.scale,
+        )
+    elif field_type == 'BIGNUMERIC':
+        return BigNumeric(
+            precision=schema_field.precision,
+            scale=schema_field.scale,
+        )
+    elif field_type == 'STRING':
+        return STRING
+    elif field_type == 'JSON':
+        return JSON
+    elif field_type == 'DATE':
+        return DATE
+    elif field_type == 'TIME':
+        return TIME
+    elif field_type == 'DATETIME':
+        return DATE_TIME
+    elif field_type == 'TIMESTAMP':
+        return TIMESTAMP
+    elif field_type == 'RANGE':
+        return Range(kind=schema_field.range_element_type.element_type)
+    elif field_type == 'INTERVAL':
+        return INTERVAL
+    elif field_type == 'RECORD':
+        return Struct(fields={f.name: to_datatype_array(f) for f in schema_field.fields})
+    else:
+        raise ValueError(f'bigquery.to_datatype unrecognized field_type - {schema_field}')
+
+
+def to_datatype_array(schema_field: SchemaField) -> Datatype:
+    if schema_field.mode == REPEATED:
+        return Array(inner=to_datatype(schema_field))
+    else:
+        return to_datatype(schema_field)
+
+
+def to_column(schema_field: SchemaField, table: BqTable) -> Column:
+    primary_key_columns = set()
+
+    if table.table_constraints:
+        if table.table_constraints.primary_key and table.table_constraints.primary_key.columns:
+            primary_key_columns = set(table.table_constraints.primary_key.columns)
+
+    return Column(
+        name=schema_field.name,
+        datatype=to_datatype_array(schema_field),
+        primary_key=schema_field.name in primary_key_columns,
+        default_expression=schema_field.default_value_expression,
+        nullable=schema_field.mode != REQUIRED,
+        description=schema_field.description,
+        rounding_mode=schema_field.rounding_mode,
+    )
+
+
+def to_liti_table(table: BqTable) -> Table:
     if table.time_partitioning:
         time_partition = table.time_partitioning
         partitioning = Partitioning(
             kind='TIME',
             column=ColumnName(time_partition.field),
             time_unit=time_partition.type_,
-            expiration_days=time_partition.expiration_ms and time_partition.expiration_ms / (1000 * 60 * 60 * 24),
+            expiration_days=time_partition.expiration_ms and time_partition.expiration_ms / ONE_DAY_IN_MILLIS,
             require_filter=table.require_partition_filter,
         )
     elif table.range_partitioning:
@@ -437,7 +464,13 @@ def to_table(table: BqTable) -> Table:
         name=TableName(table.full_table_id.replace(':', '.')),
         columns=[to_column(f, table) for f in table.schema],
         partitioning=partitioning,
-        clustering=table.clustering_fields,
+        clustering=[ColumnName(field) for field in table.clustering_fields] if table.clustering_fields else None,
+        friendly_name=table.friendly_name,
+        description=table.description,
+        labels=table.labels or None,
+        tags=table.resource_tags or None,
+        expiration_timestamp=table.expires,
+        # TODO: figure out what to do about BqTable missing rounding mode
     )
 
 
@@ -467,7 +500,7 @@ class BigQueryDbBackend(DbBackend):
 
     def get_table(self, name: TableName) -> Table | None:
         bq_table = self.client.get_table(to_table_ref(name))
-        return bq_table and to_table(bq_table)
+        return bq_table and to_liti_table(bq_table)
 
     def create_table(self, table: Table):
         for column in table.columns:
@@ -679,6 +712,16 @@ class BigQueryDbBackend(DbBackend):
             f'ALTER COLUMN `{column_name}\n`'
             f'SET DATA TYPE {datatype_to_sql(to_datatype)}\n'
         ))
+
+    def add_column_field(self, table_name: TableName, field_path: FieldPath, datatype: Datatype):
+        table = super().add_column_field(table_name, field_path, datatype)
+        self.client.update_table(to_bq_table(table), ['schema'])
+
+    def drop_column_field(self, table_name: TableName, field_path: FieldPath):
+        self.handle_unsupported(
+            Unsupported.DROP_COLUMN_FIELD,
+            f'Not dropping field at {field_path} since Big Query does not support it',
+        )
 
     def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
         if nullable:

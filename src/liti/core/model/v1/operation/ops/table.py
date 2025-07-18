@@ -1,9 +1,8 @@
 from liti.core.backend.base import DbBackend, MetaBackend
-from liti.core.model.v1.operation.data.table import AddColumn, CreateTable, DropColumn, DropTable, RenameColumn, \
-    RenameTable, SetClustering, SetColumnDatatype, SetColumnDescription, SetColumnNullable, SetColumnRoundingMode, \
-    SetDefaultRoundingMode, \
-    SetDescription, \
-    SetLabels, SetTags
+from liti.core.function import extract_nested_datatype
+from liti.core.model.v1.operation.data.table import AddColumn, AddColumnField, CreateTable, DropColumn, DropColumnField, \
+    DropTable, RenameColumn, RenameTable, SetClustering, SetColumnDatatype, SetColumnDescription, SetColumnNullable, \
+    SetColumnRoundingMode, SetDefaultRoundingMode, SetDescription, SetLabels, SetTags
 from liti.core.model.v1.operation.ops.base import OperationOps
 
 
@@ -233,6 +232,68 @@ class SetColumnDatatypeOps(OperationOps):
 
     def is_up(self, db_backend: DbBackend) -> bool:
         return db_backend.get_table(self.op.table_name).column_map[self.op.column_name].datatype == self.op.datatype
+
+
+class AddColumnFieldOps(OperationOps):
+    op: AddColumnField
+
+    def __init__(self, op: AddColumnField):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
+        db_backend.add_column_field(
+            table_name=self.op.table_name,
+            field_path=self.op.field_path,
+            datatype=self.op.datatype,
+        )
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> DropColumnField:
+        return DropColumnField(
+            table_name=self.op.table_name,
+            field_path=self.op.field_path,
+        )
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        table = db_backend.get_table(self.op.table_name)
+
+        try:
+            extract_nested_datatype(table, self.op.field_path)
+            return True
+        except ValueError:
+            return False
+
+
+class DropColumnFieldOps(OperationOps):
+    op: DropColumnField
+
+    def __init__(self, op: DropColumnField):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
+        db_backend.drop_column_field(
+            table_name=self.op.table_name,
+            field_path=self.op.field_path,
+        )
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> AddColumnField:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+        sim_datatype = extract_nested_datatype(sim_table, self.op.field_path)
+
+        return AddColumnField(
+            table_name=self.op.table_name,
+            field_path=self.op.field_path,
+            datatype=sim_datatype,
+        )
+
+    def is_up(self, db_backend: DbBackend) -> bool:
+        table = db_backend.get_table(self.op.table_name)
+
+        try:
+            extract_nested_datatype(table, self.op.field_path)
+            return False
+        except ValueError:
+            return True
 
 
 class SetColumnNullableOps(OperationOps):

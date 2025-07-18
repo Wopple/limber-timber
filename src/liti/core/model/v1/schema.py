@@ -1,6 +1,6 @@
 from datetime import datetime
 from string import ascii_letters, digits
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Iterator, Literal
 
 from pydantic import Field, field_serializer, field_validator, model_validator
 
@@ -9,6 +9,7 @@ from liti.core.model.v1.datatype import Datatype, parse_datatype, serialize_data
 
 DATABASE_CHARS = set(ascii_letters + digits + '_-')
 IDENTIFIER_CHARS = set(ascii_letters + digits + '_')
+FIELD_PATH_CHARS = set(ascii_letters + digits + '_.')
 
 RoundingMode = Literal[
     'ROUND_HALF_AWAY_FROM_ZERO',
@@ -64,25 +65,27 @@ class RoundingModeLiteral(LitiModel):
         return value and value.upper()
 
 
-class DatabaseName(LitiModel):
+class ValidatedString(LitiModel):
     string: str
 
+    VALID_CHARS: ClassVar[set[str]]
+
     def __init__(self, string: str | None = None, **kwargs):
-        """ Allows DatabaseName('database') """
+        """ Allows ValidatedString('value') """
         if string is None:
             super().__init__(**kwargs)
         else:
             super().__init__(string=string)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.__class__.__name__, self.string))
 
     def __str__(self) -> str:
         return self.string
 
     def model_post_init(self, context: Any):
-        if any(c not in DATABASE_CHARS for c in self.string):
-            raise ValueError(f'Invalid database name: {self.string}')
+        if any(c not in self.VALID_CHARS for c in self.string):
+            raise ValueError(f'Invalid {self.__class__.__name__}: {self.string}')
 
     @model_validator(mode='before')
     @classmethod
@@ -93,33 +96,33 @@ class DatabaseName(LitiModel):
             return data
 
 
-class Identifier(LitiModel):
-    string: str
+class DatabaseName(ValidatedString):
+    VALID_CHARS = DATABASE_CHARS
 
     def __init__(self, string: str | None = None, **kwargs):
-        """ Allows Identifier('identifier') """
-        if string is None:
-            super().__init__(**kwargs)
-        else:
-            super().__init__(string=string)
+        super().__init__(string, **kwargs)
 
-    def __hash__(self):
-        return hash((self.__class__.__name__, self.string))
 
-    def __str__(self) -> str:
-        return self.string
+class Identifier(ValidatedString):
+    VALID_CHARS = IDENTIFIER_CHARS
 
-    def model_post_init(self, context: Any):
-        if any(c not in IDENTIFIER_CHARS for c in self.string):
-            raise ValueError(f'Invalid identifier: {self.string}')
+    def __init__(self, string: str | None = None, **kwargs):
+        super().__init__(string, **kwargs)
 
-    @model_validator(mode='before')
-    @classmethod
-    def allow_string_init(cls, data: str | dict[str, str]) -> dict[str, str]:
-        if isinstance(data, str):
-            return {'string': data}
-        else:
-            return data
+
+class FieldPath(ValidatedString):
+    """ . delimited path to the field (e.g. 'column_name.sub_field_1.sub_field_2') """
+    VALID_CHARS = FIELD_PATH_CHARS
+
+    def __init__(self, string: str | None = None, **kwargs):
+        super().__init__(string, **kwargs)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.segments)
+
+    @property
+    def segments(self) -> list[str]:
+        return self.string.split('.')
 
 
 class SchemaName(Identifier):
@@ -151,7 +154,7 @@ class TableName(LitiModel):
                 table_name=table_name,
             )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.__class__.__name__, self.database, self.schema_name, self.table_name))
 
     def __str__(self) -> str:
@@ -181,7 +184,7 @@ class TableName(LitiModel):
         else:
             return data
 
-    def with_table_name(self, table_name: Identifier) -> "TableName":
+    def with_table_name(self, table_name: Identifier) -> 'TableName':
         return TableName(
             database=self.database,
             schema_name=self.schema_name,
@@ -218,7 +221,7 @@ class Column(LitiModel):
     def serialize_datatype(cls, value: Datatype) -> str | dict[str, Any]:
         return serialize_datatype(value)
 
-    def with_name(self, name: ColumnName) -> "Column":
+    def with_name(self, name: ColumnName) -> 'Column':
         return self.model_copy(update={'name': name})
 
 

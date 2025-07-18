@@ -1,12 +1,10 @@
 from datetime import datetime
+
 from pytest import fixture
 
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
-    Numeric, Range, \
-    STRING, \
-    Struct, \
-    TIME, TIMESTAMP
+    Numeric, Range, STRING, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.schema import Column, ColumnName, IntervalLiteral, Partitioning, RoundingModeLiteral, Table, \
     TableName
 from liti.core.runner import MigrateRunner
@@ -23,6 +21,8 @@ def meta_backend() -> MemoryMetaBackend:
 
 
 def test_all_datatypes(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.datatypes_table')
+
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -30,13 +30,13 @@ def test_all_datatypes(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
     )
 
     up_runner.run(wet_run=True)
-    datatypes_table = db_backend.get_table(TableName('my_project.my_dataset.datatypes_table'))
+    datatypes_table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 2
     assert len(meta_backend.get_applied_operations()) == 2
 
     assert datatypes_table == Table(
-        name=TableName('my_project.my_dataset.datatypes_table'),
+        name=table_name,
         columns=[
             Column(name=ColumnName('col_bool'), datatype=BOOL),
             Column(name=ColumnName('col_int_64'), datatype=INT64),
@@ -73,10 +73,12 @@ def test_all_datatypes(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.datatypes_table')) is None
+    assert db_backend.get_table(table_name) is None
 
 
 def test_create_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.create_table')
+
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -84,7 +86,7 @@ def test_create_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
     )
 
     up_runner.run(wet_run=True)
-    create_table = db_backend.get_table(TableName('my_project.my_dataset.create_table'))
+    create_table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 2
     assert len(meta_backend.get_applied_operations()) == 2
@@ -112,10 +114,12 @@ def test_create_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.create_table')) is None
+    assert db_backend.get_table(table_name) is None
 
 
 def test_drop_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -134,13 +138,13 @@ def test_drop_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     )
 
     down_runner.run(wet_run=True, allow_down=True)
-    revert_table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    revert_table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
 
     assert revert_table == Table(
-        name=TableName('my_project.my_dataset.revert_table'),
+        name=table_name,
         columns=[
             Column(name='col_bool', datatype=BOOL),
         ],
@@ -351,6 +355,8 @@ def test_rename_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
 
 
 def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.clustering_table')
+
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -362,7 +368,7 @@ def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
     assert len(db_backend.tables) == 2
     assert len(meta_backend.get_applied_operations()) == 3
 
-    assert db_backend.get_table(TableName('my_project.my_dataset.clustering_table')).clustering == [
+    assert db_backend.get_table(table_name).clustering == [
         ColumnName('col_int'),
         ColumnName('col_bool'),
     ]
@@ -378,7 +384,7 @@ def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
     assert len(db_backend.tables) == 2
     assert len(meta_backend.get_applied_operations()) == 2
 
-    assert db_backend.get_table(TableName('my_project.my_dataset.clustering_table')).clustering == [
+    assert db_backend.get_table(table_name).clustering == [
         ColumnName('col_bool'),
         ColumnName('col_int'),
     ]
@@ -393,10 +399,12 @@ def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.clustering_table')) is None
+    assert db_backend.get_table(table_name) is None
 
 
 def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -407,7 +415,7 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).description == 'bar'
+    assert db_backend.get_table(table_name).description == 'bar'
 
     unset_runner = MigrateRunner(
         db_backend=db_backend,
@@ -419,7 +427,7 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).description == 'foo'
+    assert db_backend.get_table(table_name).description == 'foo'
 
     down_runner = MigrateRunner(
         db_backend=db_backend,
@@ -431,10 +439,12 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).description is None
+    assert db_backend.get_table(table_name).description is None
 
 
 def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -446,9 +456,9 @@ def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
 
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).labels == {
-        "l2": "v2",
-        "l3": "v3",
+    assert db_backend.get_table(table_name).labels == {
+        'l2': 'v2',
+        'l3': 'v3',
     }
 
     unset_runner = MigrateRunner(
@@ -462,9 +472,9 @@ def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
 
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).labels == {
-        "l1": "v1",
-        "l2": "v2",
+    assert db_backend.get_table(table_name).labels == {
+        'l1': 'v1',
+        'l2': 'v2',
     }
 
     down_runner = MigrateRunner(
@@ -477,10 +487,12 @@ def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).labels is None
+    assert db_backend.get_table(table_name).labels is None
 
 
 def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -492,9 +504,9 @@ def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
 
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).tags == {
-        "t2": "v2",
-        "t3": "v3",
+    assert db_backend.get_table(table_name).tags == {
+        't2': 'v2',
+        't3': 'v3',
     }
 
     unset_runner = MigrateRunner(
@@ -508,9 +520,9 @@ def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
 
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).tags == {
-        "t1": "v1",
-        "t2": "v2",
+    assert db_backend.get_table(table_name).tags == {
+        't1': 'v1',
+        't2': 'v2',
     }
 
     down_runner = MigrateRunner(
@@ -523,10 +535,12 @@ def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')).tags is None
+    assert db_backend.get_table(table_name).tags is None
 
 
 def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -534,7 +548,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
     )
 
     set_runner.run(wet_run=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
@@ -547,7 +561,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
@@ -560,7 +574,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
     )
 
     down_runner.run(wet_run=True, allow_down=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
@@ -568,6 +582,8 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
 
 
 def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -576,9 +592,9 @@ def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
 
     up_runner.run(wet_run=True)
 
-    assert len(db_backend.get_table(TableName('my_project.my_dataset.revert_table')).columns) == 2
+    assert len(db_backend.get_table(table_name).columns) == 2
     assert len(meta_backend.get_applied_operations()) == 2
-    assert ColumnName('add_col') in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
+    assert ColumnName('add_col') in db_backend.get_table(table_name).column_map
 
     down_runner = MigrateRunner(
         db_backend=db_backend,
@@ -588,12 +604,14 @@ def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
 
     down_runner.run(wet_run=True, allow_down=True)
 
-    assert len(db_backend.get_table(TableName('my_project.my_dataset.revert_table')).columns) == 1
+    assert len(db_backend.get_table(table_name).columns) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert ColumnName('add_col') not in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
+    assert ColumnName('add_col') not in db_backend.get_table(table_name).column_map
 
 
 def test_drop_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -602,9 +620,9 @@ def test_drop_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
 
     up_runner.run(wet_run=True)
 
-    assert len(db_backend.get_table(TableName('my_project.my_dataset.revert_table')).columns) == 0
+    assert len(db_backend.get_table(table_name).columns) == 0
     assert len(meta_backend.get_applied_operations()) == 2
-    assert ColumnName('col_bool') not in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
+    assert ColumnName('col_bool') not in db_backend.get_table(table_name).column_map
 
     down_runner = MigrateRunner(
         db_backend=db_backend,
@@ -614,12 +632,14 @@ def test_drop_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
 
     down_runner.run(wet_run=True, allow_down=True)
 
-    assert len(db_backend.get_table(TableName('my_project.my_dataset.revert_table')).columns) == 1
+    assert len(db_backend.get_table(table_name).columns) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert ColumnName('col_bool') in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
+    assert ColumnName('col_bool') in db_backend.get_table(table_name).column_map
 
 
 def test_rename_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     up_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -628,10 +648,10 @@ def test_rename_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
 
     up_runner.run(wet_run=True)
 
-    assert len(db_backend.get_table(TableName('my_project.my_dataset.revert_table')).columns) == 1
+    assert len(db_backend.get_table(table_name).columns) == 1
     assert len(meta_backend.get_applied_operations()) == 2
-    assert ColumnName('col_bool') not in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
-    assert ColumnName('col_renamed') in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
+    assert ColumnName('col_bool') not in db_backend.get_table(table_name).column_map
+    assert ColumnName('col_renamed') in db_backend.get_table(table_name).column_map
 
     down_runner = MigrateRunner(
         db_backend=db_backend,
@@ -641,13 +661,15 @@ def test_rename_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
 
     down_runner.run(wet_run=True, allow_down=True)
 
-    assert len(db_backend.get_table(TableName('my_project.my_dataset.revert_table')).columns) == 1
+    assert len(db_backend.get_table(table_name).columns) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert ColumnName('col_bool') in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
-    assert ColumnName('col_renamed') not in db_backend.get_table(TableName('my_project.my_dataset.revert_table')).column_map
+    assert ColumnName('col_bool') in db_backend.get_table(table_name).column_map
+    assert ColumnName('col_renamed') not in db_backend.get_table(table_name).column_map
 
 
 def test_set_column_datatype(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.datatype_table')
+
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -655,7 +677,7 @@ def test_set_column_datatype(db_backend: MemoryDbBackend, meta_backend: MemoryMe
     )
 
     set_runner.run(wet_run=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.datatype_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 4
@@ -670,7 +692,7 @@ def test_set_column_datatype(db_backend: MemoryDbBackend, meta_backend: MemoryMe
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.datatype_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
@@ -679,7 +701,77 @@ def test_set_column_datatype(db_backend: MemoryDbBackend, meta_backend: MemoryMe
     assert table.column_map[ColumnName('col_bignumeric')].datatype == BigNumeric(precision=8, scale=4)
 
 
+def test_add_column_field(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.column_field_table')
+
+    add_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_add_column_field',
+    )
+
+    add_runner.run(wet_run=True)
+    table = db_backend.get_table(table_name)
+    col_struct = table.column_map[ColumnName('col_struct')].datatype
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+    assert col_struct.fields['field_string'] == STRING
+    assert col_struct.fields['field_array_struct'].inner.fields['field_array_string'].inner == STRING
+
+    unadd_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_unadd_column_field',
+    )
+
+    unadd_runner.run(wet_run=True, allow_down=True)
+    table = db_backend.get_table(table_name)
+    col_struct = table.column_map[ColumnName('col_struct')].datatype
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert 'field_string' not in col_struct.fields
+    assert 'field_array_string' not in col_struct.fields['field_array_struct'].inner.fields
+
+
+def test_drop_column_field(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.column_field_table')
+
+    drop_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_drop_column_field',
+    )
+
+    drop_runner.run(wet_run=True)
+    table = db_backend.get_table(table_name)
+    col_struct = table.column_map[ColumnName('col_struct')].datatype
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 5
+    assert 'field_string' not in col_struct.fields
+    assert 'field_array_string' not in col_struct.fields['field_array_struct'].inner.fields
+
+    add_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_add_column_field',
+    )
+
+    add_runner.run(wet_run=True, allow_down=True)
+    table = db_backend.get_table(table_name)
+    col_struct = table.column_map[ColumnName('col_struct')].datatype
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+    assert col_struct.fields['field_string'] == STRING
+    assert col_struct.fields['field_array_struct'].inner.fields['field_array_string'].inner == STRING
+
+
 def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -687,7 +779,7 @@ def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMe
     )
 
     set_runner.run(wet_run=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
@@ -700,7 +792,7 @@ def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMe
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
@@ -713,7 +805,7 @@ def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMe
     )
 
     down_runner.run(wet_run=True, allow_down=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
@@ -721,6 +813,8 @@ def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMe
 
 
 def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
     set_runner = MigrateRunner(
         db_backend=db_backend,
         meta_backend=meta_backend,
@@ -728,7 +822,7 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     )
 
     set_runner.run(wet_run=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
@@ -741,7 +835,7 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     )
 
     unset_runner.run(wet_run=True, allow_down=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
@@ -754,7 +848,7 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     )
 
     down_runner.run(wet_run=True, allow_down=True)
-    table = db_backend.get_table(TableName('my_project.my_dataset.revert_table'))
+    table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1

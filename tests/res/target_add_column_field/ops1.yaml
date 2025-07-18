@@ -1,0 +1,39 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: column_field_table
+      columns:
+      - name: col_struct
+        datatype:
+          type: STRUCT
+          fields:
+            field_int: INT64
+            field_array_struct:
+              type: ARRAY
+              inner:
+                type: STRUCT
+                fields:
+                  field_int: INT64
+- kind: add_column_field
+  data:
+    table_name:
+      database: my_project
+      schema_name: my_dataset
+      table_name: column_field_table
+    field_path: col_struct.field_string
+    datatype: STRING
+- kind: add_column_field
+  data:
+    table_name:
+      database: my_project
+      schema_name: my_dataset
+      table_name: column_field_table
+    field_path: col_struct.field_array_struct.field_array_string
+    datatype:
+      type: ARRAY
+      inner: STRING
