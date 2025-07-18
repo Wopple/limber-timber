@@ -63,7 +63,7 @@ These are listed in rough priority order if you are interested in contributing.
   - ✅ Drop Column
   - ✅ Rename Column
   - ✅ Set Data Type
-  - ➡️ Add Struct Field
+  - ✅ Add Struct Field
   - ➡️ Create View
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table
@@ -72,7 +72,7 @@ These are listed in rough priority order if you are interested in contributing.
   - ✅ Tags
 - ✅ Big Query Metadata
 - ✅ Database Adoption
-- ➡️ Raise Unsupported Operations
+- ✅ Raise Unsupported Operations
 - ➡️ JSON Schema
   - To validate and auto complete migration files in IDEs
 - ✅ Database Specific Validation
