@@ -84,7 +84,7 @@ These are listed in rough priority order if you are interested in contributing.
   - To reduce round trips with the backend and reduce migration time
 - ➡️ Minimize Scan Output
   - To generate a more human readable operation file
-- ➡️ Arbitrary DML SQL Migrations
+- ✅ Arbitrary DML SQL Migrations
 - ➡️ File System Metadata
 - ➡️ SQLite Database
 - ➡️ SQLite Metadata
