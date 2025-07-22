@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.base import Operation
@@ -27,7 +28,7 @@ class OperationOps(ABC):
         }[type(op)]
 
     @abstractmethod
-    def up(self, db_backend: DbBackend, meta_backend: MetaBackend):
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
         """ Apply the operation """
         pass
 
@@ -37,11 +38,12 @@ class OperationOps(ABC):
         pass
 
     @abstractmethod
-    def is_up(self, db_backend: DbBackend) -> bool:
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
         """ True if the operation is applied
 
-        Assumes that, if applied, this is the most recent operation (otherwise the behavior is not defined).
-        Can return True even if the migrations metadata is not up to date.
+        If the operation is applied when `is_up` is called, it assumes this is the most recently applied operation.
+        Otherwise, the behavior is undefined.
+        Can return True even if the metadata is not up to date.
         Useful for recovering from failures that left the migrations in an inconsistent state.
         """
         pass

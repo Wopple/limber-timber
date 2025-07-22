@@ -63,14 +63,14 @@ class MigrateRunner:
 
                 up_ops = attach_ops(up_op)
 
-                if not up_ops.is_up(self.db_backend):
+                if not up_ops.is_up(self.db_backend, self.target_dir):
                     if up:
-                        logger.info(f'\033[32m{pformat(up_op)}\033[0m')
+                        logger.info(f'\033[32m{pformat(up_op)}\033[0m')  # Green
                     else:
-                        logger.info(f'\033[31m{pformat(up_op)}\033[0m')
+                        logger.info(f'\033[31m{pformat(up_op)}\033[0m')  # Red
 
                     if wet_run:
-                        up_ops.up(self.db_backend, self.meta_backend)
+                        up_ops.up(self.db_backend, self.meta_backend, self.target_dir)
 
                 if wet_run:
                     if up:
@@ -78,17 +78,24 @@ class MigrateRunner:
                     else:
                         self.meta_backend.unapply_operation(op)
 
-        # TODO: only check is_up() on the first operation since that is
-        #    the only case where we need to recover from a possible failure
         logger.info('Down')
         apply_operations(migration_plan['down'], False)
         logger.info('Up')
         apply_operations(migration_plan['up'], True)
         logger.info('Done')
 
-    def get_target_operations(self) -> list[Operation]:
+    @property
+    def target_dir(self) -> Path | None:
         if isinstance(self.target, str):
-            return get_target_operations(Path(self.target))
+            return Path(self.target)
+        else:
+            return None
+
+    def get_target_operations(self) -> list[Operation]:
+        target_dir = self.target_dir
+
+        if target_dir is not None:
+            return get_target_operations(target_dir)
         else:
             return self.target
 

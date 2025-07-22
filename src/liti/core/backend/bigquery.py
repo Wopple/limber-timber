@@ -444,7 +444,7 @@ def to_liti_table(table: BqTable) -> Table:
             column=ColumnName(time_partition.field),
             time_unit=time_partition.type_,
             expiration_days=time_partition.expiration_ms and time_partition.expiration_ms / ONE_DAY_IN_MILLIS,
-            require_filter=table.require_partition_filter,
+            require_filter=table.require_partition_filter or False,
         )
     elif table.range_partitioning:
         range_: PartitionRange = table.range_partitioning.range_
@@ -455,7 +455,7 @@ def to_liti_table(table: BqTable) -> Table:
             int_start=range_.start,
             int_end=range_.end,
             int_step=range_.interval,
-            require_filter=table.require_partition_filter,
+            require_filter=table.require_partition_filter or False,
         )
     else:
         partitioning = None
@@ -742,6 +742,27 @@ class BigQueryDbBackend(DbBackend):
     def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingModeLiteral):
         self.set_column_option(table_name, column_name, 'rounding_mode', f'"{rounding_mode}"')
 
+    def execute_sql(self, sql: str):
+        self.client.query_and_wait(sql)
+
+    def execute_bool_value_query(self, sql: str) -> bool:
+        row_iter = self.client.query_and_wait(sql)
+
+        if row_iter.total_rows != 1:
+            raise ValueError(f'Expected a bool value query, got {row_iter.total_rows} rows')
+
+        row = next(iter(row_iter))
+
+        if len(row) != 1:
+            raise ValueError(f'Expected a bool value query, got a row with {len(row)} columns')
+
+        value = row[0]
+
+        if not isinstance(value, bool):
+            raise ValueError(f'Expected a bool value query, got a value of type {type(value)}')
+
+        return value
+
     # default methods
 
     def int_defaults(self, node: Int):
@@ -877,9 +898,11 @@ class BigQueryMetaBackend(MetaBackend):
         ))
 
     def get_applied_operations(self) -> list[Operation]:
-        rows = self.client.query_and_wait(f'SELECT op_kind, op_data FROM `{self.table_name}` ORDER BY idx')
-
-        return [parse_operation(row.op_kind, json.loads(row.op_data)) for row in rows]
+        if self.client.has_table(to_table_ref(self.table_name)):
+            rows = self.client.query_and_wait(f'SELECT op_kind, op_data FROM `{self.table_name}` ORDER BY idx')
+            return [parse_operation(row.op_kind, json.loads(row.op_data)) for row in rows]
+        else:
+            return []
 
     def apply_operation(self, operation: Operation):
         results = self.client.query_and_wait(

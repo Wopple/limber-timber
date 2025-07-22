@@ -14,7 +14,10 @@ class Operation(LitiModel):
         }[kind]
 
     def to_op_data(self, format: Literal['json', 'yaml']) -> dict[str, Any]:
-        data = self.model_dump(mode='json' if format == 'json' else 'python')
+        data = self.model_dump(
+            mode='json' if format == 'json' else 'python',
+            exclude_none=True,
+        )
 
         return {
             'kind': self.KIND,

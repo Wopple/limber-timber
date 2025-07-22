@@ -11,66 +11,51 @@ from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPat
 class DbBackend(ABC, Defaulter, Validator):
     """ DB backends make changes to and read the state of the database """
 
-    @abstractmethod
     def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def scan_table(self, name: TableName) -> CreateTable | None:
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def has_table(self, name: TableName) -> bool:
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def get_table(self, name: TableName) -> Table | None:
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def create_table(self, table: Table):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def drop_table(self, name: TableName):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def rename_table(self, from_name: TableName, to_name: Identifier):
         raise NotImplementedError('not supported')
 
     def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def set_description(self, table_name: TableName, description: str | None):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def set_labels(self, table_name: TableName, labels: dict[str, str] | None):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def add_column(self, table_name: TableName, column: Column):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def drop_column(self, table_name: TableName, column_name: ColumnName):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def set_column_datatype(self, table_name: TableName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
         raise NotImplementedError('not supported')
 
@@ -114,16 +99,19 @@ class DbBackend(ABC, Defaulter, Validator):
         else:
             raise ValueError(f'Expected struct datatype for {struct}')
 
-    @abstractmethod
     def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
         raise NotImplementedError('not supported')
 
-    @abstractmethod
     def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingModeLiteral):
+        raise NotImplementedError('not supported')
+
+    def execute_sql(self, sql: str):
+        raise NotImplementedError('not supported')
+
+    def execute_bool_value_query(self, sql: str) -> bool:
         raise NotImplementedError('not supported')
 
 
