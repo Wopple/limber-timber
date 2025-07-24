@@ -23,8 +23,8 @@ REPEATED = 'REPEATED'
 ONE_DAY_IN_MILLIS = 1000 * 60 * 60 * 24
 
 
-def to_dataset_ref(database: DatabaseName, schema: SchemaName) -> bq.DatasetReference:
-    return bq.DatasetReference(database.string, schema.string)
+def to_dataset_ref(project: DatabaseName, dataset: SchemaName) -> bq.DatasetReference:
+    return bq.DatasetReference(project.string, dataset.string)
 
 
 def extract_dataset_ref(name: TableName | bq.TableListItem) -> bq.DatasetReference:
@@ -48,9 +48,9 @@ def to_table_ref(name: TableName | bq.TableListItem) -> bq.TableReference:
 def to_field_type(datatype: Datatype) -> str:
     if datatype == BOOL:
         return 'BOOL'
-    elif datatype == INT64:
+    elif isinstance(datatype, Int) and datatype.bits == 64:
         return 'INT64'
-    elif datatype == FLOAT64:
+    elif isinstance(datatype, Float) and datatype.bits == 64:
         return 'FLOAT64'
     elif datatype == GEOGRAPHY:
         return 'GEOGRAPHY'
@@ -58,7 +58,7 @@ def to_field_type(datatype: Datatype) -> str:
         return 'NUMERIC'
     elif isinstance(datatype, BigNumeric):
         return 'BIGNUMERIC'
-    elif datatype == STRING:
+    elif isinstance(datatype, String):
         return 'STRING'
     elif datatype == JSON:
         return 'JSON'
@@ -82,18 +82,6 @@ def to_field_type(datatype: Datatype) -> str:
         raise ValueError(f'bigquery.to_field_type unrecognized datatype - {datatype}')
 
 
-def to_fields(datatype: Datatype) -> tuple[bq.SchemaField, ...]:
-    if isinstance(datatype, Array):
-        return to_fields(datatype.inner)
-    if isinstance(datatype, Struct):
-        return tuple(
-            to_schema_field(Column(name=n, datatype=t, nullable=True))
-            for n, t in datatype.fields.items()
-        )
-    else:
-        return ()
-
-
 def to_mode(column: Column) -> str:
     if isinstance(column.datatype, Array):
         return REPEATED
@@ -101,6 +89,18 @@ def to_mode(column: Column) -> str:
         return NULLABLE
     else:
         return REQUIRED
+
+
+def to_fields(datatype: Datatype) -> tuple[bq.SchemaField, ...]:
+    if isinstance(datatype, Array):
+        return to_fields(datatype.inner)
+    if isinstance(datatype, Struct):
+        return tuple(
+            to_schema_field(Column(name=name, datatype=dt, nullable=True))
+            for name, dt in datatype.fields.items()
+        )
+    else:
+        return ()
 
 
 def to_precision(datatype: Datatype) -> int | None:
@@ -156,32 +156,13 @@ def to_schema_field(column: Column) -> bq.SchemaField:
 
 
 def to_bq_table(table: Table) -> bq.Table:
-    if table.partitioning:
-        if table.partitioning.kind == 'TIME':
-            partitioning = bq.TimePartitioning(
-                type_=table.partitioning.time_unit,
-                field=table.partitioning.column.string if table.partitioning.column else None,
-                expiration_ms=table.partitioning.expiration_days and int(table.partitioning.expiration_days * ONE_DAY_IN_MILLIS),
-                require_partition_filter=table.partitioning.require_filter,
-            )
-        elif table.partitioning.kind == 'INT':
-            partitioning = bq.RangePartitioning(
-                field=table.partitioning.column.string,
-                range_=bq.PartitionRange(
-                    start=table.partitioning.int_start,
-                    end=table.partitioning.int_end,
-                    interval=table.partitioning.int_step,
-                ),
-            )
-        else:
-            raise ValueError(f'Unrecognized partitioning kind: {table.partitioning}')
-    else:
-        partitioning = None
-
     bq_table = bq.Table(
-        to_table_ref(table.name),
+        table_ref=to_table_ref(table.name),
         schema=[to_schema_field(column) for column in table.columns],
     )
+
+    table_constraints = None
+    partitioning = None
 
     if table.primary_key or table.foreign_keys:
         if table.primary_key:
@@ -204,11 +185,32 @@ def to_bq_table(table: Table) -> bq.Table:
         else:
             foreign_keys = None
 
-        bq_table.table_constraints = bq.TableConstraints(
+        table_constraints = bq.TableConstraints(
             primary_key=primary_key,
             foreign_keys=foreign_keys,
         )
 
+    if table.partitioning:
+        if table.partitioning.kind == 'TIME':
+            partitioning = bq.TimePartitioning(
+                type_=table.partitioning.time_unit,
+                field=table.partitioning.column.string if table.partitioning.column else None,
+                expiration_ms=table.partitioning.expiration_days and int(table.partitioning.expiration_days * ONE_DAY_IN_MILLIS),
+                require_partition_filter=table.partitioning.require_filter,
+            )
+        elif table.partitioning.kind == 'INT':
+            partitioning = bq.RangePartitioning(
+                field=table.partitioning.column.string,
+                range_=bq.PartitionRange(
+                    start=table.partitioning.int_start,
+                    end=table.partitioning.int_end,
+                    interval=table.partitioning.int_step,
+                ),
+            )
+        else:
+            raise ValueError(f'Unrecognized partitioning kind: {table.partitioning}')
+
+    bq_table.table_constraints = table_constraints
     bq_table.partitioning = partitioning
     bq_table.clustering_fields = [field.string for field in table.clustering] if table.clustering else None
     bq_table.friendly_name = table.friendly_name
@@ -216,8 +218,8 @@ def to_bq_table(table: Table) -> bq.Table:
     bq_table.labels = table.labels
     bq_table.resource_tags = table.tags
     bq_table.expires = table.expiration_timestamp
-
     # TODO: figure out what to do about bq.Table missing rounding mode
+    return bq_table
 
 
 def datatype_to_sql(datatype: Datatype) -> str:

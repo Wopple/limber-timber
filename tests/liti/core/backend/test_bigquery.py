@@ -3,10 +3,12 @@ from unittest.mock import Mock
 
 from pytest import fixture, mark, raises
 
-from liti.core.backend.bigquery import BigQueryDbBackend
+from liti import bigquery as bq
+from liti.core.backend.bigquery import BigQueryDbBackend, extract_dataset_ref, to_dataset_ref, to_field_type, \
+    to_fields, to_max_length, to_mode, to_precision, to_range_element_type, to_scale, to_schema_field, to_table_ref
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
-    Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, Struct, TIME, TIMESTAMP
-from liti.core.model.v1.schema import Partitioning
+    Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Partitioning, SchemaName, TableName
 from tests.liti.util import NoRaise
 
 
@@ -18,6 +20,370 @@ def bq_client():
 @fixture
 def db_backend(bq_client):
     return BigQueryDbBackend(bq_client, raise_unsupported=set())
+
+
+def test_to_dataset_ref():
+    actual = to_dataset_ref(DatabaseName('test_project'), SchemaName('test_dataset'))
+    assert actual == bq.DatasetReference('test_project', 'test_dataset')
+
+
+@mark.parametrize(
+    'name, expected',
+    [
+        [
+            TableName('test_project.test_dataset.test_table'),
+            bq.DatasetReference('test_project', 'test_dataset'),
+        ],
+        [
+            bq.TableListItem({
+                'tableReference': {
+                    'projectId': 'test_project',
+                    'datasetId': 'test_dataset',
+                    'tableId': 'test_table',
+                }
+            }),
+            bq.DatasetReference('test_project', 'test_dataset'),
+        ],
+    ],
+)
+def test_extract_dataset_ref(name, expected):
+    actual = extract_dataset_ref(name)
+    assert actual == expected
+
+
+@mark.parametrize(
+    'name, expected',
+    [
+        [
+            TableName('test_project.test_dataset.test_table'),
+            bq.TableReference(bq.DatasetReference('test_project', 'test_dataset'), 'test_table'),
+        ],
+        [
+            bq.TableListItem({
+                'tableReference': {
+                    'projectId': 'test_project',
+                    'datasetId': 'test_dataset',
+                    'tableId': 'test_table',
+                }
+            }),
+            bq.TableReference(bq.DatasetReference('test_project', 'test_dataset'), 'test_table'),
+        ],
+    ],
+)
+def test_to_table_ref(name, expected):
+    actual = to_table_ref(name)
+    assert actual == expected
+
+
+@mark.parametrize(
+    'datatype, expected',
+    [
+        [BOOL, 'BOOL'],
+        [INT64, 'INT64'],
+        [Int(bits=64), 'INT64'],
+        [FLOAT64, 'FLOAT64'],
+        [Float(bits=64), 'FLOAT64'],
+        [GEOGRAPHY, 'GEOGRAPHY'],
+        [Numeric(precision=1, scale=1), 'NUMERIC'],
+        [BigNumeric(precision=1, scale=1), 'BIGNUMERIC'],
+        [STRING, 'STRING'],
+        [String(characters=1), 'STRING'],
+        [JSON, 'JSON'],
+        [DATE, 'DATE'],
+        [TIME, 'TIME'],
+        [DATE_TIME, 'DATETIME'],
+        [TIMESTAMP, 'TIMESTAMP'],
+        [Range(kind='DATE'), 'RANGE'],
+        [Range(kind='DATETIME'), 'RANGE'],
+        [Range(kind='TIMESTAMP'), 'RANGE'],
+        [INTERVAL, 'INTERVAL'],
+        [Array(inner=BOOL), 'BOOL'],
+        [Struct(fields={'field': BOOL}), 'RECORD'],
+    ],
+)
+def test_to_field_type(datatype, expected):
+    actual = to_field_type(datatype)
+    assert actual == expected
+
+
+@mark.parametrize(
+    'column, expected',
+    [
+        [Column(name=ColumnName('test_name'), datatype=BOOL, nullable=False), 'REQUIRED'],
+        [Column(name=ColumnName('test_name'), datatype=BOOL, nullable=True), 'NULLABLE'],
+        [Column(name=ColumnName('test_name'), datatype=Array(inner=BOOL), nullable=False), 'REPEATED'],
+        [Column(name=ColumnName('test_name'), datatype=Array(inner=BOOL), nullable=True), 'REPEATED'],
+    ],
+)
+def test_to_mode(column, expected):
+    actual = to_mode(column)
+    assert actual == expected
+
+
+@mark.parametrize(
+    'datatype, expected',
+    [
+        [
+            Struct(fields={
+                'field1': BOOL,
+                'field2': INT64,
+            }),
+            (
+                bq.SchemaField('field1', 'BOOL'),
+                bq.SchemaField('field2', 'INT64'),
+            ),
+        ],
+        [
+            Array(inner=Struct(fields={
+                'field1': BOOL,
+                'field2': INT64,
+                'field3': Array(inner=Struct(fields={
+                    'inner_field1': BOOL,
+                    'inner_field2': INT64,
+                })),
+            })),
+            (
+                bq.SchemaField('field1', 'BOOL'),
+                bq.SchemaField('field2', 'INT64'),
+                bq.SchemaField(
+                    name='field3',
+                    field_type='RECORD',
+                    mode='REPEATED',
+                    fields=(
+                        bq.SchemaField('inner_field1', 'BOOL'),
+                        bq.SchemaField('inner_field2', 'INT64'),
+                    )
+                ),
+            ),
+        ],
+    ],
+)
+def test_to_fields(datatype, expected):
+    actual = to_fields(datatype)
+    assert actual == expected
+
+
+@mark.parametrize(
+    'datatype, expected',
+    [
+        [Numeric(precision=2, scale=1), 2],
+        [BigNumeric(precision=2, scale=1), 2],
+        [Array(inner=Numeric(precision=2, scale=1)), 2],
+        [Array(inner=BigNumeric(precision=2, scale=1)), 2],
+    ],
+)
+def test_to_precision(datatype, expected):
+    actual = to_precision(datatype)
+    assert actual == expected
+
+
+@mark.parametrize(
+    'datatype, expected',
+    [
+        [Numeric(precision=2, scale=1), 1],
+        [BigNumeric(precision=2, scale=1), 1],
+        [Array(inner=Numeric(precision=2, scale=1)), 1],
+        [Array(inner=BigNumeric(precision=2, scale=1)), 1],
+    ],
+)
+def test_to_scale(datatype, expected):
+    actual = to_scale(datatype)
+    assert actual == expected
+
+
+@mark.parametrize(
+    'datatype, expected',
+    [
+        [STRING, None],
+        [String(characters=None), None],
+        [String(characters=1), 1],
+        [Array(inner=STRING), None],
+        [Array(inner=String(characters=None)), None],
+        [Array(inner=String(characters=1)), 1],
+    ],
+)
+def test_to_max_length(datatype, expected):
+    actual = to_max_length(datatype)
+    assert actual == expected
+
+
+@mark.parametrize(
+    'datatype, expected',
+    [
+        [Range(kind='DATE'), 'DATE'],
+        [Range(kind='DATETIME'), 'DATETIME'],
+        [Range(kind='TIMESTAMP'), 'TIMESTAMP'],
+        [Array(inner=Range(kind='DATE')), 'DATE'],
+        [Array(inner=Range(kind='DATETIME')), 'DATETIME'],
+        [Array(inner=Range(kind='TIMESTAMP')), 'TIMESTAMP'],
+    ],
+)
+def test_to_range_element_type(datatype, expected):
+    actual = to_range_element_type(datatype)
+    assert actual == expected
+
+
+@mark.parametrize(
+    'column, expected',
+    [
+        [
+            Column(
+                name='col_bool',
+                datatype=BOOL,
+                nullable=False,
+            ),
+            bq.SchemaField(
+                name='col_bool',
+                field_type='BOOL',
+                mode='REQUIRED',
+            ),
+        ],
+        [
+            Column(
+                name='col_date',
+                datatype=DATE,
+                default_expression='CURRENT_DATE',
+                nullable=True,
+            ),
+            bq.SchemaField(
+                name='col_date',
+                field_type='DATE',
+                default_value_expression='CURRENT_DATE',
+            ),
+        ],
+        [
+            Column(
+                name='col_bool',
+                datatype=BOOL,
+                nullable=True,
+                description='Test description',
+            ),
+            bq.SchemaField(
+                name='col_bool',
+                field_type='BOOL',
+                description='Test description',
+            ),
+        ],
+        [
+            Column(
+                name='col_struct',
+                datatype=Struct(fields={
+                    'field1': BOOL,
+                    'field2': INT64,
+                }),
+                nullable=True,
+            ),
+            bq.SchemaField(
+                name='col_struct',
+                field_type='RECORD',
+                fields=(bq.SchemaField('field1', 'BOOL'), bq.SchemaField('field2', 'INT64')),
+            ),
+        ],
+        [
+            Column(
+                name='col_numeric',
+                datatype=Numeric(precision=2, scale=1),
+                nullable=True,
+            ),
+            bq.SchemaField(
+                name='col_numeric',
+                field_type='NUMERIC',
+                precision=2,
+                scale=1,
+            ),
+        ],
+        [
+            Column(
+                name='col_bignumeric',
+                datatype=BigNumeric(precision=2, scale=1),
+                nullable=True,
+            ),
+            bq.SchemaField(
+                name='col_bignumeric',
+                field_type='BIGNUMERIC',
+                precision=2,
+                scale=1,
+            ),
+        ],
+        [
+            Column(
+                name='col_string',
+                datatype=String(characters=1),
+                nullable=True,
+            ),
+            bq.SchemaField(
+                name='col_string',
+                field_type='STRING',
+                max_length=1,
+            ),
+        ],
+        [
+            Column(
+                name='col_range',
+                datatype=Range(kind='DATE'),
+                nullable=True,
+            ),
+            bq.SchemaField(
+                name='col_range',
+                field_type='RANGE',
+                range_element_type='DATE',
+            ),
+        ],
+        [
+            Column(
+                name='col_range',
+                datatype=Range(kind='DATETIME'),
+                nullable=True,
+            ),
+            bq.SchemaField(
+                name='col_range',
+                field_type='RANGE',
+                range_element_type='DATETIME',
+            ),
+        ],
+        [
+            Column(
+                name='col_range',
+                datatype=Range(kind='TIMESTAMP'),
+                nullable=True,
+            ),
+            bq.SchemaField(
+                name='col_range',
+                field_type='RANGE',
+                range_element_type='TIMESTAMP',
+            ),
+        ],
+        [
+            Column(
+                name='col_float',
+                datatype=FLOAT64,
+                nullable=True,
+                rounding_mode='ROUND_HALF_AWAY_FROM_ZERO',
+            ),
+            bq.SchemaField(
+                name='col_float',
+                field_type='FLOAT64',
+                rounding_mode='ROUND_HALF_AWAY_FROM_ZERO',
+            ),
+        ],
+        [
+            Column(
+                name='col_float',
+                datatype=FLOAT64,
+                nullable=True,
+                rounding_mode='ROUND_HALF_EVEN',
+            ),
+            bq.SchemaField(
+                name='col_float',
+                field_type='FLOAT64',
+                rounding_mode='ROUND_HALF_EVEN',
+            ),
+        ],
+    ],
+)
+def test_to_schema_field(column, expected):
+    actual = to_schema_field(column)
+    assert actual == expected
 
 
 def test_int_defaults(db_backend: BigQueryDbBackend):
@@ -49,12 +415,12 @@ def test_big_numeric_defaults(db_backend: BigQueryDbBackend):
 @mark.parametrize(
     'bits, raise_ctx',
     [
-        (None, raises(ValueError)),
-        (8, raises(ValueError)),
-        (16, raises(ValueError)),
-        (32, raises(ValueError)),
-        (64, NoRaise()),
-        (128, raises(ValueError)),
+        [None, raises(ValueError)],
+        [8, raises(ValueError)],
+        [16, raises(ValueError)],
+        [32, raises(ValueError)],
+        [64, NoRaise()],
+        [128, raises(ValueError)],
     ],
 )
 def test_validate_int(db_backend: BigQueryDbBackend, bits: int | None, raise_ctx):
@@ -67,12 +433,12 @@ def test_validate_int(db_backend: BigQueryDbBackend, bits: int | None, raise_ctx
 @mark.parametrize(
     'bits, raise_ctx',
     [
-        (None, raises(ValueError)),
-        (8, raises(ValueError)),
-        (16, raises(ValueError)),
-        (32, raises(ValueError)),
-        (64, NoRaise()),
-        (128, raises(ValueError)),
+        [None, raises(ValueError)],
+        [8, raises(ValueError)],
+        [16, raises(ValueError)],
+        [32, raises(ValueError)],
+        [64, NoRaise()],
+        [128, raises(ValueError)],
     ],
 )
 def test_validate_float(db_backend: BigQueryDbBackend, bits: int | None, raise_ctx):
@@ -86,22 +452,22 @@ def test_validate_float(db_backend: BigQueryDbBackend, bits: int | None, raise_c
     'precision, scale, raise_ctx',
     [
         *[
-            (precision, scale, NoRaise())
+            [precision, scale, NoRaise()]
             for scale in [0, 4, 9]
             for precision in [max(scale, 1), (max(scale, 1) + 38) // 2, 38]
         ],
         *[
-            (precision, scale, raises(ValueError))
+            [precision, scale, raises(ValueError)]
             for scale in [0, 4, 9]
             for precision in [0, (0 + scale - 1) // 2, scale - 1]
         ],
         *[
-            (precision, scale, raises(ValueError))
+            [precision, scale, raises(ValueError)]
             for scale in [0, 4, 9]
             for precision in [scale + 30, (scale + 30 + 39) // 2, 39]
         ],
         *[
-            (precision, scale, raises(ValueError))
+            [precision, scale, raises(ValueError)]
             for scale in [-1, 10]
             for precision in [1, 19, 38]
         ],
@@ -118,22 +484,22 @@ def test_validate_numeric(db_backend: BigQueryDbBackend, precision: int, scale: 
     'precision, scale, raise_ctx',
     [
         *[
-            (precision, scale, NoRaise())
+            [precision, scale, NoRaise()]
             for scale in [0, 19, 38]
             for precision in [max(scale, 1), (max(scale, 1) + 76) // 2, 76]
         ],
         *[
-            (precision, scale, raises(ValueError))
+            [precision, scale, raises(ValueError)]
             for scale in [0, 19, 38]
             for precision in [0, (0 + scale - 1) // 2, scale - 1]
         ],
         *[
-            (precision, scale, raises(ValueError))
+            [precision, scale, raises(ValueError)]
             for scale in [0, 19, 38]
             for precision in [scale + 39, (scale + 39 + 77) // 2, 77]
         ],
         *[
-            (precision, scale, raises(ValueError))
+            [precision, scale, raises(ValueError)]
             for scale in [-1, 39]
             for precision in [1, 39, 77]
         ],
@@ -149,24 +515,24 @@ def test_validate_big_numeric(db_backend: BigQueryDbBackend, precision: int, sca
 @mark.parametrize(
     'inner, raise_ctx',
     [
-        (BOOL, NoRaise()),
-        (INT64, NoRaise()),
-        (FLOAT64, NoRaise()),
-        (GEOGRAPHY, NoRaise()),
-        (Numeric(), NoRaise()),
-        (BigNumeric(), NoRaise()),
-        (STRING, NoRaise()),
-        (JSON, NoRaise()),
-        (DATE, NoRaise()),
-        (TIME, NoRaise()),
-        (DATE_TIME, NoRaise()),
-        (TIMESTAMP, NoRaise()),
-        (Range(kind='DATE'), NoRaise()),
-        (Range(kind='DATETIME'), NoRaise()),
-        (Range(kind='TIMESTAMP'), NoRaise()),
-        (INTERVAL, NoRaise()),
-        (Array(inner=BOOL), raises(ValueError)),
-        (Struct(fields={'field': BOOL}), NoRaise()),
+        [BOOL, NoRaise()],
+        [INT64, NoRaise()],
+        [FLOAT64, NoRaise()],
+        [GEOGRAPHY, NoRaise()],
+        [Numeric(), NoRaise()],
+        [BigNumeric(), NoRaise()],
+        [STRING, NoRaise()],
+        [JSON, NoRaise()],
+        [DATE, NoRaise()],
+        [TIME, NoRaise()],
+        [DATE_TIME, NoRaise()],
+        [TIMESTAMP, NoRaise()],
+        [Range(kind='DATE'), NoRaise()],
+        [Range(kind='DATETIME'), NoRaise()],
+        [Range(kind='TIMESTAMP'), NoRaise()],
+        [INTERVAL, NoRaise()],
+        [Array(inner=BOOL), raises(ValueError)],
+        [Struct(fields={'field': BOOL}), NoRaise()],
     ],
 )
 def test_validate_array(db_backend: BigQueryDbBackend, inner: Datatype, raise_ctx):
@@ -180,26 +546,26 @@ def test_validate_array(db_backend: BigQueryDbBackend, inner: Datatype, raise_ct
     'kind, time_unit, int_start, int_end, int_step, raise_ctx',
     [
         *[
-            ('TIME', time_unit, None, None, None, NoRaise())
+            ['TIME', time_unit, None, None, None, NoRaise()]
             for time_unit in ['YEAR', 'MONTH', 'DAY', 'HOUR']
         ],
-        ('TIME', None, None, None, None, raises(ValueError)),
-        ('TIME', 'YEAR', 0, None, None, raises(ValueError)),
-        ('TIME', 'YEAR', None, 0, None, raises(ValueError)),
-        ('TIME', 'YEAR', None, None, 0, raises(ValueError)),
+        ['TIME', None, None, None, None, raises(ValueError)],
+        ['TIME', 'YEAR', 0, None, None, raises(ValueError)],
+        ['TIME', 'YEAR', None, 0, None, raises(ValueError)],
+        ['TIME', 'YEAR', None, None, 0, raises(ValueError)],
         *[
-            ('INT', None, None, None, None, NoRaise())
+            ['INT', None, None, None, None, NoRaise()]
             for int_start in range(3)
             for int_end in range(int_start + 1, int_start + 4)
             for int_step in range(max(int_start, int_start))
         ],
-        ('INT', None, None, 1, 1, raises(ValueError)),
-        ('INT', None, 0, None, 1, raises(ValueError)),
-        ('INT', None, 0, 1, None, raises(ValueError)),
-        ('INT', 'YEAR', 0, 1, 1, raises(ValueError)),
-        ('INT', 'MONTH', 0, 1, 1, raises(ValueError)),
-        ('INT', 'DAY', 0, 1, 1, raises(ValueError)),
-        ('INT', 'HOUR', 0, 1, 1, raises(ValueError)),
+        ['INT', None, None, 1, 1, raises(ValueError)],
+        ['INT', None, 0, None, 1, raises(ValueError)],
+        ['INT', None, 0, 1, None, raises(ValueError)],
+        ['INT', 'YEAR', 0, 1, 1, raises(ValueError)],
+        ['INT', 'MONTH', 0, 1, 1, raises(ValueError)],
+        ['INT', 'DAY', 0, 1, 1, raises(ValueError)],
+        ['INT', 'HOUR', 0, 1, 1, raises(ValueError)],
     ],
 )
 def test_validate_partitioning(
