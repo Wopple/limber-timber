@@ -192,20 +192,62 @@ class TableName(LitiModel):
         )
 
 
-# TODO: fix foreign key to be a property of a table and support multiple foreign columns
+class PrimaryKey(LitiModel):
+    column_names: list[ColumnName]
+    enforced: bool | None = None
+
+    @field_validator('column_names', mode='before')
+    @classmethod
+    def validate_column_names(cls, value: list[ColumnName]) -> list[ColumnName]:
+        if len(value) == 0:
+            raise ValueError('A primary key\'s column_names must not be empty')
+
+        return value
+
+
 class ForeignKey(LitiModel):
-    table_name: TableName
-    column_name: ColumnName
+    name: str | None = None
+    local_column_names: list[ColumnName]
+    foreign_table_name: TableName
+    foreign_column_names: list[ColumnName]
+    enforced: bool | None = None
+
+    @model_validator(mode='after')
+    def validate_model(self) -> 'ForeignKey':
+        if not self.name:
+            local_names = '_'.join(col.string for col in self.local_column_names)
+            foreign_table = f'{self.database}_{self.schema_name}_{self.table_name}'
+            foreign_names = '_'.join(col.string for col in self.foreign_column_names)
+            self.name = f'fk__{local_names}__{foreign_table}__{foreign_names}'
+
+        if len(self.local_column_names) != len(self.foreign_column_names):
+            raise ValueError(
+                f'A foreign key must have the same number of local and foreign column names:'
+                f' {len(self.local_column_names)} != {len(self.foreign_column_names)}'
+            )
+
+        return self
+
+    @field_validator('local_column_names', mode='before')
+    @classmethod
+    def validate_local_column_names(cls, value: list[ColumnName]) -> list[ColumnName]:
+        if len(value) == 0:
+            raise ValueError('A foreign key\'s local_column_names must not be empty')
+
+        return value
+
+    @field_validator('foreign_column_names', mode='before')
+    @classmethod
+    def validate_foreign_column_names(cls, value: list[ColumnName]) -> list[ColumnName]:
+        if len(value) == 0:
+            raise ValueError('A foreign key\'s foreign_column_names must not be empty')
+
+        return value
 
 
 class Column(LitiModel):
     name: ColumnName
     datatype: Datatype
-    # TODO: move primary key to be a property of a table
-    primary_key: bool = False
-    primary_enforced: bool = False
-    foreign_key: ForeignKey | None = None
-    foreign_enforced: bool = False
     default_expression: str | None = None
     nullable: bool = False
     description: str | None = None
@@ -247,6 +289,8 @@ class Partitioning(LitiModel):
 class Table(LitiModel):
     name: TableName
     columns: list[Column]
+    primary_key: PrimaryKey | None = None
+    foreign_keys: list[ForeignKey] | None = None
     partitioning: Partitioning | None = None
     clustering: list[ColumnName] | None = None
     friendly_name: str | None = None
@@ -255,10 +299,7 @@ class Table(LitiModel):
     tags: dict[str, str] | None = None
     expiration_timestamp: datetime | None = None
     default_rounding_mode: RoundingModeLiteral = Field(default_factory=RoundingModeLiteral)
-
-    # TODO: validate milliseconds between 0 and 86400000 for big query
     max_staleness: IntervalLiteral | None = None
-
     enable_change_history: bool | None = None
     enable_fine_grained_mutations: bool | None = None
     kms_key_name: str | None = None
@@ -267,6 +308,14 @@ class Table(LitiModel):
     table_format: Literal['ICEBERG'] | None = None
 
     DEFAULT_METHOD = 'table_defaults'
+
+    @model_validator(mode='after')
+    def validate_model(self) -> 'Table':
+        # canonicalize
+        if self.foreign_keys:
+            self.foreign_keys.sort(key=lambda fk: fk.name)
+
+        return self
 
     @field_validator('file_format', 'table_format', mode='before')
     @classmethod

@@ -1,9 +1,9 @@
 import logging
 from argparse import ArgumentParser, BooleanOptionalAction, Namespace
 
-from google.cloud import bigquery
 from pydantic import BaseModel, ConfigDict
 
+from liti import bigquery as bq
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.backend.bigquery import BigQueryDbBackend, BigQueryMetaBackend
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
@@ -81,7 +81,7 @@ def build_clients(args: Namespace) -> Clients:
         else:
             raise ValueError('Unable to determine the GCP project to use for the client')
 
-        big_query_client = BqClient(bigquery.Client(project=gcp_project))
+        big_query_client = BqClient(bq.Client(project=gcp_project))
     else:
         big_query_client = None
 

@@ -2,11 +2,7 @@ import json
 import logging
 from datetime import timezone
 
-from google.cloud.bigquery import DatasetReference, PartitionRange, QueryJobConfig, RangePartitioning, \
-    ScalarQueryParameter, SchemaField, Table as BqTable, TableReference
-from google.cloud.bigquery.schema import _DEFAULT_VALUE
-from google.cloud.bigquery.table import TableListItem, TimePartitioning
-
+from liti import bigquery as bq
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.error import Unsupported, UnsupportedError
@@ -15,8 +11,8 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE,
     FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, Identifier, \
-    IntervalLiteral, Partitioning, RoundingModeLiteral, SchemaName, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
+    IntervalLiteral, Partitioning, PrimaryKey, RoundingModeLiteral, SchemaName, Table, TableName
 
 log = logging.getLogger(__name__)
 
@@ -27,24 +23,24 @@ REPEATED = 'REPEATED'
 ONE_DAY_IN_MILLIS = 1000 * 60 * 60 * 24
 
 
-def to_dataset_ref(database: DatabaseName, schema: SchemaName) -> DatasetReference:
-    return DatasetReference(database.string, schema.string)
+def to_dataset_ref(database: DatabaseName, schema: SchemaName) -> bq.DatasetReference:
+    return bq.DatasetReference(database.string, schema.string)
 
 
-def extract_dataset_ref(name: TableName | TableListItem) -> DatasetReference:
+def extract_dataset_ref(name: TableName | bq.TableListItem) -> bq.DatasetReference:
     if isinstance(name, TableName):
         return to_dataset_ref(name.database, name.schema_name)
-    elif isinstance(name, TableListItem):
-        return DatasetReference(name.project, name.dataset_id)
+    elif isinstance(name, bq.TableListItem):
+        return bq.DatasetReference(name.project, name.dataset_id)
     else:
         raise ValueError(f'Invalid dataset ref type: {type(name)}')
 
 
-def to_table_ref(name: TableName | TableListItem) -> TableReference:
+def to_table_ref(name: TableName | bq.TableListItem) -> bq.TableReference:
     if isinstance(name, TableName):
-        return TableReference(extract_dataset_ref(name), name.table_name.string)
-    elif isinstance(name, TableListItem):
-        return TableReference(extract_dataset_ref(name), name.table_id)
+        return bq.TableReference(extract_dataset_ref(name), name.table_name.string)
+    elif isinstance(name, bq.TableListItem):
+        return bq.TableReference(extract_dataset_ref(name), name.table_id)
     else:
         raise ValueError(f'Invalid table ref type: {type(name)}')
 
@@ -86,7 +82,7 @@ def to_field_type(datatype: Datatype) -> str:
         raise ValueError(f'bigquery.to_field_type unrecognized datatype - {datatype}')
 
 
-def to_fields(datatype: Datatype) -> tuple[SchemaField, ...]:
+def to_fields(datatype: Datatype) -> tuple[bq.SchemaField, ...]:
     if isinstance(datatype, Array):
         return to_fields(datatype.inner)
     if isinstance(datatype, Struct):
@@ -143,13 +139,13 @@ def to_range_element_type(datatype: Datatype) -> str | None:
         return None
 
 
-def to_schema_field(column: Column) -> SchemaField:
-    return SchemaField(
+def to_schema_field(column: Column) -> bq.SchemaField:
+    return bq.SchemaField(
         name=column.name.string,
         field_type=to_field_type(column.datatype),
         mode=to_mode(column),
         default_value_expression=column.default_expression,
-        description=column.description or _DEFAULT_VALUE,
+        description=column.description or bq.SCHEMA_DEFAULT_VALUE,
         fields=to_fields(column.datatype),
         precision=to_precision(column.datatype),
         scale=to_scale(column.datatype),
@@ -159,19 +155,19 @@ def to_schema_field(column: Column) -> SchemaField:
     )
 
 
-def to_bq_table(table: Table) -> BqTable:
+def to_bq_table(table: Table) -> bq.Table:
     if table.partitioning:
         if table.partitioning.kind == 'TIME':
-            partitioning = TimePartitioning(
+            partitioning = bq.TimePartitioning(
                 type_=table.partitioning.time_unit,
                 field=table.partitioning.column.string if table.partitioning.column else None,
                 expiration_ms=table.partitioning.expiration_days and int(table.partitioning.expiration_days * ONE_DAY_IN_MILLIS),
                 require_partition_filter=table.partitioning.require_filter,
             )
         elif table.partitioning.kind == 'INT':
-            partitioning = RangePartitioning(
+            partitioning = bq.RangePartitioning(
                 field=table.partitioning.column.string,
-                range_=PartitionRange(
+                range_=bq.PartitionRange(
                     start=table.partitioning.int_start,
                     end=table.partitioning.int_end,
                     interval=table.partitioning.int_step,
@@ -182,10 +178,36 @@ def to_bq_table(table: Table) -> BqTable:
     else:
         partitioning = None
 
-    bq_table = BqTable(
+    bq_table = bq.Table(
         to_table_ref(table.name),
         schema=[to_schema_field(column) for column in table.columns],
     )
+
+    if table.primary_key or table.foreign_keys:
+        if table.primary_key:
+            primary_key = bq.PrimaryKey([col.string for col in table.primary_key.column_names])
+        else:
+            primary_key = None
+
+        if table.foreign_keys:
+            foreign_keys = [
+                bq.ForeignKey(
+                    fk.name,
+                    to_table_ref(fk.foreign_table_name),
+                    [
+                        bq.ColumnReference(l.string, f.string)
+                        for l, f in zip(fk.local_column_names, fk.foreign_column_names)
+                    ],
+                )
+                for fk in table.foreign_keys
+            ]
+        else:
+            foreign_keys = None
+
+        bq_table.table_constraints = bq.TableConstraints(
+            primary_key=primary_key,
+            foreign_keys=foreign_keys,
+        )
 
     bq_table.partitioning = partitioning
     bq_table.clustering_fields = [field.string for field in table.clustering] if table.clustering else None
@@ -194,7 +216,8 @@ def to_bq_table(table: Table) -> BqTable:
     bq_table.labels = table.labels
     bq_table.resource_tags = table.tags
     bq_table.expires = table.expiration_timestamp
-    # TODO: figure out what to do about BqTable missing rounding mode
+
+    # TODO: figure out what to do about bq.Table missing rounding mode
 
 
 def datatype_to_sql(datatype: Datatype) -> str:
@@ -338,14 +361,6 @@ def interval_literal_to_sql(interval: IntervalLiteral) -> str:
 def column_to_sql(column: Column) -> str:
     column_schema_parts = []
 
-    if column.primary_key:
-        column_schema_parts.append(' PRIMARY KEY NOT ENFORCED')
-
-    if column.foreign_key:
-        foreign_table_name = column.foreign_key.table_name
-        foreign_column_name = column.foreign_key.column_name
-        column_schema_parts.append(f'REFERENCES `{foreign_table_name}` (`{foreign_column_name}`) NOT ENFORCED')
-
     if column.default_expression:
         column_schema_parts.append(f'DEFAULT {column.default_expression}')
 
@@ -368,7 +383,7 @@ def option_dict_to_sql(option: dict[str, str]) -> str:
     return f'[{join_sql}]'
 
 
-def to_datatype(schema_field: SchemaField) -> Datatype:
+def to_datatype(schema_field: bq.SchemaField) -> Datatype:
     field_type = schema_field.field_type
 
     if field_type in ('BOOL', 'BOOLEAN'):
@@ -411,24 +426,17 @@ def to_datatype(schema_field: SchemaField) -> Datatype:
         raise ValueError(f'bigquery.to_datatype unrecognized field_type - {schema_field}')
 
 
-def to_datatype_array(schema_field: SchemaField) -> Datatype:
+def to_datatype_array(schema_field: bq.SchemaField) -> Datatype:
     if schema_field.mode == REPEATED:
         return Array(inner=to_datatype(schema_field))
     else:
         return to_datatype(schema_field)
 
 
-def to_column(schema_field: SchemaField, table: BqTable) -> Column:
-    primary_key_columns = set()
-
-    if table.table_constraints:
-        if table.table_constraints.primary_key and table.table_constraints.primary_key.columns:
-            primary_key_columns = set(table.table_constraints.primary_key.columns)
-
+def to_column(schema_field: bq.SchemaField) -> Column:
     return Column(
         name=schema_field.name,
         datatype=to_datatype_array(schema_field),
-        primary_key=schema_field.name in primary_key_columns,
         default_expression=schema_field.default_value_expression,
         nullable=schema_field.mode != REQUIRED,
         description=schema_field.description,
@@ -436,7 +444,31 @@ def to_column(schema_field: SchemaField, table: BqTable) -> Column:
     )
 
 
-def to_liti_table(table: BqTable) -> Table:
+def to_liti_table(table: bq.Table) -> Table:
+    primary_key = None
+    foreign_keys = None
+    partitioning = None
+
+    if table.table_constraints:
+        if table.table_constraints.primary_key:
+            primary_key = PrimaryKey(column_names=[ColumnName(col) for col in table.table_constraints.primary_key.columns])
+
+        if table.table_constraints.foreign_keys:
+            foreign_keys = [
+                ForeignKey(
+                    name=fk.name,
+                    local_column_names=[ColumnName(ref.referencing_column) for ref in fk.column_references],
+                    foreign_table_name=TableName(
+                        database=fk.referenced_table.project,
+                        schema_name=fk.referenced_table.dataset_id,
+                        table_name=fk.referenced_table.table_id,
+                    ),
+                    foreign_column_names=[ColumnName(ref.referenced_column) for ref in fk.column_references],
+                    enforced=False,
+                )
+                for fk in table.table_constraints.foreign_keys
+            ]
+
     if table.time_partitioning:
         time_partition = table.time_partitioning
         partitioning = Partitioning(
@@ -447,7 +479,7 @@ def to_liti_table(table: BqTable) -> Table:
             require_filter=table.require_partition_filter or False,
         )
     elif table.range_partitioning:
-        range_: PartitionRange = table.range_partitioning.range_
+        range_: bq.PartitionRange = table.range_partitioning.range_
 
         partitioning = Partitioning(
             kind='INT',
@@ -457,12 +489,12 @@ def to_liti_table(table: BqTable) -> Table:
             int_step=range_.interval,
             require_filter=table.require_partition_filter or False,
         )
-    else:
-        partitioning = None
 
     return Table(
         name=TableName(table.full_table_id.replace(':', '.')),
-        columns=[to_column(f, table) for f in table.schema],
+        columns=[to_column(f) for f in table.schema],
+        primary_key=primary_key,
+        foreign_keys=foreign_keys,
         partitioning=partitioning,
         clustering=[ColumnName(field) for field in table.clustering_fields] if table.clustering_fields else None,
         friendly_name=table.friendly_name,
@@ -470,7 +502,7 @@ def to_liti_table(table: BqTable) -> Table:
         labels=table.labels or None,
         tags=table.resource_tags or None,
         expiration_timestamp=table.expires,
-        # TODO: figure out what to do about BqTable missing rounding mode
+        # TODO: figure out what to do about bq.Table missing rounding mode
     )
 
 
@@ -503,22 +535,37 @@ class BigQueryDbBackend(DbBackend):
         return bq_table and to_liti_table(bq_table)
 
     def create_table(self, table: Table):
-        for column in table.columns:
+        column_sqls = [column_to_sql(column) for column in table.columns]
+        constraint_sqls = []
+
+        if table.primary_key:
             # TODO? update this if Big Query ever supports enforcement
-            if column.primary_key and column.primary_enforced:
+            if table.primary_key.enforced:
                 self.handle_unsupported(
                     Unsupported.ENFORCE_PRIMARY_KEY,
                     'Not enforcing primary key since Big Query does not support enforcement',
                 )
 
+            column_sql = ", ".join(col.string for col in table.primary_key.column_names)
+            constraint_sqls.append(f'PRIMARY KEY ({", ".join(column_sql)}) NOT ENFORCED')
+
+        for foreign_key in (table.foreign_keys or []):
             # TODO? update this if Big Query ever supports enforcement
-            if column.foreign_key and column.foreign_enforced:
+            if foreign_key.enforced:
                 self.handle_unsupported(
                     Unsupported.ENFORCE_FOREIGN_KEY,
-                    'Not enforcing foreign key since Big Query does not support enforcement',
+                    f'Not enforcing foreign key {foreign_key.name} since Big Query does not support enforcement',
                 )
 
-        column_sqls = [column_to_sql(column) for column in table.columns]
+            local_column_sql = ", ".join(col.string for col in foreign_key.local_column_names)
+            foreign_column_sql = ", ".join(col.string for col in foreign_key.foreign_column_names)
+
+            constraint_sqls.append(
+                f'CONSTRAINT {foreign_key.name}\n'
+                f'    FOREIGN KEY ({local_column_sql})\n'
+                f'    REFERENCES {foreign_key.foreign_table_name} ({foreign_column_sql})\n'
+                f'    NOT ENFORCED\n'
+            )
 
         if table.partitioning:
             partitioning = table.partitioning
@@ -606,16 +653,16 @@ class BigQueryDbBackend(DbBackend):
         else:
             options_sql = ''
 
-        joined_columns = ",\n    ".join(column_sqls)
+        columns_and_constraints = ",\n    ".join(column_sqls + constraint_sqls)
 
-        self.client.query_and_wait((
+        self.client.query_and_wait(
             f'CREATE TABLE `{table.name}` (\n'
-            f'    {joined_columns}\n'
+            f'    {columns_and_constraints}\n'
             f')\n'
             f'{partition_sql}'
             f'{cluster_sql}'
             f'{options_sql}'
-        ))
+        )
 
     def drop_table(self, name: TableName):
         self.client.delete_table(to_table_ref(name))
@@ -625,7 +672,7 @@ class BigQueryDbBackend(DbBackend):
 
     def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
         bq_table = self.client.get_table(to_table_ref(table_name))
-        bq_table.clustering_fields = [c.string for c in columns] if columns else None
+        bq_table.clustering_fields = [col.string for col in columns] if columns else None
         self.client.update_table(bq_table, ['clustering_fields'])
 
     def set_description(self, table_name: TableName, description: str | None):
@@ -641,36 +688,22 @@ class BigQueryDbBackend(DbBackend):
         self.set_option(table_name, 'default_rounding_mode', f'"{rounding_mode}"')
 
     def add_column(self, table_name: TableName, column: Column):
-        # TODO? update this if Big Query ever supports enforcement
-        if column.primary_key and column.primary_enforced:
-            self.handle_unsupported(
-                Unsupported.ENFORCE_PRIMARY_KEY,
-                'Not enforcing primary key since Big Query does not support enforcement',
-            )
-
-        # TODO? update this if Big Query ever supports enforcement
-        if column.foreign_key and column.foreign_enforced:
-            self.handle_unsupported(
-                Unsupported.ENFORCE_FOREIGN_KEY,
-                'Not enforcing foreign key since Big Query does not support enforcement',
-            )
-
-        self.client.query_and_wait((
+        self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'ADD COLUMN {column_to_sql(column)}\n'
-        ))
+        )
 
     def drop_column(self, table_name: TableName, column_name: ColumnName):
-        self.client.query_and_wait((
+        self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'DROP COLUMN `{column_name}`\n'
-        ))
+        )
 
     def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
-        self.client.query_and_wait((
+        self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'RENAME COLUMN `{from_name}` TO `{to_name}`\n'
-        ))
+        )
 
     def set_column_datatype(self, table_name: TableName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
         # TODO: work around these limitations by:
@@ -707,11 +740,11 @@ class BigQueryDbBackend(DbBackend):
         else:
             unsupported()
 
-        self.client.query_and_wait((
+        self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'ALTER COLUMN `{column_name}\n`'
             f'SET DATA TYPE {datatype_to_sql(to_datatype)}\n'
-        ))
+        )
 
     def add_column_field(self, table_name: TableName, field_path: FieldPath, datatype: Datatype):
         table = super().add_column_field(table_name, field_path, datatype)
@@ -725,11 +758,11 @@ class BigQueryDbBackend(DbBackend):
 
     def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
         if nullable:
-            self.client.query_and_wait((
+            self.client.query_and_wait(
                 f'ALTER TABLE `{table_name}`\n'
                 f'ALTER COLUMN `{column_name}`\n'
                 f'DROP NOT NULL\n'
-            ))
+            )
         else:
             self.handle_unsupported(
                 Unsupported.ADD_NON_NULLABLE_COLUMN,
@@ -867,17 +900,17 @@ class BigQueryDbBackend(DbBackend):
             log.warning(message)
 
     def set_option(self, table_name: TableName, key: str, value: str):
-        self.client.query_and_wait((
+        self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'SET OPTIONS({key} = {value})\n'
-        ))
+        )
 
     def set_column_option(self, table_name: TableName, column_name: ColumnName, key: str, value: str):
-        self.client.query_and_wait((
+        self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'ALTER COLUMN `{column_name}`\n'
             f'SET OPTIONS({key} = {value})\n'
-        ))
+        )
 
 
 class BigQueryMetaBackend(MetaBackend):
@@ -886,7 +919,7 @@ class BigQueryMetaBackend(MetaBackend):
         self.table_name = table_name
 
     def initialize(self):
-        self.client.query_and_wait((
+        self.client.query_and_wait(
             f'CREATE SCHEMA IF NOT EXISTS `{self.table_name.database}.{self.table_name.schema_name}`;\n'
             f'\n'
             f'CREATE TABLE IF NOT EXISTS `{self.table_name}` (\n'
@@ -895,7 +928,7 @@ class BigQueryMetaBackend(MetaBackend):
             f'    op_data JSON NOT NULL,\n'
             f'    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() NOT NULL\n'
             f')\n'
-        ))
+        )
 
     def get_applied_operations(self) -> list[Operation]:
         if self.client.has_table(to_table_ref(self.table_name)):
@@ -906,18 +939,16 @@ class BigQueryMetaBackend(MetaBackend):
 
     def apply_operation(self, operation: Operation):
         results = self.client.query_and_wait(
-            f'''
-            INSERT INTO `{self.table_name}` (idx, op_kind, op_data)
-            VALUES (
-                (SELECT COALESCE(MAX(idx) + 1, 0) FROM `{self.table_name}`),
-                @op_kind,
-                @op_data
-            )
-            ''',
-            job_config=QueryJobConfig(
+            f'INSERT INTO `{self.table_name}` (idx, op_kind, op_data)\n'
+            f'VALUES (\n'
+            f'    (SELECT COALESCE(MAX(idx) + 1, 0) FROM `{self.table_name}`),\n'
+            f'    @op_kind,\n'
+            f'    @op_data\n'
+            f')\n',
+            job_config=bq.QueryJobConfig(
                 query_parameters=[
-                    ScalarQueryParameter('op_kind', 'STRING', operation.KIND),
-                    ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json()),
+                    bq.ScalarQueryParameter('op_kind', 'STRING', operation.KIND),
+                    bq.ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json()),
                 ]
             )
         )
@@ -933,10 +964,10 @@ class BigQueryMetaBackend(MetaBackend):
                 # ensure normalized comparison, cannot compare JSON types
                 f'    AND TO_JSON_STRING(op_data) = TO_JSON_STRING(@op_data)\n'
             ),
-            job_config=QueryJobConfig(
+            job_config=bq.QueryJobConfig(
                 query_parameters=[
-                    ScalarQueryParameter('op_kind', 'STRING', operation.KIND),
-                    ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json()),
+                    bq.ScalarQueryParameter('op_kind', 'STRING', operation.KIND),
+                    bq.ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json()),
                 ]
             )
         )

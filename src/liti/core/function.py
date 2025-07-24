@@ -40,7 +40,7 @@ def extract_nested_datatype(table: Table, field_path: FieldPath) -> Datatype:
 def parse_operation(op_kind: str, op_data: dict) -> Operation:
     # hack to import OperationOps subclasses
     # noinspection PyUnresolvedReferences
-    from liti.core.model.v1.operation.ops.table import CreateTable
+    import liti.core.model.v1.operation.ops.subclasses
 
     return Operation.get_kind(op_kind)(**op_data)
 
