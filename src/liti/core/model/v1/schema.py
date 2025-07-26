@@ -303,6 +303,7 @@ class Table(LitiModel):
     enable_change_history: bool | None = None
     enable_fine_grained_mutations: bool | None = None
     kms_key_name: str | None = None
+    connection_name: str | None = None
     storage_uri: str | None = None
     file_format: Literal['PARQUET'] | None = None
     table_format: Literal['ICEBERG'] | None = None

@@ -565,6 +565,11 @@ class BigQueryDbBackend(DbBackend):
         else:
             cluster_sql = ''
 
+        if table.connection_name:
+            connection_sql = f'WITH CONNECTION `{table.connection_name}`\n'
+        else:
+            connection_sql = ''
+
         options = []
 
         if table.friendly_name:
@@ -626,6 +631,7 @@ class BigQueryDbBackend(DbBackend):
             f')\n'
             f'{partition_sql}'
             f'{cluster_sql}'
+            f'{connection_sql}'
             f'{options_sql}'
         )
 
