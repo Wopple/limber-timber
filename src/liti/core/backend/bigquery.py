@@ -162,7 +162,6 @@ def to_bq_table(table: Table) -> bq.Table:
     )
 
     table_constraints = None
-    partitioning = None
 
     if table.primary_key or table.foreign_keys:
         if table.primary_key:
@@ -192,14 +191,14 @@ def to_bq_table(table: Table) -> bq.Table:
 
     if table.partitioning:
         if table.partitioning.kind == 'TIME':
-            partitioning = bq.TimePartitioning(
+            bq_table.time_partitioning = bq.TimePartitioning(
                 type_=table.partitioning.time_unit,
                 field=table.partitioning.column.string if table.partitioning.column else None,
                 expiration_ms=table.partitioning.expiration_days and int(table.partitioning.expiration_days * ONE_DAY_IN_MILLIS),
                 require_partition_filter=table.partitioning.require_filter,
             )
         elif table.partitioning.kind == 'INT':
-            partitioning = bq.RangePartitioning(
+            bq_table.range_partitioning = bq.RangePartitioning(
                 field=table.partitioning.column.string,
                 range_=bq.PartitionRange(
                     start=table.partitioning.int_start,
@@ -211,14 +210,14 @@ def to_bq_table(table: Table) -> bq.Table:
             raise ValueError(f'Unrecognized partitioning kind: {table.partitioning}')
 
     bq_table.table_constraints = table_constraints
-    bq_table.partitioning = partitioning
     bq_table.clustering_fields = [field.string for field in table.clustering] if table.clustering else None
     bq_table.friendly_name = table.friendly_name
     bq_table.description = table.description
     bq_table.labels = table.labels
     bq_table.resource_tags = table.tags
     bq_table.expires = table.expiration_timestamp
-    # TODO: figure out what to do about bq.Table missing rounding mode
+    bq_table.max_staleness = table.max_staleness and interval_literal_to_str(table.max_staleness)
+    # TODO: figure out what to do about bq.Table missing fields
     return bq_table
 
 
@@ -263,108 +262,25 @@ def datatype_to_sql(datatype: Datatype) -> str:
 
 
 def interval_literal_to_sql(interval: IntervalLiteral) -> str:
-    from_str: str = next(filter(lambda x: x[0] != 0, [
-        (interval.year, 'YEAR'),
-        (interval.month, 'MONTH'),
-        (interval.day, 'DAY'),
-        (interval.hour, 'HOUR'),
-        (interval.minute, 'MINUTE'),
-        (interval.second, 'SECOND'),
-        (interval.microsecond, 'SECOND'),
-    ]))[1]
+    return f'INTERVAL \'{interval_literal_to_str(interval)}\' YEAR TO SECOND'
 
-    to_str: str = next(filter(lambda x: x[0] != 0, [
-        (interval.microsecond, 'MICROSECOND'),
-        (interval.second, 'SECOND'),
-        (interval.minute, 'MINUTE'),
-        (interval.hour, 'HOUR'),
-        (interval.day, 'DAY'),
-        (interval.month, 'MONTH'),
-        (interval.year, 'YEAR'),
-    ]))[1]
 
-    if interval.year > 0:
-        if to_str == 'YEAR':
-            year_part = f'{interval.year}'
-        else:
-            year_part = f'{interval.year}-'
-    else:
-        year_part = ''
-
-    if interval.month > 0:
-        if to_str == 'MONTH':
-            month_part = f'{interval.month}'
-        else:
-            month_part = f'{interval.month} '
-    else:
-        month_part = ''
-
-    if interval.day > 0:
-        if to_str == 'DAY':
-            day_part = f'{interval.day}'
-        else:
-            day_part = f'{interval.day} '
-    else:
-        day_part = ''
-
-    if interval.hour > 0:
-        if to_str == 'HOUR':
-            hour_part = f'{interval.hour}'
-        else:
-            hour_part = f'{interval.hour}:'
-    else:
-        hour_part = ''
-
-    if interval.minute > 0:
-        if to_str == 'MINUTE':
-            minute_part = f'{interval.minute}'
-        else:
-            minute_part = f'{interval.minute}:'
-    else:
-        minute_part = ''
-
-    if interval.second > 0:
-        if to_str == 'SECOND':
-            second_part = f'{interval.second}'
-        else:
-            second_part = f'{interval.second}.'
-    else:
-        second_part = ''
-
-    if interval.microsecond > 0:
-        microsecond_part = f'{interval.microsecond}'
-    else:
-        microsecond_part = ''
-
-    year_month_part = f'{year_part}{month_part}'
-    time_part = f'{hour_part}{minute_part}{second_part}{microsecond_part}'
+def interval_literal_to_str(interval: IntervalLiteral) -> str:
     sign_part = '-' if interval.sign == '-' else ''
-
-    if year_month_part:
-        year_month_part = f'{sign_part}{year_month_part}'
-
-    if day_part:
-        day_part = f'{sign_part}{day_part}'
-
-    if time_part:
-        time_part = f'{sign_part}{time_part}'
-
-    if to_str == 'MICROSECOND':
-        to_str = 'SECOND'
-
-    if from_str == to_str:
-        range_part = from_str
-    else:
-        range_part = f'{from_str} TO {to_str}'
-
-    return f'INTERVAL "{year_month_part}{day_part}{time_part}" {range_part}'
+    year_month_part = f'{sign_part}{interval.year}-{interval.month}'
+    day_part = f'{sign_part}{interval.day}'
+    time_part = f'{sign_part}{interval.hour}:{interval.minute}:{interval.second}.{interval.microsecond:06d}'
+    return f'{year_month_part} {day_part} {time_part}'
 
 
 def column_to_sql(column: Column) -> str:
-    column_schema_parts = []
+    column_schema = ''
 
     if column.default_expression:
-        column_schema_parts.append(f'DEFAULT {column.default_expression}')
+        column_schema += f' DEFAULT {column.default_expression}'
+
+    if not column.nullable:
+        column_schema += ' NOT NULL'
 
     option_parts = []
 
@@ -375,9 +291,9 @@ def column_to_sql(column: Column) -> str:
         option_parts.append(f'rounding_mode = "{column.rounding_mode}"')
 
     if option_parts:
-        column_schema_parts.append(f'OPTIONS({", ".join(option_parts)})')
+        column_schema += f' OPTIONS({", ".join(option_parts)})'
 
-    return f'`{column.name}` {datatype_to_sql(column.datatype)} {" ".join(column_schema_parts)}'
+    return f'`{column.name}` {datatype_to_sql(column.datatype)}{column_schema}'
 
 
 def option_dict_to_sql(option: dict[str, str]) -> str:
@@ -407,7 +323,7 @@ def to_datatype(schema_field: bq.SchemaField) -> Datatype:
             scale=schema_field.scale,
         )
     elif field_type == 'STRING':
-        return STRING
+        return String(characters=schema_field.max_length)
     elif field_type == 'JSON':
         return JSON
     elif field_type == 'DATE':
@@ -493,7 +409,11 @@ def to_liti_table(table: bq.Table) -> Table:
         )
 
     return Table(
-        name=TableName(table.full_table_id.replace(':', '.')),
+        name=TableName(
+            database=table.project,
+            schema_name=table.dataset_id,
+            table_name=table.table_id,
+        ),
         columns=[to_column(f) for f in table.schema],
         primary_key=primary_key,
         foreign_keys=foreign_keys,
@@ -504,7 +424,7 @@ def to_liti_table(table: bq.Table) -> Table:
         labels=table.labels or None,
         tags=table.resource_tags or None,
         expiration_timestamp=table.expires,
-        # TODO: figure out what to do about bq.Table missing rounding mode
+        # TODO: figure out what to do about bq.Table missing fields
     )
 
 
