@@ -896,7 +896,7 @@ class BigQueryMetaBackend(MetaBackend):
             job_config=bq.QueryJobConfig(
                 query_parameters=[
                     bq.ScalarQueryParameter('op_kind', 'STRING', operation.KIND),
-                    bq.ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json()),
+                    bq.ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json(exclude_none=True)),
                 ]
             )
         )
@@ -915,7 +915,7 @@ class BigQueryMetaBackend(MetaBackend):
             job_config=bq.QueryJobConfig(
                 query_parameters=[
                     bq.ScalarQueryParameter('op_kind', 'STRING', operation.KIND),
-                    bq.ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json()),
+                    bq.ScalarQueryParameter('op_data', 'JSON', operation.model_dump_json(exclude_none=True)),
                 ]
             )
         )

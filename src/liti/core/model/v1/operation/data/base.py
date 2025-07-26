@@ -16,6 +16,7 @@ class Operation(LitiModel):
     def to_op_data(self, format: Literal['json', 'yaml']) -> dict[str, Any]:
         data = self.model_dump(
             mode='json' if format == 'json' else 'python',
+            exclude_defaults=True,
             exclude_none=True,
         )
 

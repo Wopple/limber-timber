@@ -89,8 +89,7 @@ These are listed in rough priority order if you are interested in contributing.
   - To handle complex operations that do not have atomic support in the backend
 - ➡️ Grouped Operation Application
   - To reduce round trips with the backend and reduce migration time
-- ➡️ Minimize Scan Output
-  - To generate a more human readable operation file
+- ✅ Minimize Scan Output
 - ✅ Arbitrary DML SQL Migrations
 - ➡️ File System Metadata
 - ➡️ SQLite Database

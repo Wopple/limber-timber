@@ -2,10 +2,11 @@ from datetime import datetime
 from string import ascii_letters, digits
 from typing import Any, ClassVar, Iterator, Literal
 
-from pydantic import Field, field_serializer, field_validator, model_validator
+from pydantic import Field, field_serializer, field_validator, model_serializer, model_validator
+from pydantic_core.core_schema import FieldSerializationInfo
 
 from liti.core.base import LitiModel
-from liti.core.model.v1.datatype import Datatype, parse_datatype, serialize_datatype
+from liti.core.model.v1.datatype import Datatype, parse_datatype
 
 DATABASE_CHARS = set(ascii_letters + digits + '_-')
 IDENTIFIER_CHARS = set(ascii_letters + digits + '_')
@@ -94,6 +95,10 @@ class ValidatedString(LitiModel):
             return {'string': data}
         else:
             return data
+
+    @model_serializer
+    def serialize(self) -> str:
+        return self.string
 
 
 class DatabaseName(ValidatedString):
@@ -260,8 +265,12 @@ class Column(LitiModel):
 
     @field_serializer('datatype')
     @classmethod
-    def serialize_datatype(cls, value: Datatype) -> str | dict[str, Any]:
-        return serialize_datatype(value)
+    def serialize_datatype(cls, value: Datatype, info: FieldSerializationInfo) -> str | dict[str, Any]:
+        # necessary to call the subclass serializer, otherwise pydantic uses Datatype
+        return value.model_dump(
+            exclude_defaults=info.exclude_defaults,
+            exclude_none=info.exclude_none,
+        )
 
     def with_name(self, name: ColumnName) -> 'Column':
         return self.model_copy(update={'name': name})

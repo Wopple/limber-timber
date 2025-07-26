@@ -1,6 +1,7 @@
 from typing import Any, Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_serializer
+from pydantic_core.core_schema import SerializerFunctionWrapHandler
 
 from liti.core.base import LitiModel
 
@@ -8,14 +9,19 @@ FieldName = str
 
 
 class Datatype(LitiModel):
-    pass
+    type: str
 
 
 class Bool(Datatype):
-    pass
+    type: Literal['BOOL'] = 'BOOL'
+
+    @model_serializer
+    def serialize(self) -> str:
+        return self.type
 
 
 class Int(Datatype):
+    type: Literal['INT'] = 'INT'
     bits: int | None = None
 
     DEFAULT_METHOD = 'int_defaults'
@@ -25,8 +31,16 @@ class Int(Datatype):
     def bytes(self) -> int:
         return self.bits // 8
 
+    @model_serializer(mode='wrap')
+    def serialize(self, nxt: SerializerFunctionWrapHandler) -> str | dict[str, Any]:
+        if self.bits in {8, 16, 32, 64}:
+            return f'INT{self.bits}'
+        else:
+            return nxt(self)
+
 
 class Float(Datatype):
+    type: Literal['FLOAT'] = 'FLOAT'
     bits: int | None = None
 
     DEFAULT_METHOD = 'float_defaults'
@@ -36,12 +50,24 @@ class Float(Datatype):
     def bytes(self) -> int:
         return self.bits // 8
 
+    @model_serializer(mode='wrap')
+    def serialize(self, nxt: SerializerFunctionWrapHandler) -> str | dict[str, Any]:
+        if self.bits in {8, 16, 32, 64}:
+            return f'FLOAT{self.bits}'
+        else:
+            return nxt(self)
+
 
 class Geography(Datatype):
-    pass
+    type: Literal['GEOGRAPHY'] = 'GEOGRAPHY'
+
+    @model_serializer
+    def serialize(self) -> str:
+        return self.type
 
 
 class Numeric(Datatype):
+    type: Literal['NUMERIC'] = 'NUMERIC'
     precision: int | None = None
     scale: int | None = None
 
@@ -50,6 +76,7 @@ class Numeric(Datatype):
 
 
 class BigNumeric(Datatype):
+    type: Literal['BIGNUMERIC'] = 'BIGNUMERIC'
     precision: int | None = None
     scale: int | None = None
 
@@ -58,30 +85,59 @@ class BigNumeric(Datatype):
 
 
 class String(Datatype):
+    type: Literal['STRING'] = 'STRING'
     characters: int | None = None
+
+    @model_serializer(mode='wrap')
+    def serialize(self, nxt: SerializerFunctionWrapHandler) -> str | dict[str, Any]:
+        if self.characters is None:
+            return self.type
+        else:
+            return nxt(self)
 
 
 class Json(Datatype):
-    pass
+    type: Literal['JSON'] = 'JSON'
+
+    @model_serializer
+    def serialize(self) -> str:
+        return self.type
 
 
 class Date(Datatype):
-    pass
+    type: Literal['DATE'] = 'DATE'
+
+    @model_serializer
+    def serialize(self) -> str:
+        return self.type
 
 
 class Time(Datatype):
-    pass
+    type: Literal['TIME'] = 'TIME'
+
+    @model_serializer
+    def serialize(self) -> str:
+        return self.type
 
 
 class DateTime(Datatype):
-    pass
+    type: Literal['DATETIME'] = 'DATETIME'
+
+    @model_serializer
+    def serialize(self) -> str:
+        return self.type
 
 
 class Timestamp(Datatype):
-    pass
+    type: Literal['TIMESTAMP'] = 'TIMESTAMP'
+
+    @model_serializer
+    def serialize(self) -> str:
+        return self.type
 
 
 class Range(Datatype):
+    type: Literal['RANGE'] = 'RANGE'
     kind: Literal['DATE', 'DATETIME', 'TIMESTAMP']
 
     @field_validator('kind', mode='before')
@@ -91,16 +147,22 @@ class Range(Datatype):
 
 
 class Interval(Datatype):
-    pass
+    type: Literal['INTERVAL'] = 'INTERVAL'
+
+    @model_serializer
+    def serialize(self) -> str:
+        return self.type
 
 
 class Array(Datatype):
+    type: Literal['ARRAY'] = 'ARRAY'
     inner: Datatype
 
     VALIDATE_METHOD = 'validate_array'
 
 
 class Struct(Datatype):
+    type: Literal['STRUCT'] = 'STRUCT'
     fields: dict[FieldName, Datatype]
 
 
@@ -167,63 +229,3 @@ def parse_datatype(data: Datatype | str | dict[str, Any]) -> Datatype:
             return Struct(fields={k: parse_datatype(v) for k, v in data['fields'].items()})
 
     raise ValueError(f'Cannot parse data type: {data}')
-
-
-def serialize_datatype(data: Datatype) -> str | list[Any] | dict[str, Any]:
-    if isinstance(data, Bool):
-        return 'BOOL'
-    elif isinstance(data, Int):
-        return {
-            'type': 'INT',
-            'bits': data.bits,
-        }
-    elif isinstance(data, Float):
-        return {
-            'type': 'FLOAT',
-            'bits': data.bits,
-        }
-    elif isinstance(data, Geography):
-        return 'GEOGRAPHY'
-    elif isinstance(data, Numeric):
-        return {
-            'type': 'NUMERIC',
-            'precision': data.precision,
-            'scale': data.scale,
-        }
-    elif isinstance(data, BigNumeric):
-        return {
-            'type': 'BIGNUMERIC',
-            'precision': data.precision,
-            'scale': data.scale,
-        }
-    elif isinstance(data, String):
-        return 'STRING'
-    elif isinstance(data, Json):
-        return 'JSON'
-    elif isinstance(data, Date):
-        return 'DATE'
-    elif isinstance(data, Time):
-        return 'TIME'
-    elif isinstance(data, DateTime):
-        return 'DATETIME'
-    elif isinstance(data, Timestamp):
-        return 'TIMESTAMP'
-    elif isinstance(data, Interval):
-        return 'INTERVAL'
-    elif isinstance(data, Range):
-        return {
-            'type': 'RANGE',
-            'kind': data.kind,
-        }
-    elif isinstance(data, Array):
-        return {
-            'type': 'ARRAY',
-            'inner': serialize_datatype(data.inner),
-        }
-    elif isinstance(data, Struct):
-        return {
-            'type': 'STRUCT',
-            'fields': {k: serialize_datatype(v) for k, v in data.fields.items()},
-        }
-    else:
-        raise ValueError(f'Cannot serialize data type: {data}')
