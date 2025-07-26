@@ -3,9 +3,13 @@ Limber Timber
 
 ***Database Migrations Made Easy***
 
-## Overview
+This project is in pre-alpha. You can try using it, but it probably won't work.
 
-This project is not ready for production use, consider it v0.0.0.
+```shell
+pip install limber-timber
+```
+
+## Overview
 
 I am writing the migration system I always wanted but does not exist (yet).
 
