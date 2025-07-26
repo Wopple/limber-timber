@@ -5,7 +5,8 @@ from unittest.mock import Mock
 from pytest import fixture, mark, raises
 
 from liti import bigquery as bq
-from liti.core.backend.bigquery import BigQueryDbBackend, column_to_sql, datatype_to_sql, extract_dataset_ref, \
+from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_sql, datatype_to_sql, \
+    extract_dataset_ref, \
     interval_literal_to_sql, \
     NULLABLE, REPEATED, REQUIRED, to_bq_table, \
     to_column, to_dataset_ref, \
@@ -16,18 +17,18 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE,
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, IntervalLiteral, Partitioning, \
     PrimaryKey, \
-    SchemaName, Table, \
+    RoundingModeLiteral, SchemaName, Table, \
     TableName
 from tests.liti.util import NoRaise
 
 
 @fixture
-def bq_client():
+def bq_client() -> Mock:
     return Mock()
 
 
 @fixture
-def db_backend(bq_client):
+def db_backend(bq_client) -> BigQueryDbBackend:
     return BigQueryDbBackend(bq_client, raise_unsupported=set())
 
 
@@ -552,7 +553,7 @@ def test_interval_literal_to_sql(interval, expected):
                 nullable=True,
                 description='Test description',
             ),
-            '`col_bool` BOOL OPTIONS(description = "Test description")',
+            '`col_bool` BOOL OPTIONS(description = \'Test description\')',
         ],
         [
             Column(
@@ -620,7 +621,7 @@ def test_interval_literal_to_sql(interval, expected):
                 nullable=True,
                 rounding_mode='ROUND_HALF_AWAY_FROM_ZERO',
             ),
-            '`col_float` FLOAT64 OPTIONS(rounding_mode = "ROUND_HALF_AWAY_FROM_ZERO")',
+            '`col_float` FLOAT64 OPTIONS(rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\')',
         ],
         [
             Column(
@@ -629,7 +630,7 @@ def test_interval_literal_to_sql(interval, expected):
                 nullable=True,
                 rounding_mode='ROUND_HALF_EVEN',
             ),
-            '`col_float` FLOAT64 OPTIONS(rounding_mode = "ROUND_HALF_EVEN")',
+            '`col_float` FLOAT64 OPTIONS(rounding_mode = \'ROUND_HALF_EVEN\')',
         ],
     ],
 )
@@ -1206,6 +1207,118 @@ def test_to_liti_table():
 
     actual = to_liti_table(table)
     assert actual == expected
+
+
+@mark.parametrize(
+    'from_dt, to_dt, expected',
+    [
+        [INT64, INT64, False],
+        [INT64, FLOAT64, True],
+        [INT64, Numeric(precision=1, scale=0), True],
+        [INT64, BigNumeric(precision=1, scale=0), True],
+        [INT64, STRING, False],
+        [FLOAT64, INT64, False],
+        [FLOAT64, FLOAT64, False],
+        [FLOAT64, Numeric(precision=1, scale=0), False],
+        [FLOAT64, BigNumeric(precision=1, scale=0), False],
+        [FLOAT64, STRING, False],
+        [Numeric(precision=1, scale=0), INT64, False],
+        [Numeric(precision=1, scale=0), FLOAT64, True],
+        [Numeric(precision=1, scale=0), Numeric(precision=1, scale=0), False],
+        [Numeric(precision=1, scale=0), Numeric(precision=2, scale=0), True],
+        [Numeric(precision=1, scale=0), Numeric(precision=1, scale=1), True],
+        [Numeric(precision=1, scale=0), BigNumeric(precision=1, scale=0), True],
+        [Numeric(precision=1, scale=0), BigNumeric(precision=2, scale=0), True],
+        [Numeric(precision=1, scale=0), BigNumeric(precision=1, scale=1), True],
+        [Numeric(precision=1, scale=0), STRING, False],
+        [BigNumeric(precision=1, scale=0), INT64, False],
+        [BigNumeric(precision=1, scale=0), FLOAT64, True],
+        [BigNumeric(precision=1, scale=0), Numeric(precision=1, scale=0), False],
+        [BigNumeric(precision=1, scale=0), Numeric(precision=2, scale=0), False],
+        [BigNumeric(precision=1, scale=0), Numeric(precision=1, scale=1), False],
+        [BigNumeric(precision=1, scale=0), BigNumeric(precision=1, scale=0), False],
+        [BigNumeric(precision=1, scale=0), BigNumeric(precision=2, scale=0), True],
+        [BigNumeric(precision=1, scale=0), BigNumeric(precision=1, scale=1), True],
+        [BigNumeric(precision=1, scale=0), STRING, False],
+        [STRING, INT64, False],
+        [STRING, FLOAT64, False],
+        [STRING, Numeric(precision=1, scale=0), False],
+        [STRING, BigNumeric(precision=1, scale=0), False],
+        [STRING, STRING, False],
+        [STRING, String(characters=1), False],
+        [STRING, String(characters=2), False],
+        [String(characters=1), INT64, False],
+        [String(characters=1), FLOAT64, False],
+        [String(characters=1), Numeric(precision=1, scale=0), False],
+        [String(characters=1), BigNumeric(precision=1, scale=0), False],
+        [String(characters=1), STRING, True],
+        [String(characters=1), String(characters=1), False],
+        [String(characters=1), String(characters=2), True],
+    ],
+)
+def test_can_coerce(from_dt, to_dt, expected):
+    actual = can_coerce(from_dt, to_dt)
+    assert actual == expected
+
+
+def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
+    table = Table(
+        name=TableName('test_project.test_dataset.test_table'),
+        columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
+        primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
+        foreign_keys=[ForeignKey(
+            name='fk_test',
+            local_column_names=[ColumnName('col_date')],
+            foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
+            foreign_column_names=[ColumnName('fk_col_date')],
+        )],
+        partitioning=Partitioning(
+            kind='TIME',
+            column=ColumnName('col_date'),
+            time_unit='DAY',
+        ),
+        clustering=[ColumnName('col_date')],
+        friendly_name='test_friendly',
+        description='Test description',
+        labels={'l1': 'v1', 'l2': 'v2'},
+        tags={'t1': 'v1', 't2': 'v2'},
+        expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+        default_rounding_mode=RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO'),
+        max_staleness=IntervalLiteral(hour=1),
+        enable_change_history=True,
+        enable_fine_grained_mutations=True,
+        kms_key_name='test_key',
+        storage_uri='test/uri',
+        file_format='PARQUET',
+        table_format='ICEBERG',
+    )
+
+    db_backend.create_table(table)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'CREATE TABLE `test_project.test_dataset.test_table` (\n'
+        f'    `col_date` DATE NOT NULL,\n'
+        f'    PRIMARY KEY (`col_date`) NOT ENFORCED,\n'
+        f'    CONSTRAINT fk_test FOREIGN KEY (`col_date`) REFERENCES `test_project.test_dataset.fk_test_table` (`fk_col_date`) NOT ENFORCED\n'
+        f')\n'
+        f'PARTITION BY `col_date`\n'
+        f'CLUSTER BY `col_date`\n'
+        f'OPTIONS(\n'
+        f'    friendly_name = \'test_friendly\',\n'
+        f'    description = \'Test description\',\n'
+        f'    labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')],\n'
+        f'    tags = [(\'t1\', \'v1\'), (\'t2\', \'v2\')],\n'
+        f'    expiration_timestamp = TIMESTAMP \'2025-01-01 00:00:00 UTC\',\n'
+        f'    default_rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\',\n'
+        f'    max_staleness = INTERVAL \'0-0 0 1:0:0.000000\' YEAR TO SECOND,\n'
+        f'    enable_change_history = TRUE,\n'
+        f'    enable_fine_grained_mutations = TRUE,\n'
+        f'    kms_key_name = \'test_key\',\n'
+        f'    storage_uri = \'test/uri\',\n'
+        f'    file_format = PARQUET,\n'
+        f'    table_format = ICEBERG\n'
+        f')\n'
+    )
 
 
 def test_int_defaults(db_backend: BigQueryDbBackend):

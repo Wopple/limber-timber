@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import timezone
+from typing import Any
 
 from liti import bigquery as bq
 from liti.core.backend.base import DbBackend, MetaBackend
@@ -285,10 +286,10 @@ def column_to_sql(column: Column) -> str:
     option_parts = []
 
     if column.description:
-        option_parts.append(f'description = "{column.description}"')
+        option_parts.append(f'description = \'{column.description}\'')
 
     if column.rounding_mode:
-        option_parts.append(f'rounding_mode = "{column.rounding_mode}"')
+        option_parts.append(f'rounding_mode = \'{column.rounding_mode}\'')
 
     if option_parts:
         column_schema += f' OPTIONS({", ".join(option_parts)})'
@@ -297,7 +298,7 @@ def column_to_sql(column: Column) -> str:
 
 
 def option_dict_to_sql(option: dict[str, str]) -> str:
-    join_sql = ', '.join(f'("{k}", "{v}")' for k, v in option.items())
+    join_sql = ', '.join(f'(\'{k}\', \'{v}\')' for k, v in option.items())
     return f'[{join_sql}]'
 
 
@@ -428,6 +429,48 @@ def to_liti_table(table: bq.Table) -> Table:
     )
 
 
+def can_coerce_int(to_dt: Any) -> bool:
+    return isinstance(to_dt, Numeric | BigNumeric) or to_dt == FLOAT64
+
+
+def can_coerce_numeric(from_dt: Numeric, to_dt: Any) -> bool:
+    if isinstance(to_dt, Numeric):
+        return (from_dt.precision, from_dt.scale) < (to_dt.precision, to_dt.scale)
+    elif isinstance(to_dt, BigNumeric):
+        return (from_dt.precision, from_dt.scale) <= (to_dt.precision, to_dt.scale)
+    else:
+        return to_dt == FLOAT64
+
+
+def can_coerce_big_numeric(from_dt: BigNumeric, to_dt: Any) -> bool:
+    if isinstance(to_dt, BigNumeric):
+        return (from_dt.precision, from_dt.scale) < (to_dt.precision, to_dt.scale)
+    else:
+        return to_dt == FLOAT64
+
+
+def can_coerce_string(from_dt: String, to_dt: Any) -> bool:
+    if isinstance(to_dt, String):
+        return from_dt.characters is not None and (
+            to_dt.characters is None or from_dt.characters < to_dt.characters
+        )
+    else:
+        return False
+
+
+def can_coerce(from_dt: Any, to_dt: Any) -> bool:
+    if from_dt == INT64:
+        return can_coerce_int(to_dt)
+    elif isinstance(from_dt, Numeric):
+        return can_coerce_numeric(from_dt, to_dt)
+    elif isinstance(from_dt, BigNumeric):
+        return can_coerce_big_numeric(from_dt, to_dt)
+    elif isinstance(from_dt, String):
+        return can_coerce_string(from_dt, to_dt)
+    else:
+        return False
+
+
 class BigQueryDbBackend(DbBackend):
     """ Big Query "client" that adapts terms between liti and google.cloud.bigquery """
 
@@ -468,8 +511,8 @@ class BigQueryDbBackend(DbBackend):
                     'Not enforcing primary key since Big Query does not support enforcement',
                 )
 
-            column_sql = ", ".join(col.string for col in table.primary_key.column_names)
-            constraint_sqls.append(f'PRIMARY KEY ({", ".join(column_sql)}) NOT ENFORCED')
+            pk_columns_sql = ', '.join(f'`{col}`' for col in table.primary_key.column_names)
+            constraint_sqls.append(f'PRIMARY KEY ({pk_columns_sql}) NOT ENFORCED')
 
         for foreign_key in (table.foreign_keys or []):
             # TODO? update this if Big Query ever supports enforcement
@@ -479,14 +522,14 @@ class BigQueryDbBackend(DbBackend):
                     f'Not enforcing foreign key {foreign_key.name} since Big Query does not support enforcement',
                 )
 
-            local_column_sql = ", ".join(col.string for col in foreign_key.local_column_names)
-            foreign_column_sql = ", ".join(col.string for col in foreign_key.foreign_column_names)
+            local_column_sql = ', '.join(f'`{col}`' for col in foreign_key.local_column_names)
+            foreign_column_sql = ', '.join(f'`{col}`' for col in foreign_key.foreign_column_names)
 
             constraint_sqls.append(
-                f'CONSTRAINT {foreign_key.name}\n'
-                f'    FOREIGN KEY ({local_column_sql})\n'
-                f'    REFERENCES {foreign_key.foreign_table_name} ({foreign_column_sql})\n'
-                f'    NOT ENFORCED\n'
+                f'CONSTRAINT {foreign_key.name}'
+                f' FOREIGN KEY ({local_column_sql})'
+                f' REFERENCES `{foreign_key.foreign_table_name}` ({foreign_column_sql})'
+                f' NOT ENFORCED'
             )
 
         if table.partitioning:
@@ -525,23 +568,23 @@ class BigQueryDbBackend(DbBackend):
         options = []
 
         if table.friendly_name:
-            options.append(f'friendly_name = "{table.friendly_name}"')
+            options.append(f'friendly_name = \'{table.friendly_name}\'')
 
         if table.description:
-            options.append(f'description = "{table.description}"')
+            options.append(f'description = \'{table.description}\'')
 
         if table.labels:
-            options.append(f'labels = [{option_dict_to_sql(table.labels)}]')
+            options.append(f'labels = {option_dict_to_sql(table.labels)}')
 
         if table.tags:
-            options.append(f'tags = [{option_dict_to_sql(table.tags)}]')
+            options.append(f'tags = {option_dict_to_sql(table.tags)}')
 
         if table.expiration_timestamp:
             utc_ts = table.expiration_timestamp.astimezone(timezone.utc)
-            options.append(f'expiration_timestamp = TIMESTAMP "{utc_ts.strftime("%Y-%m-%d %H:%M:%S UTC")}"')
+            options.append(f'expiration_timestamp = TIMESTAMP \'{utc_ts.strftime("%Y-%m-%d %H:%M:%S UTC")}\'')
 
         if table.default_rounding_mode:
-            options.append(f'default_rounding_mode = "{table.default_rounding_mode}"')
+            options.append(f'default_rounding_mode = \'{table.default_rounding_mode}\'')
 
         if table.max_staleness:
             options.append(f'max_staleness = {interval_literal_to_sql(table.max_staleness)}')
@@ -553,10 +596,10 @@ class BigQueryDbBackend(DbBackend):
             options.append(f'enable_fine_grained_mutations = TRUE')
 
         if table.kms_key_name:
-            options.append(f'kms_key_name = "{table.kms_key_name}"')
+            options.append(f'kms_key_name = \'{table.kms_key_name}\'')
 
         if table.storage_uri:
-            options.append(f'storage_uri = "{table.storage_uri}"')
+            options.append(f'storage_uri = \'{table.storage_uri}\'')
 
         if table.file_format:
             options.append(f'file_format = {table.file_format}')
@@ -565,7 +608,7 @@ class BigQueryDbBackend(DbBackend):
             options.append(f'table_format = {table.table_format}')
 
         if options:
-            joined_options = ",\n    ".join(options)
+            joined_options = ',\n    '.join(options)
 
             options_sql = (
                 f'OPTIONS(\n'
@@ -575,7 +618,7 @@ class BigQueryDbBackend(DbBackend):
         else:
             options_sql = ''
 
-        columns_and_constraints = ",\n    ".join(column_sqls + constraint_sqls)
+        columns_and_constraints = ',\n    '.join(column_sqls + constraint_sqls)
 
         self.client.query_and_wait(
             f'CREATE TABLE `{table.name}` (\n'
@@ -598,7 +641,7 @@ class BigQueryDbBackend(DbBackend):
         self.client.update_table(bq_table, ['clustering_fields'])
 
     def set_description(self, table_name: TableName, description: str | None):
-        self.set_option(table_name, 'description', f'"{description}"' if description else 'NULL')
+        self.set_option(table_name, 'description', f'\'{description}\'' if description else 'NULL')
 
     def set_labels(self, table_name: TableName, labels: dict[str, str] | None):
         self.set_option(table_name, 'labels', option_dict_to_sql(labels) if labels else 'NULL')
@@ -607,7 +650,7 @@ class BigQueryDbBackend(DbBackend):
         self.set_option(table_name, 'tags', option_dict_to_sql(tags) if tags else 'NULL')
 
     def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
-        self.set_option(table_name, 'default_rounding_mode', f'"{rounding_mode}"')
+        self.set_option(table_name, 'default_rounding_mode', f'\'{rounding_mode}\'')
 
     def add_column(self, table_name: TableName, column: Column):
         self.client.query_and_wait(
@@ -628,39 +671,16 @@ class BigQueryDbBackend(DbBackend):
         )
 
     def set_column_datatype(self, table_name: TableName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
-        # TODO: work around these limitations by:
+        # TODO: work around some of these limitations by:
         #     1. create a new table with the new datatype
         #     2. copy data from the old table to the new table truncating values
         #     3. drop the old table
         #     4. rename the new table to the old table name
-        def unsupported():
+        if not can_coerce(from_datatype, to_datatype):
             self.handle_unsupported(
                 Unsupported.SET_COLUMN_DATATYPE,
-                f'Not updating column {column_name} datatype from INT64 to {to_datatype} since Big Query does not support it',
+                f'Not updating column {column_name} from {from_datatype} to {to_datatype} since Big Query does not support it',
             )
-
-        if from_datatype == INT64:
-            if not (isinstance(to_datatype, Numeric | BigNumeric) or to_datatype == FLOAT64):
-                unsupported()
-        elif isinstance(from_datatype, Numeric):
-            if not (
-                to_datatype == FLOAT64 or
-                (
-                    isinstance(to_datatype, Numeric | BigNumeric) and
-                    from_datatype.precision <= to_datatype.precision and
-                    from_datatype.scale <= to_datatype.scale
-                )
-            ):
-                unsupported()
-        elif isinstance(from_datatype, String):
-            if not (
-                isinstance(to_datatype, String) and
-                to_datatype.characters is None or
-                (from_datatype.characters is not None and from_datatype.characters <= to_datatype.characters)
-            ):
-                unsupported()
-        else:
-            unsupported()
 
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
@@ -692,10 +712,10 @@ class BigQueryDbBackend(DbBackend):
             )
 
     def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
-        self.set_column_option(table_name, column_name, 'description', f'"{description}"' if description else 'NULL')
+        self.set_column_option(table_name, column_name, 'description', f'\'{description}\'' if description else 'NULL')
 
     def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingModeLiteral):
-        self.set_column_option(table_name, column_name, 'rounding_mode', f'"{rounding_mode}"')
+        self.set_column_option(table_name, column_name, 'rounding_mode', f'\'{rounding_mode}\'')
 
     def execute_sql(self, sql: str):
         self.client.query_and_wait(sql)
