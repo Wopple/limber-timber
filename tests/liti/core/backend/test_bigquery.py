@@ -1323,6 +1323,254 @@ def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
     )
 
 
+@mark.parametrize(
+    'column_names, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'DROP PRIMARY KEY\n',
+        ],
+        [
+            ['col_date', 'col_int'],
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ADD PRIMARY KEY (`col_date`, `col_int`) NOT ENFORCED\n',
+        ],
+    ],
+)
+def test_set_primary_key(db_backend: BigQueryDbBackend, bq_client: Mock, column_names, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+
+    if column_names:
+        primary_key = PrimaryKey(column_names=[ColumnName('col_date'), ColumnName('col_int')])
+    else:
+        primary_key = None
+
+    db_backend.set_primary_key(table_name, primary_key)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+def test_add_foreign_key(db_backend: BigQueryDbBackend, bq_client: Mock):
+    table_name = TableName('test_project.test_dataset.test_table')
+
+    foreign_key = ForeignKey(
+        foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
+        references=[
+            ForeignReference(
+                local_column_name=ColumnName('col_date'),
+                foreign_column_name=ColumnName('fk_col_date'),
+            ),
+            ForeignReference(
+                local_column_name=ColumnName('col_int'),
+                foreign_column_name=ColumnName('fk_col_int'),
+            ),
+        ],
+    )
+
+    db_backend.add_foreign_key(table_name, foreign_key)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+        f'ADD CONSTRAINT `fk__col_date_col_int__test_project_test_dataset_fk_test_table__fk_col_date_fk_col_int`'
+        f' FOREIGN KEY (`col_date`, `col_int`)'
+        f' REFERENCES `test_project.test_dataset.fk_test_table` (`fk_col_date`, `fk_col_int`)'
+        f' NOT ENFORCED\n'
+    )
+
+
+def test_drop_constraint(db_backend: BigQueryDbBackend, bq_client: Mock):
+    table_name = TableName('test_project.test_dataset.test_table')
+    constraint_name = Identifier('fk__test')
+    db_backend.drop_constraint(table_name, constraint_name)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+        f'DROP CONSTRAINT `fk__test`\n'
+    )
+
+
+@mark.parametrize(
+    'description, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(description = NULL)\n',
+        ],
+        [
+            'Test description',
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(description = \'Test description\')\n',
+        ],
+    ],
+)
+def test_set_description(db_backend: BigQueryDbBackend, bq_client: Mock, description, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_description(table_name, description)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'labels, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(labels = NULL)\n',
+        ],
+        [
+            {'l1': 'v1', 'l2': 'v2'},
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
+        ],
+    ],
+)
+def test_set_labels(db_backend: BigQueryDbBackend, bq_client: Mock, labels, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_labels(table_name, labels)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'tags, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(tags = NULL)\n',
+        ],
+        [
+            {'t1': 'v1', 't2': 'v2'},
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(tags = [(\'t1\', \'v1\'), (\'t2\', \'v2\')])\n',
+        ],
+    ],
+)
+def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_tags(table_name, tags)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'default_rounding_mode, expected',
+    [
+        [
+            'ROUND_HALF_AWAY_FROM_ZERO',
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\')\n',
+        ],
+        [
+            'ROUND_HALF_EVEN',
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_EVEN\')\n',
+        ],
+    ],
+)
+def test_set_default_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock, default_rounding_mode, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_default_rounding_mode(table_name, default_rounding_mode)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+def test_add_column(db_backend: BigQueryDbBackend, bq_client: Mock):
+    table_name = TableName('test_project.test_dataset.test_table')
+    column = Column(name=ColumnName('col_date'), datatype=DATE)
+    db_backend.add_column(table_name, column)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+        f'ADD COLUMN `col_date` DATE NOT NULL\n'
+    )
+
+
+def test_rename_column(db_backend: BigQueryDbBackend, bq_client: Mock):
+    table_name = TableName('test_project.test_dataset.test_table')
+    column_name = ColumnName('col_date')
+    column_rename = ColumnName('col_date_renamed')
+    db_backend.rename_column(table_name, column_name, column_rename)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+        f'RENAME COLUMN `col_date` TO `col_date_renamed`\n'
+    )
+
+
+def test_set_column_datatype(db_backend: BigQueryDbBackend, bq_client: Mock):
+    table_name = TableName('test_project.test_dataset.test_table')
+    column_name = ColumnName('col_num')
+    from_dt = INT64
+    to_dt = FLOAT64
+    db_backend.set_column_datatype(table_name, column_name, from_dt, to_dt)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+        f'ALTER COLUMN `col_num`\n'
+        f'SET DATA TYPE FLOAT64\n'
+    )
+
+
+def test_set_column_nullable(db_backend: BigQueryDbBackend, bq_client: Mock):
+    table_name = TableName('test_project.test_dataset.test_table')
+    column_name = ColumnName('col_num')
+    nullable = True
+    db_backend.set_column_nullable(table_name, column_name, nullable)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+        f'ALTER COLUMN `col_num`\n'
+        f'DROP NOT NULL\n'
+    )
+
+
+@mark.parametrize(
+    'description, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(description = NULL)\n',
+        ],
+        [
+            'Test description',
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(description = \'Test description\')\n',
+        ],
+    ],
+)
+def test_set_column_description(db_backend: BigQueryDbBackend, bq_client: Mock, description, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    column_name = ColumnName('col_num')
+    db_backend.set_column_description(table_name, column_name, description)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'rounding_mode, expected',
+    [
+        [
+            'ROUND_HALF_AWAY_FROM_ZERO',
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\')\n',
+        ],
+        [
+            'ROUND_HALF_EVEN',
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(rounding_mode = \'ROUND_HALF_EVEN\')\n',
+        ],
+    ],
+)
+def test_set_column_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock, rounding_mode, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    column_name = ColumnName('col_num')
+    db_backend.set_column_rounding_mode(table_name, column_name, rounding_mode)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
 def test_int_defaults(db_backend: BigQueryDbBackend):
     node = Int()
     node.set_defaults(db_backend)
