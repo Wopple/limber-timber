@@ -2,7 +2,7 @@ from pathlib import Path
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.table import CreateTable, DropTable, RenameTable, SetClustering, \
-    SetDefaultRoundingMode, SetDescription, SetLabels, SetTags
+    SetDefaultRoundingMode, SetDescription, SetLabels, SetPrimaryKey, SetTags
 from liti.core.model.v1.operation.ops.base import OperationOps
 
 
@@ -59,6 +59,25 @@ class RenameTableOps(OperationOps):
         return db_backend.has_table(self.op.from_name.with_table_name(self.op.to_name))
 
 
+class SetPrimaryKeyOps(OperationOps):
+    op: SetPrimaryKey
+
+    def __init__(self, op: SetPrimaryKey):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        # TODO: implement removal of the existing primary key if any
+        db_backend.set_primary_key(self.op.table_name, self.op.primary_key)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetPrimaryKey:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+        return SetPrimaryKey(table_name=self.op.table_name, primary_key=sim_table.primary_key)
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        return db_backend.get_table(self.op.table_name).primary_key == self.op.primary_key
+
+
 class SetClusteringOps(OperationOps):
     op: SetClustering
 
@@ -66,15 +85,15 @@ class SetClusteringOps(OperationOps):
         self.op = op
 
     def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
-        db_backend.set_clustering(self.op.table_name, self.op.columns)
+        db_backend.set_clustering(self.op.table_name, self.op.column_names)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetClustering:
         sim_db = self.simulate(meta_backend.get_previous_operations())
         sim_table = sim_db.get_table(self.op.table_name)
-        return SetClustering(table_name=self.op.table_name, columns=sim_table.clustering)
+        return SetClustering(table_name=self.op.table_name, column_names=sim_table.clustering)
 
     def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
-        return db_backend.get_table(self.op.table_name).clustering == self.op.columns
+        return db_backend.get_table(self.op.table_name).clustering == self.op.column_names
 
 
 class SetDescriptionOps(OperationOps):

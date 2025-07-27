@@ -1,9 +1,9 @@
 from typing import ClassVar
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import ColumnName, Identifier, RoundingModeLiteral, Table, TableName
+from liti.core.model.v1.schema import ColumnName, Identifier, PrimaryKey, RoundingModeLiteral, Table, TableName
 
 
 class CreateTable(Operation):
@@ -25,11 +25,26 @@ class RenameTable(Operation):
     KIND: ClassVar[str] = 'rename_table'
 
 
+class SetPrimaryKey(Operation):
+    table_name: TableName
+    primary_key: PrimaryKey | None = None
+
+    KIND: ClassVar[str] = 'set_primary_key'
+
+
 class SetClustering(Operation):
     table_name: TableName
-    columns: list[ColumnName]
+    column_names: list[ColumnName] | None = None
 
     KIND: ClassVar[str] = 'set_clustering'
+
+    @field_validator('column_names', mode='before')
+    @classmethod
+    def validate_column_names(cls, value: list[ColumnName] | None) -> list[ColumnName] | None:
+        if value:
+            return value
+        else:
+            return None
 
 
 class SetDescription(Operation):

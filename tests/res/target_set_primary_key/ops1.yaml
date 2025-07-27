@@ -1,0 +1,28 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: revert_table
+      columns:
+      - name: col_bool
+        datatype: BOOL
+- kind: set_primary_key
+  data:
+    table_name:
+      database: my_project
+      schema_name: my_dataset
+      table_name: revert_table
+    primary_key:
+      column_names:
+      - col_bool
+      enforced: true
+- kind: set_primary_key
+  data:
+    table_name:
+      database: my_project
+      schema_name: my_dataset
+      table_name: revert_table

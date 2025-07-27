@@ -198,23 +198,15 @@ class TableName(LitiModel):
 
 
 class PrimaryKey(LitiModel):
-    column_names: list[ColumnName]
+    column_names: list[ColumnName] = Field(min_length=1)
     enforced: bool | None = None
-
-    @field_validator('column_names', mode='before')
-    @classmethod
-    def validate_column_names(cls, value: list[ColumnName]) -> list[ColumnName]:
-        if len(value) == 0:
-            raise ValueError('A primary key\'s column_names must not be empty')
-
-        return value
 
 
 class ForeignKey(LitiModel):
     name: str | None = None
-    local_column_names: list[ColumnName]
+    local_column_names: list[ColumnName] = Field(min_length=1)
     foreign_table_name: TableName
-    foreign_column_names: list[ColumnName]
+    foreign_column_names: list[ColumnName] = Field(min_length=1)
     enforced: bool | None = None
 
     @model_validator(mode='after')
@@ -232,22 +224,6 @@ class ForeignKey(LitiModel):
             )
 
         return self
-
-    @field_validator('local_column_names', mode='before')
-    @classmethod
-    def validate_local_column_names(cls, value: list[ColumnName]) -> list[ColumnName]:
-        if len(value) == 0:
-            raise ValueError('A foreign key\'s local_column_names must not be empty')
-
-        return value
-
-    @field_validator('foreign_column_names', mode='before')
-    @classmethod
-    def validate_foreign_column_names(cls, value: list[ColumnName]) -> list[ColumnName]:
-        if len(value) == 0:
-            raise ValueError('A foreign key\'s foreign_column_names must not be empty')
-
-        return value
 
 
 class Column(LitiModel):

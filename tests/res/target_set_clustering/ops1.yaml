@@ -31,6 +31,6 @@ operations:
       database: my_project
       schema_name: my_dataset
       table_name: clustering_table
-    columns:
+    column_names:
     - col_int
     - col_bool

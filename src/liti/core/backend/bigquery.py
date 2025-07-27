@@ -650,9 +650,44 @@ class BigQueryDbBackend(DbBackend):
     def rename_table(self, from_name: TableName, to_name: Identifier):
         self.client.query_and_wait(f'ALTER TABLE `{from_name}` RENAME TO `{to_name}`')
 
-    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
+    def set_primary_key(self, table_name: TableName, primary_key: PrimaryKey | None):
         bq_table = self.client.get_table(to_table_ref(table_name))
-        bq_table.clustering_fields = [col.string for col in columns] if columns else None
+        table_constraints = bq_table.table_constraints
+
+        if primary_key:
+            if primary_key.enforced:
+                self.handle_unsupported(
+                    Unsupported.ENFORCE_PRIMARY_KEY,
+                    'Not enforcing primary key since Big Query does not support enforcement',
+                )
+
+            if table_constraints:
+                if table_constraints.primary_key and table_constraints.primary_key.columns:
+                    raise ValueError(f'Cannot set primary key on {table_name} since it already has a primary key')
+
+                bq_table.table_constraints = bq.TableConstraints(
+                    primary_key=bq.PrimaryKey([col.string for col in primary_key.column_names]),
+                    foreign_keys=table_constraints.foreign_keys,
+                )
+            else:
+                bq_table.table_constraints = bq.TableConstraints(
+                    primary_key=bq.PrimaryKey([col.string for col in primary_key.column_names]),
+                    foreign_keys=None,
+                )
+        else:
+            if table_constraints:
+                bq_table.table_constraints = bq.TableConstraints(
+                    primary_key=None,
+                    foreign_keys=table_constraints.foreign_keys,
+                )
+            else:
+                bq_table.table_constraints = None
+
+        self.client.update_table(bq_table, ['table_constraints'])
+
+    def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
+        bq_table = self.client.get_table(to_table_ref(table_name))
+        bq_table.clustering_fields = [col.string for col in column_names] if column_names else None
         self.client.update_table(bq_table, ['clustering_fields'])
 
     def set_description(self, table_name: TableName, description: str | None):

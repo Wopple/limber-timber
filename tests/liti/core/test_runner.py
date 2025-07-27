@@ -5,7 +5,8 @@ from pytest import fixture
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
     Numeric, Range, STRING, Struct, TIME, TIMESTAMP
-from liti.core.model.v1.schema import Column, ColumnName, IntervalLiteral, Partitioning, RoundingModeLiteral, Table, \
+from liti.core.model.v1.schema import Column, ColumnName, IntervalLiteral, Partitioning, PrimaryKey, \
+    RoundingModeLiteral, Table, \
     TableName
 from liti.core.runner import MigrateRunner
 
@@ -353,6 +354,50 @@ def test_rename_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
     assert len(meta_backend.get_applied_operations()) == 1
     assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')) is not None
     assert db_backend.get_table(TableName('my_project.my_dataset.renamed_table')) is None
+
+
+def test_set_primary_key(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('my_project.my_dataset.revert_table')
+
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_set_primary_key',
+    )
+
+    set_runner.run(wet_run=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+    assert db_backend.get_table(table_name).primary_key is None
+
+    unset_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_unset_primary_key',
+    )
+
+    unset_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+
+    assert db_backend.get_table(table_name).primary_key == PrimaryKey(
+        column_names = [ColumnName('col_bool')],
+        enforced=True,
+    )
+
+    down_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_revert',
+    )
+
+    down_runner.run(wet_run=True, allow_down=True)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert db_backend.get_table(table_name).primary_key is None
 
 
 def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):

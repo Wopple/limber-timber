@@ -4,8 +4,8 @@ from liti.core.base import Defaulter, Validator
 from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, Identifier, RoundingModeLiteral, \
-    SchemaName, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, Identifier, PrimaryKey, \
+    RoundingModeLiteral, SchemaName, Table, TableName
 
 
 class DbBackend(ABC, Defaulter, Validator):
@@ -32,7 +32,10 @@ class DbBackend(ABC, Defaulter, Validator):
     def rename_table(self, from_name: TableName, to_name: Identifier):
         raise NotImplementedError('not supported')
 
-    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
+    def set_primary_key(self, table_name: TableName, primary_key: PrimaryKey | None):
+        raise NotImplementedError('not supported')
+
+    def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
         raise NotImplementedError('not supported')
 
     def set_description(self, table_name: TableName, description: str | None):

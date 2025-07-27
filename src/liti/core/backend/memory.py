@@ -2,7 +2,7 @@ from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, RoundingModeLiteral, \
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, PrimaryKey, RoundingModeLiteral, \
     SchemaName, Table, TableName
 
 
@@ -38,8 +38,11 @@ class MemoryDbBackend(DbBackend):
     def rename_table(self, from_name: TableName, to_name: Identifier):
         self.tables[from_name.with_table_name(to_name)] = self.tables.pop(from_name)
 
-    def set_clustering(self, table_name: TableName, columns: list[ColumnName] | None):
-        self.tables[table_name].clustering = columns
+    def set_primary_key(self, table_name: TableName, primary_key: PrimaryKey | None):
+        self.tables[table_name].primary_key = primary_key
+
+    def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
+        self.tables[table_name].clustering = column_names
 
     def set_description(self, table_name: TableName, description: str | None):
         self.tables[table_name].description = description
