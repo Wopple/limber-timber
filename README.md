@@ -102,7 +102,7 @@ These are listed in rough priority order.
 
 # Usage
 
-## Create Migrations
+### Create Migrations
 
 1. Create your target manifest
 
@@ -188,7 +188,7 @@ poetry run liti migrate -w \
     --meta-table-name your_project.your_dataset._migrations
 ```
 
-## Scan Database
+### Scan Database
 
 You can also scan a schema / table which will print out the operations file that generates that schema / table.
 
@@ -214,7 +214,7 @@ poetry run liti scan \
 Being completely new to this project, you will have no idea where to start. Here. This is where you start. This is a
 crash course on what Limber Timber is and how its put together.
 
-## The Big Picture
+### The Big Picture
 
 Limber Timber uses the `Operation` to describe changes to a database. These operations are pure data. They can be
 serialized to JSON or YAML, and can be deserialized from the same. Developers write JSON or YAML files to describe the
@@ -228,7 +228,7 @@ The `Operation` can be enhanced to become an `OperationOps`. This type brings be
 
 Down migrations are inferred from the up migrations, so developers only ever have to write the up migrations.
 
-## Migration Files
+### Migration Files
 
 Migration files start with a manifest file. The manifest points to the operation files in the order they should be
 applied. Each operation file contains a list of operations in the order they should be applied. In this way,
@@ -259,7 +259,7 @@ learn right away about the conflict, and the developer is prompted to resolve it
 are using the same style for adding new migrations: either adding a new file to the manifest, or adding a new operation
 to the most recent file.
 
-## Python Modules
+### Python Modules
 
 `liti.core.model`
 
@@ -317,7 +317,7 @@ It is highly recommended but not necessary to:
 
 If you have any questions, you can reach out to me on [discord](https://discord.gg/b4jGYACJJy).
 
-## Design Principles
+### Design Principles
 
 - The default behavior is safe and automated
 - The behavior can be configured to be fast and efficient
@@ -326,7 +326,7 @@ If you have any questions, you can reach out to me on [discord](https://discord.
 - Apply heavy importance to the Single Responsibility Principle
 - Put complex logic in easily tested functions
 
-## Code Style
+### Code Style
 
 - 4-space indentation
 - Prefer single quotes

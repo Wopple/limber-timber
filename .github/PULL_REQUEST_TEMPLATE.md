@@ -2,8 +2,6 @@
 
 # Problem
 
----
-
 <!-- Describe the problem you are solving including relevant background information
 
 Examples:
@@ -20,8 +18,6 @@ operation which is bad form.
 -->
 
 # Solution
-
----
 
 <!-- Describe how you are solving the problem
 
@@ -41,7 +37,5 @@ provided in a YAML file, and be overridden by command line arguments.
 <!-- OPTIONAL SECTIONS -->
 
 # Testing
-
----
 
 <!-- Describe how you verified your solution fixes the problem -->
