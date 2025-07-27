@@ -92,6 +92,8 @@ These are listed in rough priority order.
   - To reduce round trips with the backend and reduce migration time
 - ✅ Minimize Scan Output
 - ✅ Arbitrary DML SQL Migrations
+- ➡️ Optional Backend Installation
+  - To minimize dependency bloat
 - ➡️ File System Metadata
 - ➡️ SQLite Database
 - ➡️ SQLite Metadata
