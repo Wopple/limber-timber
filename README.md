@@ -1,7 +1,8 @@
-Limber Timber
-=============
+# Limber Timber
 
 ***Database Migrations Made Easy***
+
+---
 
 This project is in pre-alpha. You can try using it, but it probably won't work.
 
@@ -9,11 +10,11 @@ This project is in pre-alpha. You can try using it, but it probably won't work.
 pip install limber-timber
 ```
 
-## Overview
+# Overview
 
 I am writing the migration system I always wanted but does not exist (yet).
 
-## Notable Feature Goals
+# Notable Feature Goals
 
 - Migrations specified in data, not SQL
 - Down migrations automatically inferred from up migrations
@@ -26,14 +27,14 @@ I am writing the migration system I always wanted but does not exist (yet).
 - JSON schema for migration files
 - Error recovery for backends that do not support DDL transactions
 
-## Not Goals
+# Not Goals
 
 - ORM
 - Parsing SQL
 - Specifying all kinds of migrations in pure data (e.g. DML migrations will use SQL)
 - Preserving lost data
 
-## Rationale
+# Rationale
 
 - It is cumbersome to iterate on migrations without robust down migrations
 - Automatically inferred down migrations reduces developer burden
@@ -46,9 +47,9 @@ I am writing the migration system I always wanted but does not exist (yet).
 - No checksums allows for modifying migration files without breaking the migrations
 - Manifest files cause git merge conflicts when parallel development has collisions
 
-## Roadmap
+# Roadmap
 
-These are listed in rough priority order if you are interested in contributing.
+These are listed in rough priority order.
 
 - ✅ CLI
 - ✅ Publish to PyPI
@@ -99,9 +100,9 @@ These are listed in rough priority order if you are interested in contributing.
 - ➡️ MySQL Database
 - ➡️ MySQL Metadata
 
-## Usage
+# Usage
 
-### Create Migrations
+## Create Migrations
 
 1. Create your target manifest
 
@@ -187,7 +188,7 @@ poetry run liti migrate -w \
     --meta-table-name your_project.your_dataset._migrations
 ```
 
-### Scan Database
+## Scan Database
 
 You can also scan a schema / table which will print out the operations file that generates that schema / table.
 
@@ -208,12 +209,12 @@ poetry run liti scan \
     --scan-table your_table
 ```
 
-## Learn
+# Learn
 
 Being completely new to this project, you will have no idea where to start. Here. This is where you start. This is a
 crash course on what Limber Timber is and how its put together.
 
-### The Big Picture
+## The Big Picture
 
 Limber Timber uses the `Operation` to describe changes to a database. These operations are pure data. They can be
 serialized to JSON or YAML, and can be deserialized from the same. Developers write JSON or YAML files to describe the
@@ -227,7 +228,7 @@ The `Operation` can be enhanced to become an `OperationOps`. This type brings be
 
 Down migrations are inferred from the up migrations, so developers only ever have to write the up migrations.
 
-### Migration Files
+## Migration Files
 
 Migration files start with a manifest file. The manifest points to the operation files in the order they should be
 applied. Each operation file contains a list of operations in the order they should be applied. In this way,
@@ -258,7 +259,7 @@ learn right away about the conflict, and the developer is prompted to resolve it
 are using the same style for adding new migrations: either adding a new file to the manifest, or adding a new operation
 to the most recent file.
 
-### Python Modules
+## Python Modules
 
 `liti.core.model`
 
@@ -302,3 +303,56 @@ Observer / Observable pattern so different backends can define their own behavio
 
 This module is for the runners associated with the various ways `liti` can be run. Main code will instantiate a runner
 and run it.
+
+# Contribution
+
+If you want to contribute, the roadmap is a good place to start. I will only accept contributions if:
+
+1. I agree with the design decisions
+2. The code style matches the existing code
+
+It is highly recommended but not necessary to:
+
+1. Include unit tests
+
+If you have any questions, you can reach out to me on [discord](https://discord.gg/b4jGYACJJy).
+
+## Design Principles
+
+- The default behavior is safe and automated
+- The behavior can be configured to be fast and efficient
+- High flexibility to support future and unknown use-cases
+- Prefer supporting narrow use cases well rather than broad use cases poorly
+- Apply heavy importance to the Single Responsibility Principle
+- Put complex logic in easily tested functions
+
+## Code Style
+
+- 4-space indentation
+- Prefer single quotes
+  - exceptions
+    - `pyproject.toml`
+    - docstrings
+    - nested f-strings
+- Use newlines to visually separate blocks and conceptual groups of code
+- Include explicit `else` blocks
+  - exceptions
+    - assertive if-statements
+- Naming
+  - balance brevity and clarity: say exactly what is needed
+  - do not restate what is already clear from the context
+- Comments
+  - dos
+    - clarify confusing code
+    - make assumptions about the reader
+    - explain the 'why'
+    - first try to explain with the code instead of a comment
+  - do nots
+    - state that which is explained by the surrounding code
+    - cover up for poor code
+    - just because
+- Multiline strings use concatenated single line strings
+  - exceptions
+    - docstrings
+- No `from my.module import *`
+  - instead: `from my import module as md`
