@@ -10,7 +10,7 @@ def nested_table() -> Table:
     return Table(name=TableName('project.dataset.table'), columns=[
         Column(name=ColumnName('struct_1'), datatype=Struct(fields={
             'field_1': Struct(fields={
-                'sub_fiel_1': INT64,
+                'sub_field_1': INT64,
                 'sub_field_2': FLOAT64,
                 'sub_field_3': Array(inner=Struct(fields={'inner_field_1': BOOL})),
             }),

@@ -53,7 +53,7 @@ These are listed in rough priority order if you are interested in contributing.
 - ✅ CLI
 - ✅ Publish to PyPI
 - ➡️ Github Actions
-  - ➡️ Unit Tests
+  - ✅ Unit Tests
   - ➡️ Release
 - ✅ In-memory Database
 - ✅ In-memory Metadata
