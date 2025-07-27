@@ -4,7 +4,7 @@ from liti.core.base import Defaulter, Validator
 from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, Identifier, PrimaryKey, \
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, PrimaryKey, \
     RoundingModeLiteral, SchemaName, Table, TableName
 
 
@@ -33,6 +33,12 @@ class DbBackend(ABC, Defaulter, Validator):
         raise NotImplementedError('not supported')
 
     def set_primary_key(self, table_name: TableName, primary_key: PrimaryKey | None):
+        raise NotImplementedError('not supported')
+
+    def add_foreign_key(self, table_name: TableName, foreign_key: ForeignKey):
+        raise NotImplementedError('not supported')
+
+    def drop_constraint(self, table_name: TableName, constraint_name: Identifier):
         raise NotImplementedError('not supported')
 
     def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):

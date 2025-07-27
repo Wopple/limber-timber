@@ -202,26 +202,24 @@ class PrimaryKey(LitiModel):
     enforced: bool | None = None
 
 
+class ForeignReference(LitiModel):
+    local_column_name: ColumnName
+    foreign_column_name: ColumnName
+
+
 class ForeignKey(LitiModel):
-    name: str | None = None
-    local_column_names: list[ColumnName] = Field(min_length=1)
+    name: Identifier | None = None
     foreign_table_name: TableName
-    foreign_column_names: list[ColumnName] = Field(min_length=1)
+    references: list[ForeignReference] = Field(min_length=1)
     enforced: bool | None = None
 
     @model_validator(mode='after')
     def validate_model(self) -> 'ForeignKey':
         if not self.name:
-            local_names = '_'.join(col.string for col in self.local_column_names)
-            foreign_table = f'{self.database}_{self.schema_name}_{self.table_name}'
-            foreign_names = '_'.join(col.string for col in self.foreign_column_names)
-            self.name = f'fk__{local_names}__{foreign_table}__{foreign_names}'
-
-        if len(self.local_column_names) != len(self.foreign_column_names):
-            raise ValueError(
-                f'A foreign key must have the same number of local and foreign column names:'
-                f' {len(self.local_column_names)} != {len(self.foreign_column_names)}'
-            )
+            local_names = '_'.join(ref.local_column_name.string for ref in self.references)
+            foreign_table = self.foreign_table_name.string.replace('.', '_')
+            foreign_names = '_'.join(ref.foreign_column_name.string for ref in self.references)
+            self.name = Identifier(f'fk__{local_names}__{foreign_table}__{foreign_names}')
 
         return self
 
@@ -302,15 +300,36 @@ class Table(LitiModel):
     @model_validator(mode='after')
     def validate_model(self) -> 'Table':
         if self.foreign_keys:
-            if len(self.foreign_keys) != len(set(fk.name for fk in self.foreign_keys)):
+            if len(self.foreign_keys) != len(set(fk.name.string for fk in self.foreign_keys)):
                 raise ValueError('Foreign keys must have unique names')
 
-            # canonicalize for comparisons
-            self.foreign_keys.sort(key=lambda fk: fk.name)
-
+        self.canonicalize()
         return self
+
+    def canonicalize(self):
+        # canonicalize for comparisons
+
+        if self.foreign_keys:
+            self.foreign_keys.sort(key=lambda fk: fk.name.string)
 
     @property
     def column_map(self) -> dict[ColumnName, Column]:
         # Recreate the map to ensure it is up-to-date
         return {column.name: column for column in self.columns}
+
+    @property
+    def foreign_key_map(self) -> dict[Identifier, ForeignKey]:
+        # Recreate the map to ensure it is up-to-date
+        if self.foreign_keys:
+            return {fk.name: fk for fk in self.foreign_keys}
+        else:
+            return {}
+
+    def add_foreign_key(self, foreign_key: ForeignKey):
+        self.foreign_keys.append(foreign_key)
+        self.canonicalize()
+
+    def drop_constraint(self, constraint_name: Identifier):
+        self.foreign_keys = [
+            fk for fk in self.foreign_keys if fk.name != constraint_name
+        ]

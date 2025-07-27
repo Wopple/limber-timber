@@ -3,7 +3,8 @@ from typing import ClassVar
 from pydantic import Field, field_validator
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import ColumnName, Identifier, PrimaryKey, RoundingModeLiteral, Table, TableName
+from liti.core.model.v1.schema import ColumnName, ForeignKey, Identifier, PrimaryKey, RoundingModeLiteral, Table, \
+    TableName
 
 
 class CreateTable(Operation):
@@ -30,6 +31,20 @@ class SetPrimaryKey(Operation):
     primary_key: PrimaryKey | None = None
 
     KIND: ClassVar[str] = 'set_primary_key'
+
+
+class AddForeignKey(Operation):
+    table_name: TableName
+    foreign_key: ForeignKey
+
+    KIND: ClassVar[str] = 'add_foreign_key'
+
+
+class DropConstraint(Operation):
+    table_name: TableName
+    constraint_name: Identifier
+
+    KIND: ClassVar[str] = 'drop_constraint'
 
 
 class SetClustering(Operation):

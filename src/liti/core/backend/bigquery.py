@@ -3,16 +3,19 @@ import logging
 from datetime import timezone
 from typing import Any
 
+from google.cloud.bigquery.table import TableConstraints
+
 from liti import bigquery as bq
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.error import Unsupported, UnsupportedError
 from liti.core.function import parse_operation
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, Date, DATE_TIME, DateTime, Float, \
-    FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP, Timestamp
+    FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, String, Struct, TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
+from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, \
+    ForeignReference, Identifier, \
     IntervalLiteral, Partitioning, PrimaryKey, RoundingModeLiteral, SchemaName, Table, TableName
 
 log = logging.getLogger(__name__)
@@ -156,6 +159,20 @@ def to_schema_field(column: Column) -> bq.SchemaField:
     )
 
 
+def to_bq_foreign_key(foreign_key: ForeignKey) -> bq.ForeignKey:
+    return bq.ForeignKey(
+        name=foreign_key.name.string,
+        referenced_table=to_table_ref(foreign_key.foreign_table_name),
+        column_references=[
+            bq.ColumnReference(
+                referencing_column=ref.local_column_name.string,
+                referenced_column=ref.foreign_column_name.string,
+            )
+            for ref in foreign_key.references
+        ],
+    )
+
+
 def to_bq_table(table: Table) -> bq.Table:
     bq_table = bq.Table(
         table_ref=to_table_ref(table.name),
@@ -171,17 +188,7 @@ def to_bq_table(table: Table) -> bq.Table:
             primary_key = None
 
         if table.foreign_keys:
-            foreign_keys = [
-                bq.ForeignKey(
-                    fk.name,
-                    to_table_ref(fk.foreign_table_name),
-                    [
-                        bq.ColumnReference(l.string, f.string)
-                        for l, f in zip(fk.local_column_names, fk.foreign_column_names)
-                    ],
-                )
-                for fk in table.foreign_keys
-            ]
+            foreign_keys = [to_bq_foreign_key(fk) for fk in table.foreign_keys]
         else:
             foreign_keys = None
 
@@ -310,6 +317,19 @@ def option_dict_to_sql(option: dict[str, str]) -> str:
     return f'[{join_sql}]'
 
 
+def to_table_name(table: bq.Table | bq.TableReference | bq.TableListItem) -> TableName:
+    if isinstance(table, bq.Table | bq.TableReference):
+        return TableName(
+            database=DatabaseName(table.project),
+            schema_name=SchemaName(table.dataset_id),
+            table_name=Identifier(table.table_id),
+        )
+    elif isinstance(table, bq.TableListItem):
+        return TableName(table.full_table_id.replace(':', '.'))
+    else:
+        raise ValueError(f'Invalid table type: {type(table)}')
+
+
 def to_datatype(schema_field: bq.SchemaField) -> Datatype:
     field_type = schema_field.field_type
 
@@ -348,7 +368,7 @@ def to_datatype(schema_field: bq.SchemaField) -> Datatype:
     elif field_type == 'INTERVAL':
         return INTERVAL
     elif field_type == 'RECORD':
-        return Struct(fields={f.name: to_datatype_array(f) for f in schema_field.fields})
+        return Struct(fields={field.name: to_datatype_array(field) for field in schema_field.fields})
     else:
         raise ValueError(f'bigquery.to_datatype unrecognized field_type - {schema_field}')
 
@@ -371,6 +391,21 @@ def to_column(schema_field: bq.SchemaField) -> Column:
     )
 
 
+def to_liti_foreign_key(foreign_key: bq.ForeignKey) -> ForeignKey:
+    return ForeignKey(
+        name=Identifier(foreign_key.name),
+        foreign_table_name=to_table_name(foreign_key.referenced_table),
+        references=[
+            ForeignReference(
+                local_column_name=ColumnName(ref.referencing_column),
+                foreign_column_name=ColumnName(ref.referenced_column),
+            )
+            for ref in foreign_key.column_references
+        ],
+        enforced=False,
+    )
+
+
 def to_liti_table(table: bq.Table) -> Table:
     primary_key = None
     foreign_keys = None
@@ -382,20 +417,7 @@ def to_liti_table(table: bq.Table) -> Table:
             primary_key = PrimaryKey(column_names=[ColumnName(col) for col in table.table_constraints.primary_key.columns])
 
         if table.table_constraints.foreign_keys:
-            foreign_keys = [
-                ForeignKey(
-                    name=fk.name,
-                    local_column_names=[ColumnName(ref.referencing_column) for ref in fk.column_references],
-                    foreign_table_name=TableName(
-                        database=fk.referenced_table.project,
-                        schema_name=fk.referenced_table.dataset_id,
-                        table_name=fk.referenced_table.table_id,
-                    ),
-                    foreign_column_names=[ColumnName(ref.referenced_column) for ref in fk.column_references],
-                    enforced=False,
-                )
-                for fk in table.table_constraints.foreign_keys
-            ]
+            foreign_keys = [to_liti_foreign_key(fk) for fk in table.table_constraints.foreign_keys]
 
     if table.time_partitioning:
         time_partition = table.time_partitioning
@@ -425,11 +447,7 @@ def to_liti_table(table: bq.Table) -> Table:
         )
 
     return Table(
-        name=TableName(
-            database=table.project,
-            schema_name=table.dataset_id,
-            table_name=table.table_id,
-        ),
+        name=to_table_name(table),
         columns=[to_column(f) for f in table.schema],
         primary_key=primary_key,
         foreign_keys=foreign_keys,
@@ -499,7 +517,7 @@ class BigQueryDbBackend(DbBackend):
     def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
         dataset = to_dataset_ref(database, schema)
         table_items = self.client.list_tables(dataset)
-        tables = [self.get_table(TableName(i.full_table_id.replace(':', '.'))) for i in table_items]
+        tables = [self.get_table(to_table_name(item)) for item in table_items]
         return [CreateTable(table=t) for t in tables]
 
     def scan_table(self, name: TableName) -> CreateTable | None:
@@ -539,8 +557,8 @@ class BigQueryDbBackend(DbBackend):
                     f'Not enforcing foreign key {foreign_key.name} since Big Query does not support enforcement',
                 )
 
-            local_column_sql = ', '.join(f'`{col}`' for col in foreign_key.local_column_names)
-            foreign_column_sql = ', '.join(f'`{col}`' for col in foreign_key.foreign_column_names)
+            local_column_sql = ', '.join(f'`{ref.local_column_name}`' for ref in foreign_key.references)
+            foreign_column_sql = ', '.join(f'`{ref.foreign_column_name}`' for ref in foreign_key.references)
 
             constraint_sqls.append(
                 f'CONSTRAINT {foreign_key.name}'
@@ -651,9 +669,6 @@ class BigQueryDbBackend(DbBackend):
         self.client.query_and_wait(f'ALTER TABLE `{from_name}` RENAME TO `{to_name}`')
 
     def set_primary_key(self, table_name: TableName, primary_key: PrimaryKey | None):
-        bq_table = self.client.get_table(to_table_ref(table_name))
-        table_constraints = bq_table.table_constraints
-
         if primary_key:
             if primary_key.enforced:
                 self.handle_unsupported(
@@ -661,29 +676,35 @@ class BigQueryDbBackend(DbBackend):
                     'Not enforcing primary key since Big Query does not support enforcement',
                 )
 
-            if table_constraints:
-                if table_constraints.primary_key and table_constraints.primary_key.columns:
-                    raise ValueError(f'Cannot set primary key on {table_name} since it already has a primary key')
+            column_sql = ', '.join(f'`{col}`' for col in primary_key.column_names)
 
-                bq_table.table_constraints = bq.TableConstraints(
-                    primary_key=bq.PrimaryKey([col.string for col in primary_key.column_names]),
-                    foreign_keys=table_constraints.foreign_keys,
-                )
-            else:
-                bq_table.table_constraints = bq.TableConstraints(
-                    primary_key=bq.PrimaryKey([col.string for col in primary_key.column_names]),
-                    foreign_keys=None,
-                )
+            self.client.query_and_wait(
+                f'ALTER TABLE `{table_name}`\n'
+                f'ADD PRIMARY KEY ({column_sql}) NOT ENFORCED\n'
+            )
         else:
-            if table_constraints:
-                bq_table.table_constraints = bq.TableConstraints(
-                    primary_key=None,
-                    foreign_keys=table_constraints.foreign_keys,
-                )
-            else:
-                bq_table.table_constraints = None
+            self.client.query_and_wait(
+                f'ALTER TABLE `{table_name}`\n'
+                f'DROP PRIMARY KEY\n'
+            )
 
-        self.client.update_table(bq_table, ['table_constraints'])
+    def add_foreign_key(self, table_name: TableName, foreign_key: ForeignKey):
+        local_column_sql = ', '.join(f'`{ref.local_column_name}`' for ref in foreign_key.references)
+        foreign_column_sql = ', '.join(f'`{ref.foreign_column_name}`' for ref in foreign_key.references)
+
+        self.client.query_and_wait(
+            f'ALTER TABLE `{table_name}`\n'
+            f'ADD CONSTRAINT `{foreign_key.name}`'
+            f' FOREIGN KEY ({local_column_sql})'
+            f' REFERENCES `{foreign_key.foreign_table_name}` ({foreign_column_sql})'
+            f' NOT ENFORCED\n'
+        )
+
+    def drop_constraint(self, table_name: TableName, constraint_name: Identifier):
+        self.client.query_and_wait(
+            f'ALTER TABLE `{table_name}`\n'
+            f'DROP CONSTRAINT `{constraint_name}`\n'
+        )
 
     def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
         bq_table = self.client.get_table(to_table_ref(table_name))
@@ -734,7 +755,7 @@ class BigQueryDbBackend(DbBackend):
 
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
-            f'ALTER COLUMN `{column_name}\n`'
+            f'ALTER COLUMN `{column_name}`\n'
             f'SET DATA TYPE {datatype_to_sql(to_datatype)}\n'
         )
 

@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from liti.core.backend.base import DbBackend, MetaBackend
-from liti.core.model.v1.operation.data.table import CreateTable, DropTable, RenameTable, SetClustering, \
+from liti.core.model.v1.operation.data.table import AddForeignKey, CreateTable, DropConstraint, DropTable, RenameTable, \
+    SetClustering, \
     SetDefaultRoundingMode, SetDescription, SetLabels, SetPrimaryKey, SetTags
 from liti.core.model.v1.operation.ops.base import OperationOps
 
@@ -76,6 +77,45 @@ class SetPrimaryKeyOps(OperationOps):
 
     def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
         return db_backend.get_table(self.op.table_name).primary_key == self.op.primary_key
+
+
+class AddForeignKeyOps(OperationOps):
+    op: AddForeignKey
+
+    def __init__(self, op: AddForeignKey):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        db_backend.add_foreign_key(self.op.table_name, self.op.foreign_key)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> DropConstraint:
+        return DropConstraint(table_name=self.op.table_name, constraint_name=self.op.foreign_key.name)
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        fk = self.op.foreign_key
+        return db_backend.get_table(self.op.table_name).foreign_key_map.get(fk.name) == fk
+
+
+class DropConstraintOps(OperationOps):
+    op: DropConstraint
+
+    def __init__(self, op: DropConstraint):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        db_backend.drop_constraint(self.op.table_name, self.op.constraint_name)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> AddForeignKey:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+
+        return AddForeignKey(
+            table_name=self.op.table_name,
+            foreign_key=sim_table.foreign_key_map[self.op.constraint_name],
+        )
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        return self.op.constraint_name not in db_backend.get_table(self.op.table_name).foreign_key_map
 
 
 class SetClusteringOps(OperationOps):

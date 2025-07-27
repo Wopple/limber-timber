@@ -2,7 +2,8 @@ from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, Identifier, PrimaryKey, RoundingModeLiteral, \
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, PrimaryKey, \
+    RoundingModeLiteral, \
     SchemaName, Table, TableName
 
 
@@ -40,6 +41,12 @@ class MemoryDbBackend(DbBackend):
 
     def set_primary_key(self, table_name: TableName, primary_key: PrimaryKey | None):
         self.tables[table_name].primary_key = primary_key
+
+    def add_foreign_key(self, table_name: TableName, foreign_key: ForeignKey):
+        self.tables[table_name].add_foreign_key(foreign_key)
+
+    def drop_constraint(self, table_name: TableName, constraint_name: Identifier):
+        self.tables[table_name].drop_constraint(constraint_name)
 
     def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
         self.tables[table_name].clustering = column_names

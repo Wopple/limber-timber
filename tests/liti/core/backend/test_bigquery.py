@@ -6,20 +6,13 @@ from pytest import fixture, mark, raises
 
 from liti import bigquery as bq
 from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_sql, datatype_to_sql, \
-    extract_dataset_ref, \
-    interval_literal_to_sql, \
-    NULLABLE, REPEATED, REQUIRED, to_bq_table, \
-    to_column, to_dataset_ref, \
-    to_datatype, to_datatype_array, to_field_type, \
-    to_fields, to_liti_table, to_max_length, to_mode, to_precision, to_range_element_type, to_scale, to_schema_field, \
-    to_table_ref
+    extract_dataset_ref, interval_literal_to_sql, NULLABLE, REPEATED, REQUIRED, to_bq_table, to_column, \
+    to_dataset_ref, to_datatype, to_datatype_array, to_field_type, to_fields, to_liti_table, to_max_length, to_mode, \
+    to_precision, to_range_element_type, to_scale, to_schema_field, to_table_ref
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
-from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, IntervalLiteral, \
-    Partitioning, \
-    PrimaryKey, \
-    RoundingModeLiteral, SchemaName, Table, \
-    TableName
+from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, ForeignReference, \
+    Identifier, IntervalLiteral, Partitioning, PrimaryKey, RoundingModeLiteral, SchemaName, Table, TableName
 from tests.liti.util import NoRaise
 
 
@@ -403,10 +396,12 @@ def test_to_bq_table():
         columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
-            name='fk_test',
-            local_column_names=[ColumnName('col_date')],
+            name=Identifier('fk_test'),
             foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
-            foreign_column_names=[ColumnName('fk_col_date')],
+            references=[ForeignReference(
+                local_column_name=ColumnName('col_date'),
+                foreign_column_name=ColumnName('fk_col_date'),
+            )],
         )],
         partitioning=Partitioning(
             kind='TIME',
@@ -1187,10 +1182,12 @@ def test_to_liti_table():
         columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
-            name='fk_test',
-            local_column_names=[ColumnName('col_date')],
+            name=Identifier('fk_test'),
             foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
-            foreign_column_names=[ColumnName('fk_col_date')],
+            references=[ForeignReference(
+                local_column_name=ColumnName('col_date'),
+                foreign_column_name=ColumnName('fk_col_date'),
+            )],
             enforced=False,
         )],
         partitioning=Partitioning(
@@ -1268,10 +1265,12 @@ def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
         columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
-            name='fk_test',
-            local_column_names=[ColumnName('col_date')],
+            name=Identifier('fk_test'),
             foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
-            foreign_column_names=[ColumnName('fk_col_date')],
+            references=[ForeignReference(
+                local_column_name=ColumnName('col_date'),
+                foreign_column_name=ColumnName('fk_col_date'),
+            )],
         )],
         partitioning=Partitioning(
             kind='TIME',

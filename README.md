@@ -69,9 +69,9 @@ These are listed in rough priority order.
   - ✅ Rename Column
   - ✅ Set Data Type
   - ✅ Add Struct Field
-  - ➡️ Set Primary Key
-  - ➡️ Add Foreign Key
-  - ➡️ Drop Foreign Key
+  - ✅ Set Primary Key
+  - ✅ Add Foreign Key
+  - ✅ Drop Foreign Key
   - ➡️ Create View
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table
