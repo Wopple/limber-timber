@@ -1,0 +1,40 @@
+name: Unit Tests
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+
+    - name: read tool versions
+      run: |
+        echo "python-version=$(cat .python-version)" >> $GITHUB_ENV
+        echo "poetry-version=$(cat .poetry-version)" >> $GITHUB_ENV
+
+    - name: set up python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.python-version }}
+
+    - name: set up poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.poetry-version }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        virtualenvs-path: .venv
+
+    - name: install dependencies
+      run: |
+        poetry install --no-root
+
+    - name: run pytest
+      run: |
+        poetry run pytest
