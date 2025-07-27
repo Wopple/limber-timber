@@ -38,6 +38,8 @@ operations:
       enable_change_history: true
       enable_fine_grained_mutations: true
       kms_key_name: my/kms/key/name
-      storage_uri: https://my.storage/uri
-      file_format: PARQUET
-      table_format: ICEBERG
+      big_lake:
+        connection_id: my_connection
+        storage_uri: https://my.storage/uri
+        file_format: PARQUET
+        table_format: ICEBERG

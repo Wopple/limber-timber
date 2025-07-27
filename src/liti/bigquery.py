@@ -21,6 +21,7 @@ from google.cloud.bigquery.schema import _DEFAULT_VALUE as SCHEMA_DEFAULT_VALUE
 
 # noinspection PyUnresolvedReferences
 from google.cloud.bigquery.table import (
+    BigLakeConfiguration,
     ColumnReference,
     ForeignKey,
     PrimaryKey,

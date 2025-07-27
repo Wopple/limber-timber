@@ -100,9 +100,10 @@ def test_create_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
     assert create_table.enable_change_history is True
     assert create_table.enable_fine_grained_mutations is True
     assert create_table.kms_key_name == 'my/kms/key/name'
-    assert create_table.storage_uri == 'https://my.storage/uri'
-    assert create_table.file_format == 'PARQUET'
-    assert create_table.table_format == 'ICEBERG'
+    assert create_table.big_lake.connection_id == 'my_connection'
+    assert create_table.big_lake.storage_uri == 'https://my.storage/uri'
+    assert create_table.big_lake.file_format == 'PARQUET'
+    assert create_table.big_lake.table_format == 'ICEBERG'
 
     down_runner = MigrateRunner(
         db_backend=db_backend,

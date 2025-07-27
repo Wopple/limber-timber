@@ -12,7 +12,7 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE,
     FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
+from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
     IntervalLiteral, Partitioning, PrimaryKey, RoundingModeLiteral, SchemaName, Table, TableName
 
 log = logging.getLogger(__name__)
@@ -210,6 +210,14 @@ def to_bq_table(table: Table) -> bq.Table:
         else:
             raise ValueError(f'Unrecognized partitioning kind: {table.partitioning}')
 
+    if table.big_lake:
+        bq_table.biglake_configuration = bq.BigLakeConfiguration(
+            connection_id=table.connection_id,
+            storage_uri=table.storage_uri,
+            file_format=table.file_format,
+            table_format=table.table_format,
+        )
+
     bq_table.table_constraints = table_constraints
     bq_table.clustering_fields = [field.string for field in table.clustering] if table.clustering else None
     bq_table.friendly_name = table.friendly_name
@@ -367,6 +375,7 @@ def to_liti_table(table: bq.Table) -> Table:
     primary_key = None
     foreign_keys = None
     partitioning = None
+    big_lake = None
 
     if table.table_constraints:
         if table.table_constraints.primary_key:
@@ -409,6 +418,12 @@ def to_liti_table(table: bq.Table) -> Table:
             require_filter=table.require_partition_filter or False,
         )
 
+    if table.biglake_configuration:
+        big_lake = BigLake(
+            connection_id=table.biglake_configuration.connection_id,
+            storage_uri=table.biglake_configuration.storage_uri,
+        )
+
     return Table(
         name=TableName(
             database=table.project,
@@ -425,6 +440,7 @@ def to_liti_table(table: bq.Table) -> Table:
         labels=table.labels or None,
         tags=table.resource_tags or None,
         expiration_timestamp=table.expires,
+        big_lake=big_lake,
         # TODO: figure out what to do about bq.Table missing fields
     )
 
@@ -502,6 +518,7 @@ class BigQueryDbBackend(DbBackend):
     def create_table(self, table: Table):
         column_sqls = [column_to_sql(column) for column in table.columns]
         constraint_sqls = []
+        options = []
 
         if table.primary_key:
             # TODO? update this if Big Query ever supports enforcement
@@ -565,13 +582,6 @@ class BigQueryDbBackend(DbBackend):
         else:
             cluster_sql = ''
 
-        if table.connection_name:
-            connection_sql = f'WITH CONNECTION `{table.connection_name}`\n'
-        else:
-            connection_sql = ''
-
-        options = []
-
         if table.friendly_name:
             options.append(f'friendly_name = \'{table.friendly_name}\'')
 
@@ -603,14 +613,13 @@ class BigQueryDbBackend(DbBackend):
         if table.kms_key_name:
             options.append(f'kms_key_name = \'{table.kms_key_name}\'')
 
-        if table.storage_uri:
-            options.append(f'storage_uri = \'{table.storage_uri}\'')
-
-        if table.file_format:
-            options.append(f'file_format = {table.file_format}')
-
-        if table.table_format:
-            options.append(f'table_format = {table.table_format}')
+        if table.big_lake:
+            connection_sql = f'WITH CONNECTION `{table.big_lake.connection_id}`\n'
+            options.append(f'storage_uri = \'{table.big_lake.storage_uri}\'')
+            options.append(f'file_format = {table.big_lake.file_format}')
+            options.append(f'table_format = {table.big_lake.table_format}')
+        else:
+            connection_sql = ''
 
         if options:
             joined_options = ',\n    '.join(options)

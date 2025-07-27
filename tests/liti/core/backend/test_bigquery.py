@@ -15,7 +15,8 @@ from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_
     to_table_ref
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, IntervalLiteral, Partitioning, \
+from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, IntervalLiteral, \
+    Partitioning, \
     PrimaryKey, \
     RoundingModeLiteral, SchemaName, Table, \
     TableName
@@ -1288,9 +1289,10 @@ def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
         enable_change_history=True,
         enable_fine_grained_mutations=True,
         kms_key_name='test_key',
-        storage_uri='test/uri',
-        file_format='PARQUET',
-        table_format='ICEBERG',
+        big_lake=BigLake(
+            connection_id='test_connection',
+            storage_uri='test/uri',
+        ),
     )
 
     db_backend.create_table(table)
@@ -1303,6 +1305,7 @@ def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
         f')\n'
         f'PARTITION BY `col_date`\n'
         f'CLUSTER BY `col_date`\n'
+        f'WITH CONNECTION `test_connection`\n'
         f'OPTIONS(\n'
         f'    friendly_name = \'test_friendly\',\n'
         f'    description = \'Test description\',\n'

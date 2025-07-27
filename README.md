@@ -81,6 +81,7 @@ These are listed in rough priority order.
 - ✅ Big Query Metadata
 - ✅ Database Adoption
 - ✅ Raise Unsupported Operations
+- ➡️ Unit Tests
 - ➡️ JSON Schema
   - To validate and auto complete migration files in IDEs
 - ✅ Database Specific Validation

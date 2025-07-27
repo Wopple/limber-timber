@@ -295,6 +295,13 @@ class Partitioning(LitiModel):
         return value and value.upper()
 
 
+class BigLake(LitiModel):
+    connection_id: str
+    storage_uri: str
+    file_format: Literal['PARQUET'] = 'PARQUET'
+    table_format: Literal['ICEBERG'] = 'ICEBERG'
+
+
 class Table(LitiModel):
     name: TableName
     columns: list[Column]
@@ -312,25 +319,20 @@ class Table(LitiModel):
     enable_change_history: bool | None = None
     enable_fine_grained_mutations: bool | None = None
     kms_key_name: str | None = None
-    connection_name: str | None = None
-    storage_uri: str | None = None
-    file_format: Literal['PARQUET'] | None = None
-    table_format: Literal['ICEBERG'] | None = None
+    big_lake: BigLake | None = None
 
     DEFAULT_METHOD = 'table_defaults'
 
     @model_validator(mode='after')
     def validate_model(self) -> 'Table':
-        # canonicalize
         if self.foreign_keys:
+            if len(self.foreign_keys) != len(set(fk.name for fk in self.foreign_keys)):
+                raise ValueError('Foreign keys must have unique names')
+
+            # canonicalize for comparisons
             self.foreign_keys.sort(key=lambda fk: fk.name)
 
         return self
-
-    @field_validator('file_format', 'table_format', mode='before')
-    @classmethod
-    def validate_upper(cls, value: str | None) -> str | None:
-        return value and value.upper()
 
     @property
     def column_map(self) -> dict[ColumnName, Column]:
