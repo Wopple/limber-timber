@@ -1300,7 +1300,7 @@ def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
         f'CREATE TABLE `test_project.test_dataset.test_table` (\n'
         f'    `col_date` DATE NOT NULL,\n'
         f'    PRIMARY KEY (`col_date`) NOT ENFORCED,\n'
-        f'    CONSTRAINT fk_test FOREIGN KEY (`col_date`) REFERENCES `test_project.test_dataset.fk_test_table` (`fk_col_date`) NOT ENFORCED\n'
+        f'    CONSTRAINT `fk_test` FOREIGN KEY (`col_date`) REFERENCES `test_project.test_dataset.fk_test_table` (`fk_col_date`) NOT ENFORCED\n'
         f')\n'
         f'PARTITION BY `col_date`\n'
         f'CLUSTER BY `col_date`\n'

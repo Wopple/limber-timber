@@ -217,7 +217,7 @@ class ForeignKey(LitiModel):
     def validate_model(self) -> 'ForeignKey':
         if not self.name:
             local_names = '_'.join(ref.local_column_name.string for ref in self.references)
-            foreign_table = self.foreign_table_name.string.replace('.', '_')
+            foreign_table = self.foreign_table_name.string.replace('.', '_').replace('-', '_')
             foreign_names = '_'.join(ref.foreign_column_name.string for ref in self.references)
             self.name = Identifier(f'fk__{local_names}__{foreign_table}__{foreign_names}')
 
@@ -241,10 +241,7 @@ class Column(LitiModel):
     @classmethod
     def serialize_datatype(cls, value: Datatype, info: FieldSerializationInfo) -> str | dict[str, Any]:
         # necessary to call the subclass serializer, otherwise pydantic uses Datatype
-        return value.model_dump(
-            exclude_defaults=info.exclude_defaults,
-            exclude_none=info.exclude_none,
-        )
+        return value.model_dump(exclude_none=info.exclude_none)
 
     def with_name(self, name: ColumnName) -> 'Column':
         return self.model_copy(update={'name': name})

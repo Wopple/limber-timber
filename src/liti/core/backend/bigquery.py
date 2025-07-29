@@ -3,8 +3,6 @@ import logging
 from datetime import timezone
 from typing import Any
 
-from google.cloud.bigquery.table import TableConstraints
-
 from liti import bigquery as bq
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
@@ -247,9 +245,21 @@ def datatype_to_sql(datatype: Datatype) -> str:
     elif datatype == GEOGRAPHY:
         return 'GEOGRAPHY'
     elif isinstance(datatype, Numeric):
-        return f'NUMERIC({datatype.precision}, {datatype.scale})'
+        if datatype.precision:
+            if datatype.scale:
+                return f'NUMERIC({datatype.precision}, {datatype.scale})'
+            else:
+                return f'NUMERIC({datatype.precision})'
+        else:
+            return f'NUMERIC'
     elif isinstance(datatype, BigNumeric):
-        return f'BIGNUMERIC({datatype.precision}, {datatype.scale})'
+        if datatype.precision:
+            if datatype.scale:
+                return f'BIGNUMERIC({datatype.precision}, {datatype.scale})'
+            else:
+                return f'BIGNUMERIC({datatype.precision})'
+        else:
+            return f'BIGNUMERIC'
     elif isinstance(datatype, String):
         if datatype.characters is None:
             return 'STRING'
@@ -561,7 +571,7 @@ class BigQueryDbBackend(DbBackend):
             foreign_column_sql = ', '.join(f'`{ref.foreign_column_name}`' for ref in foreign_key.references)
 
             constraint_sqls.append(
-                f'CONSTRAINT {foreign_key.name}'
+                f'CONSTRAINT `{foreign_key.name}`'
                 f' FOREIGN KEY ({local_column_sql})'
                 f' REFERENCES `{foreign_key.foreign_table_name}` ({foreign_column_sql})'
                 f' NOT ENFORCED'

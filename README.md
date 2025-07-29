@@ -72,6 +72,9 @@ These are listed in rough priority order.
   - ✅ Set Primary Key
   - ✅ Add Foreign Key
   - ✅ Drop Foreign Key
+  - ➡️ Ignore Foreign Key Dollar Signs
+  - ➡️ Scan Partition Expiration
+  - ➡️ Unspecified Rounding Mode
   - ➡️ Create View
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table
@@ -82,6 +85,7 @@ These are listed in rough priority order.
 - ✅ Database Adoption
 - ✅ Raise Unsupported Operations
 - ➡️ Unit Tests
+- ➡️ Scan Topologically with Foreign Keys
 - ➡️ JSON Schema
   - To validate and auto complete migration files in IDEs
 - ✅ Database Specific Validation

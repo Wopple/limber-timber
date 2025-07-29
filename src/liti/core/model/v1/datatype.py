@@ -1,7 +1,7 @@
 from typing import Any, Literal
 
 from pydantic import field_validator, model_serializer
-from pydantic_core.core_schema import SerializerFunctionWrapHandler
+from pydantic_core.core_schema import FieldSerializationInfo, SerializerFunctionWrapHandler
 
 from liti.core.base import LitiModel
 
@@ -160,10 +160,27 @@ class Array(Datatype):
 
     VALIDATE_METHOD = 'validate_array'
 
+    @model_serializer
+    def serialize(self, info: FieldSerializationInfo) -> dict[str, Any]:
+        return {
+            "type": self.type,
+            "inner": self.inner.model_dump(exclude_none=info.exclude_none),
+        }
+
 
 class Struct(Datatype):
     type: Literal['STRUCT'] = 'STRUCT'
     fields: dict[FieldName, Datatype]
+
+    @model_serializer
+    def serialize(self, info: FieldSerializationInfo) -> dict[str, Any]:
+        return {
+            "type": self.type,
+            "fields": {
+                name: dt.model_dump(exclude_none=info.exclude_none)
+                for name, dt in self.fields.items()
+            },
+        }
 
 
 BOOL = Bool()
@@ -218,9 +235,9 @@ def parse_datatype(data: Datatype | str | dict[str, Any]) -> Datatype:
         elif type_ == 'FLOAT':
             return Float(bits=data['bits'])
         elif type_ == 'NUMERIC':
-            return Numeric(precision=data['precision'], scale=data['scale'])
+            return Numeric(precision=data.get('precision'), scale=data.get('scale'))
         elif type_ == 'BIGNUMERIC':
-            return BigNumeric(precision=data['precision'], scale=data['scale'])
+            return BigNumeric(precision=data.get('precision'), scale=data.get('scale'))
         elif type_ == 'RANGE':
             return Range(kind=data['kind'])
         elif type_ == 'ARRAY':
