@@ -159,7 +159,7 @@ def to_schema_field(column: Column) -> bq.SchemaField:
 
 def to_bq_foreign_key(foreign_key: ForeignKey) -> bq.ForeignKey:
     return bq.ForeignKey(
-        name=foreign_key.name.string,
+        name=foreign_key.name,
         referenced_table=to_table_ref(foreign_key.foreign_table_name),
         column_references=[
             bq.ColumnReference(
@@ -408,7 +408,7 @@ def to_column(schema_field: bq.SchemaField) -> Column:
 
 def to_liti_foreign_key(foreign_key: bq.ForeignKey) -> ForeignKey:
     return ForeignKey(
-        name=Identifier(foreign_key.name),
+        name=foreign_key.name,
         foreign_table_name=to_table_name(foreign_key.referenced_table),
         references=[
             ForeignReference(

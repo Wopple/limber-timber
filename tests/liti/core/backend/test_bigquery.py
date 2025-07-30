@@ -396,7 +396,7 @@ def test_to_bq_table():
         columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
-            name=Identifier('fk_test'),
+            name='fk_test',
             foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
             references=[ForeignReference(
                 local_column_name=ColumnName('col_date'),
@@ -1182,7 +1182,7 @@ def test_to_liti_table():
         columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
-            name=Identifier('fk_test'),
+            name='fk_test',
             foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
             references=[ForeignReference(
                 local_column_name=ColumnName('col_date'),
@@ -1265,7 +1265,7 @@ def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
         columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
-            name=Identifier('fk_test'),
+            name='fk_test',
             foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
             references=[ForeignReference(
                 local_column_name=ColumnName('col_date'),

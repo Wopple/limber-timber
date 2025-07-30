@@ -206,7 +206,7 @@ class ForeignReference(LitiModel):
 
 
 class ForeignKey(LitiModel):
-    name: Identifier | None = None
+    name: str | None = None
     foreign_table_name: TableName
     references: list[ForeignReference] = Field(min_length=1)
     enforced: bool | None = None
@@ -217,9 +217,20 @@ class ForeignKey(LitiModel):
             local_names = '_'.join(ref.local_column_name.string for ref in self.references)
             foreign_table = self.foreign_table_name.string.replace('.', '_').replace('-', '_')
             foreign_names = '_'.join(ref.foreign_column_name.string for ref in self.references)
-            self.name = Identifier(f'fk__{local_names}__{foreign_table}__{foreign_names}')
+            self.name = f'fk__{local_names}__{foreign_table}__{foreign_names}'
 
         return self
+
+    @field_validator('name', mode='before')
+    def validate_name(cls, value: str | None) -> str | None:
+        """ Custom validation to handle backend generated foriegn key values like 'fk$1'
+
+        If one of these values is provided, it will be replaced with a valid liti generated value.
+        """
+        if isinstance(value, str) and any(c not in IDENTIFIER_CHARS for c in value):
+            return None  # will cause the model validation logic to generate a name
+        else:
+            return value
 
 
 class Column(LitiModel):
@@ -295,7 +306,7 @@ class Table(LitiModel):
     @model_validator(mode='after')
     def validate_model(self) -> 'Table':
         if self.foreign_keys:
-            if len(self.foreign_keys) != len(set(fk.name.string for fk in self.foreign_keys)):
+            if len(self.foreign_keys) != len(set(fk.name for fk in self.foreign_keys)):
                 raise ValueError('Foreign keys must have unique names')
 
         self.canonicalize()
@@ -305,7 +316,7 @@ class Table(LitiModel):
         # canonicalize for comparisons
 
         if self.foreign_keys:
-            self.foreign_keys.sort(key=lambda fk: fk.name.string)
+            self.foreign_keys.sort(key=lambda fk: fk.name)
 
     @property
     def column_map(self) -> dict[ColumnName, Column]:
