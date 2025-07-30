@@ -40,8 +40,6 @@ class IntervalLiteral(LitiModel):
 class RoundingModeLiteral(LitiModel):
     string: RoundingMode | None = None
 
-    DEFAULT_METHOD: ClassVar[str] = 'rounding_mode_defaults'
-
     def __init__(self, string: RoundingMode | None = None, **kwargs):
         """ Allows RoundingModeLiteral('rounding_mode') """
         if string is None:

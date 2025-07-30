@@ -730,8 +730,8 @@ class BigQueryDbBackend(DbBackend):
     def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
         self.set_option(table_name, 'tags', option_dict_to_sql(tags) if tags else 'NULL')
 
-    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
-        self.set_option(table_name, 'default_rounding_mode', f'\'{rounding_mode}\'')
+    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral | None):
+        self.set_option(table_name, 'default_rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL')
 
     def add_column(self, table_name: TableName, column: Column):
         self.client.query_and_wait(
@@ -840,10 +840,6 @@ class BigQueryDbBackend(DbBackend):
             node.time_unit = node.time_unit or 'DAY'
         elif node.kind == 'INT':
             node.int_step = node.int_step or 1
-
-    def rounding_mode_defaults(self, node: RoundingModeLiteral):
-        if node.string is None:
-            node.string = 'ROUND_HALF_EVEN'
 
     def table_defaults(self, node: Table):
         if node.expiration_timestamp is not None and node.expiration_timestamp.tzinfo is None:

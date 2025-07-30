@@ -33,9 +33,6 @@ class Defaulter:
     def partitioning_defaults(self, node: 'Partitioning'):
         pass
 
-    def rounding_mode_defaults(self, node: 'RoundingModeLiteral'):
-        pass
-
     def table_defaults(self, node: 'Table'):
         pass
 

@@ -74,7 +74,6 @@ These are listed in rough priority order.
   - ✅ Drop Foreign Key
   - ➡️ Ignore Foreign Key Dollar Signs
   - ➡️ Scan Partition Expiration
-  - ➡️ Unspecified Rounding Mode
   - ➡️ Create View
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table

@@ -1456,12 +1456,17 @@ def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags, expected
     'default_rounding_mode, expected',
     [
         [
-            'ROUND_HALF_AWAY_FROM_ZERO',
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(default_rounding_mode = NULL)\n',
+        ],
+        [
+            RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO'),
             f'ALTER TABLE `test_project.test_dataset.test_table`\n'
             f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\')\n',
         ],
         [
-            'ROUND_HALF_EVEN',
+            RoundingModeLiteral('ROUND_HALF_EVEN'),
             f'ALTER TABLE `test_project.test_dataset.test_table`\n'
             f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_EVEN\')\n',
         ],
