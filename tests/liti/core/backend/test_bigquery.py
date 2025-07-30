@@ -1276,6 +1276,8 @@ def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
             kind='TIME',
             column=ColumnName('col_date'),
             time_unit='DAY',
+            expiration_days=1.5,
+            require_filter=True,
         ),
         clustering=[ColumnName('col_date')],
         friendly_name='test_friendly',
@@ -1306,6 +1308,8 @@ def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
         f'CLUSTER BY `col_date`\n'
         f'WITH CONNECTION `test_connection`\n'
         f'OPTIONS(\n'
+        f'    partition_expiration_days = 1.5,\n'
+        f'    require_partition_filter = TRUE,\n'
         f'    friendly_name = \'test_friendly\',\n'
         f'    description = \'Test description\',\n'
         f'    labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')],\n'

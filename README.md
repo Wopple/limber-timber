@@ -73,7 +73,6 @@ These are listed in rough priority order.
   - ✅ Add Foreign Key
   - ✅ Drop Foreign Key
   - ➡️ Ignore Foreign Key Dollar Signs
-  - ➡️ Scan Partition Expiration
   - ➡️ Create View
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table

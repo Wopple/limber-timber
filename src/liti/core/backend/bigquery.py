@@ -197,10 +197,15 @@ def to_bq_table(table: Table) -> bq.Table:
 
     if table.partitioning:
         if table.partitioning.kind == 'TIME':
+            if table.partitioning.expiration_days is not None:
+                expiration_ms = int(table.partitioning.expiration_days * ONE_DAY_IN_MILLIS)
+            else:
+                expiration_ms = None
+
             bq_table.time_partitioning = bq.TimePartitioning(
                 type_=table.partitioning.time_unit,
                 field=table.partitioning.column.string if table.partitioning.column else None,
-                expiration_ms=table.partitioning.expiration_days and int(table.partitioning.expiration_days * ONE_DAY_IN_MILLIS),
+                expiration_ms=expiration_ms,
                 require_partition_filter=table.partitioning.require_filter,
             )
         elif table.partitioning.kind == 'INT':
@@ -431,11 +436,17 @@ def to_liti_table(table: bq.Table) -> Table:
 
     if table.time_partitioning:
         time_partition = table.time_partitioning
+
+        if time_partition.expiration_ms is not None:
+            expiration_days = time_partition.expiration_ms / ONE_DAY_IN_MILLIS
+        else:
+            expiration_days = None
+
         partitioning = Partitioning(
             kind='TIME',
             column=ColumnName(time_partition.field),
             time_unit=time_partition.type_,
-            expiration_days=time_partition.expiration_ms and time_partition.expiration_ms / ONE_DAY_IN_MILLIS,
+            expiration_days=expiration_days,
             require_filter=table.require_partition_filter or False,
         )
     elif table.range_partitioning:
@@ -595,6 +606,9 @@ class BigQueryDbBackend(DbBackend):
                         raise ValueError(f'Unsupported partitioning column data type: {datatype}')
                 else:
                     partition_sql = f'PARTITION BY TIMESTAMP_TRUNC(_PARTITIONTIME, {partitioning.time_unit})\n'
+
+                if partitioning.expiration_days is not None:
+                    options.append(f'partition_expiration_days = {partitioning.expiration_days}')
             elif table.partitioning.kind == 'INT':
                 start = partitioning.int_start
                 end = partitioning.int_end
@@ -602,11 +616,15 @@ class BigQueryDbBackend(DbBackend):
                 partition_sql = f'PARTITION BY RANGE_BUCKET(`{column}`, GENERATE_ARRAY({start}, {end}, {step}))\n'
             else:
                 raise ValueError(f'Unsupported partitioning type: {table.partitioning.kind}')
+
+            if partitioning.require_filter:
+                options.append(f'require_partition_filter = TRUE')
         else:
             partition_sql = ''
 
         if table.clustering:
-            cluster_sql = f'CLUSTER BY {", ".join(f"`{c}`" for c in table.clustering)}\n'
+            clustering_columns = ', '.join(f'`{c}`' for c in table.clustering)
+            cluster_sql = f'CLUSTER BY {clustering_columns}\n'
         else:
             cluster_sql = ''
 
