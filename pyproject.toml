@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "limber-timber"
-version = "0.0.6"
+version = "0.0.7"
 description = "Database Migrations Made Easy"
 authors = ["Daniel Tashjian <thewopple@gmail.com>"]
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Framework :: Pytest",
     "Framework :: Pydantic :: 2",
 ]

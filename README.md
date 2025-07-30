@@ -4,7 +4,7 @@
 
 ---
 
-This project is in pre-alpha. You can try using it, but it probably won't work.
+This project is in alpha: it needs to be battle tested to work out the kinks.
 
 ```shell
 pip install limber-timber
