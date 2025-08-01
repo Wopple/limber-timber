@@ -53,9 +53,11 @@ These are listed in rough priority order.
 
 - ✅ CLI
 - ✅ Publish to PyPI
-- ➡️ Github Actions
-  - ✅ Unit Tests
-  - ➡️ Release
+- ➡️ Templating
+    - To make it easy to swap out repeated values by making a change in one place
+- ➡️ JSON Schema
+    - To validate and auto complete migration files in IDEs
+- ➡️ Unit Tests
 - ✅ In-memory Database
 - ✅ In-memory Metadata
 - ➡️ Big Query Database
@@ -72,7 +74,6 @@ These are listed in rough priority order.
   - ✅ Set Primary Key
   - ✅ Add Foreign Key
   - ✅ Drop Foreign Key
-  - ➡️ Ignore Foreign Key Dollar Signs
   - ➡️ Create View
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table
@@ -82,13 +83,11 @@ These are listed in rough priority order.
 - ✅ Big Query Metadata
 - ✅ Database Adoption
 - ✅ Raise Unsupported Operations
-- ➡️ Unit Tests
-- ➡️ Scan Topologically with Foreign Keys
-- ➡️ JSON Schema
-  - To validate and auto complete migration files in IDEs
+- ✅ Scan Topologically with Foreign Keys
 - ✅ Database Specific Validation
-- ➡️ Templating
-  - To make it easy to swap out repeated values by making a change in one place
+- ➡️ Github Actions
+    - ✅ Unit Tests
+    - ➡️ Release
 - ➡️ Expand Grouped Operations
   - To handle complex operations that do not have atomic support in the backend
 - ➡️ Grouped Operation Application

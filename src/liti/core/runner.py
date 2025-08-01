@@ -10,6 +10,7 @@ from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.function import attach_ops, get_target_operations
 from liti.core.logger import NoOpLogger
 from liti.core.model.v1.operation.data.base import Operation
+from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, TableName
 
 log = logging.getLogger(__name__)
@@ -100,6 +101,37 @@ class MigrateRunner:
             return self.target
 
 
+def sort_operations(operations: list[Operation]) -> list[Operation]:
+    """ Sorts the operations into a valid application order """
+    create_tables: dict[TableName, CreateTable] = {}
+    others: list[Operation] = []
+
+    for op in operations:
+        if isinstance(op, CreateTable):
+            create_tables[op.table.name] = op
+        else:
+            others.append(op)
+
+    sorted_ops = {}
+
+    while create_tables:
+        satisfied_ops: dict[TableName, CreateTable] = {}
+
+        for op in create_tables.values():
+            if all(fk.foreign_table_name in sorted_ops for fk in op.table.foreign_keys):
+                satisfied_ops[op.table.name] = op
+
+        if not satisfied_ops:
+            raise RuntimeError('Unsatisfied or circular foreign key references found')
+
+        sorted_ops.update(satisfied_ops)
+
+        for table_name in satisfied_ops:
+            del create_tables[table_name]
+
+    return list(sorted_ops.values()) + others
+
+
 class ScanRunner:
     def __init__(self, db_backend: DbBackend):
         self.db_backend = db_backend
@@ -118,28 +150,21 @@ class ScanRunner:
         :param format: ['yaml'] the format to use when printing the operations
         """
 
-        database.set_defaults(self.db_backend)
         database.liti_validate(self.db_backend)
-
-        schema.set_defaults(self.db_backend)
         schema.liti_validate(self.db_backend)
 
         if table:
-            table.set_defaults(self.db_backend)
             table.liti_validate(self.db_backend)
 
-            create_table = self.db_backend.scan_table(TableName(
-                database=database,
-                schema_name=schema,
-                table_name=table,
-            ))
+            table_name = TableName(database=database, schema_name=schema, table_name=table)
+            create_table = self.db_backend.scan_table(table_name)
 
             if create_table is None:
-                raise RuntimeError(f'Table not found: {database}.{schema}.{table}')
+                raise RuntimeError(f'Table not found: {table_name}')
 
             operations = [create_table]
         else:
-            operations = self.db_backend.scan_schema(database, schema)
+            operations = sort_operations(self.db_backend.scan_schema(database, schema))
 
         op_data = [op.to_op_data(format=format) for op in operations]
 

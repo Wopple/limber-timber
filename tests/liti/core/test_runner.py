@@ -1,14 +1,16 @@
 from datetime import datetime
 
-from pytest import fixture
+from pytest import fixture, mark
 
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
     Numeric, Range, STRING, Struct, TIME, TIMESTAMP
-from liti.core.model.v1.schema import Column, ColumnName, IntervalLiteral, Partitioning, PrimaryKey, \
+from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, IntervalLiteral, Partitioning, \
+    PrimaryKey, \
     RoundingModeLiteral, Table, \
     TableName
-from liti.core.runner import MigrateRunner
+from liti.core.runner import MigrateRunner, sort_operations
 
 
 @fixture
@@ -899,3 +901,89 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
     assert table.column_map[ColumnName('col_bool')].description is None
+
+
+@mark.parametrize(
+    'graph, expected',
+    [
+        [
+            {
+                'a': [],
+                'b': [],
+                'c': [],
+            },
+            [
+                'a',
+                'b',
+                'c',
+            ],
+        ],
+        [
+            {
+                'a': ['b', 'c'],
+                'b': [],
+                'c': [],
+            },
+            [
+                'b',
+                'c',
+                'a',
+            ],
+        ],
+        [
+            {
+                'a': ['b'],
+                'b': ['c'],
+                'c': ['d'],
+                'd': ['e'],
+                'e': [],
+            },
+            [
+                'e',
+                'd',
+                'c',
+                'b',
+                'a',
+            ],
+        ],
+        [
+            {
+                'a': ['b', 'c', 'd', 'e'],
+                'b': ['c', 'd', 'e'],
+                'c': ['d', 'e'],
+                'd': ['e'],
+                'e': [],
+            },
+            [
+                'e',
+                'd',
+                'c',
+                'b',
+                'a',
+            ],
+        ],
+    ],
+)
+def test_sort_operations(graph, expected):
+    def to_table_name(name: str) -> TableName:
+        return TableName(f'my_project.my_dataset.{name}')
+
+    def to_table(local_table: str, foreign_tables: list[str]) -> Table:
+        return Table(
+            name=to_table_name(local_table),
+            columns=[Column(name=ColumnName('col_bool'), datatype=BOOL)],
+            foreign_keys=[
+                ForeignKey(
+                    foreign_table_name=to_table_name(name),
+                    references=[ForeignReference(
+                        local_column_name=ColumnName('col_bool'),
+                        foreign_column_name=ColumnName('col_bool'),
+                    )],
+                )
+                for name in foreign_tables
+            ],
+        )
+
+    operations = [CreateTable(table=to_table(l, fs)) for l, fs in graph.items()]
+    actual = sort_operations(operations)
+    assert [op.table.name for op in actual] == [to_table_name(name) for name in expected]
