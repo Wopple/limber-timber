@@ -10,25 +10,6 @@ if TYPE_CHECKING:
     from liti.core.model.v1.schema import Partitioning, Table
 
 
-class Star:
-    """ Star is used to match everything """
-
-    def __eq__(self, other):
-        return True
-
-    def __getitem__(self, item):
-        return self
-
-    def get(self, *args, **kwargs):
-        return self
-
-    def items(self):
-        return iter(())
-
-
-STAR = Star()
-
-
 class Defaulter:
     """ Observer interface for backends to implement to define defaults
 
@@ -124,6 +105,25 @@ def is_match(match: Any, value: Any) -> bool:
         else:
             # match must be on the left hand side for STAR comparisons
             return match == value
+
+
+class Star:
+    """ Star is used to match everything """
+
+    def __eq__(self, other):
+        return True
+
+    def __getitem__(self, item):
+        return self
+
+    def get(self, *args, **kwargs):
+        return self
+
+    def items(self):
+        return iter(())
+
+
+STAR = Star()
 
 
 class LitiModel(BaseModel, Defaultable, Validatable):

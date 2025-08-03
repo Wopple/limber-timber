@@ -302,7 +302,8 @@ model.
 `liti.core.base`
 
 This module has base classes for applying default values and validating the data. They are implemented using the
-Observer / Observable pattern so different backends can define their own behavior.
+Observer / Observable pattern so different backends can define their own behavior. Also implements the templating
+engine.
 
 `liti.core.runner`
 
@@ -349,10 +350,10 @@ If you have any questions, you can reach out to me on [discord](https://discord.
 - Comments
   - dos
     - clarify confusing code
-    - make assumptions about the reader
     - explain the 'why'
     - first try to explain with the code instead of a comment
   - do nots
+    - make assumptions about the reader
     - state that which is explained by the surrounding code
     - cover up for poor code
     - just because
