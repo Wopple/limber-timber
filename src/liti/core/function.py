@@ -4,7 +4,9 @@ from typing import Any, Iterator
 
 import yaml
 
+from liti.core.base import STAR
 from liti.core.model.v1.datatype import Array, Datatype, Struct
+from liti.core.model.v1.manifest import Manifest, Template
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.ops.base import OperationOps
 from liti.core.model.v1.schema import ColumnName, FieldPath, Table
@@ -75,9 +77,22 @@ def get_manifest_path(target_dir: Path) -> Path:
     raise ValueError(f'No manifest found in {target_dir}')
 
 
-def parse_manifest(path: Path) -> list[Path]:
+def parse_manifest(path: Path) -> Manifest:
     obj = parse_json_or_yaml_file(path)
-    return [Path(filename) for filename in obj['operation_files']]
+
+    return Manifest(
+        version=obj['version'],
+        target_dir=path.parent,
+        operation_files=[Path(filename) for filename in obj['operation_files']],
+        templates=None if 'templates' not in obj else [
+            Template(
+                path=t['path'],
+                value=t['value'],
+                match=t.get('match', STAR)
+            )
+            for t in obj['templates']
+        ],
+    )
 
 
 def parse_operation_file(path: Path) -> list[Operation]:
@@ -85,12 +100,9 @@ def parse_operation_file(path: Path) -> list[Operation]:
     return [parse_operation(op['kind'], op['data']) for op in obj['operations']]
 
 
-def get_target_operations(target_dir: Path) -> list[Operation]:
-    manifest_path = get_manifest_path(target_dir)
-    operations_filenames = parse_manifest(manifest_path)
-
+def parse_operations(manifest: Manifest) -> list[Operation]:
     return [
         operation
-        for filename in operations_filenames
-        for operation in parse_operation_file(target_dir.joinpath(filename))
+        for filename in manifest.operation_files
+        for operation in parse_operation_file(manifest.target_dir.joinpath(filename))
     ]

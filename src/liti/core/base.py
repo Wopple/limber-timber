@@ -1,4 +1,5 @@
-from typing import Any, ClassVar, TYPE_CHECKING
+from math import isclose
+from typing import Any, Callable, ClassVar, Generator, TYPE_CHECKING
 
 from pydantic import BaseModel
 
@@ -6,7 +7,26 @@ from pydantic import BaseModel
 # which need to use types from this file
 if TYPE_CHECKING:
     from liti.core.model.v1.datatype import Array, BigNumeric, Float, Int, Numeric
-    from liti.core.model.v1.schema import Partitioning, RoundingModeLiteral, Table
+    from liti.core.model.v1.schema import Partitioning, Table
+
+
+class Star:
+    """ Star is used to match everything """
+
+    def __eq__(self, other):
+        return True
+
+    def __getitem__(self, item):
+        return self
+
+    def get(self, *args, **kwargs):
+        return self
+
+    def items(self):
+        return iter(())
+
+
+STAR = Star()
 
 
 class Defaulter:
@@ -93,6 +113,19 @@ class Validatable:
         getattr(validator, self.__class__.VALIDATE_METHOD)(self)
 
 
+def is_match(match: Any, value: Any) -> bool:
+    if isinstance(value, LitiModel):
+        # dig deeper into the model
+        return all(is_match(inner, getattr(value, field)) for field, inner in match.items())
+    else:
+        # check the leaf value
+        if isinstance(match, float) and isinstance(value, float):
+            return isclose(match, value)
+        else:
+            # match must be on the left hand side for STAR comparisons
+            return match == value
+
+
 class LitiModel(BaseModel, Defaultable, Validatable):
     """ Base class for all Liti model classes """
 
@@ -113,3 +146,42 @@ class LitiModel(BaseModel, Defaultable, Validatable):
                 field.liti_validate(validator)
 
         super().liti_validate(validator)
+
+    def get_update_fns(self, path: list[str], match: Any) -> Generator[Callable[[Any], None], None, None]:
+        """ Yields functions to replace selected fields with a provided value
+
+        :param path: a list of field names to recursively traverse through to find the fields to update
+        :param match: either a dict structure of values to compare to the respective fields (functions are yielded on
+                      equivalence of all fields), or Star to always yield a function
+        """
+        if not path:
+            return
+
+        head, *tail = path
+
+        if not hasattr(self, head):
+            return
+
+        field = getattr(self, head)
+        match_value = match.get(head, STAR)
+
+        # stop if any sibling fields do not match
+        if not all(
+            hasattr(self, f) and is_match(inner, getattr(self, f))
+            for f, inner in match.items()
+            if f != head
+        ):
+            return
+
+        if tail:
+            # if there are more segments, dig deeper into the model
+            if isinstance(field, tuple | list | set):
+                # yield for each item that matches in the collection
+                for item in field:
+                    if isinstance(item, LitiModel):
+                        yield from item.get_update_fns(tail, match_value)
+            elif isinstance(field, LitiModel):
+                yield from field.get_update_fns(tail, match_value)
+        # yield the leaf field if it matches
+        elif is_match(match_value, field):
+            yield lambda value: setattr(self, head, value)

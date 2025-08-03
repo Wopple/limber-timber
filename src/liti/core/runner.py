@@ -7,7 +7,7 @@ import yaml
 from devtools import pformat
 
 from liti.core.backend.base import DbBackend, MetaBackend
-from liti.core.function import attach_ops, get_target_operations
+from liti.core.function import attach_ops, get_manifest_path, parse_manifest, parse_operations
 from liti.core.logger import NoOpLogger
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
@@ -40,7 +40,18 @@ class MigrateRunner:
         """
 
         logger = NoOpLogger() if silent else log
-        target_operations: list[Operation] = self.get_target_operations()
+
+        if isinstance(self.target, str):
+            manifest = parse_manifest(get_manifest_path(Path(self.target)))
+            target_operations = parse_operations(manifest)
+
+            if manifest.templates:
+                for op in target_operations:
+                    for template in manifest.templates:
+                        for fn in op.get_update_fns(template.path, template.match):
+                            fn(template.value)
+        elif isinstance(self.target, list):
+            target_operations: list[Operation] = self.target
 
         for op in target_operations:
             op.set_defaults(self.db_backend)
@@ -91,14 +102,6 @@ class MigrateRunner:
             return Path(self.target)
         else:
             return None
-
-    def get_target_operations(self) -> list[Operation]:
-        target_dir = self.target_dir
-
-        if target_dir is not None:
-            return get_target_operations(target_dir)
-        else:
-            return self.target
 
 
 def sort_operations(operations: list[Operation]) -> list[Operation]:

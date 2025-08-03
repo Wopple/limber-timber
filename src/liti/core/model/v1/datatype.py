@@ -163,8 +163,8 @@ class Array(Datatype):
     @model_serializer
     def serialize(self, info: FieldSerializationInfo) -> dict[str, Any]:
         return {
-            "type": self.type,
-            "inner": self.inner.model_dump(exclude_none=info.exclude_none),
+            'type': self.type,
+            'inner': self.inner.model_dump(exclude_none=info.exclude_none),
         }
 
 
@@ -175,8 +175,8 @@ class Struct(Datatype):
     @model_serializer
     def serialize(self, info: FieldSerializationInfo) -> dict[str, Any]:
         return {
-            "type": self.type,
-            "fields": {
+            'type': self.type,
+            'fields': {
                 name: dt.model_dump(exclude_none=info.exclude_none)
                 for name, dt in self.fields.items()
             },
