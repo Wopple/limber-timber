@@ -58,6 +58,7 @@ These are listed in rough priority order.
 - ➡️ JSON Schema
     - To validate and auto complete migration files in IDEs
 - ➡️ Unit Tests
+- ➡️ Documentation
 - ✅ In-memory Database
 - ✅ In-memory Metadata
 - ➡️ Big Query Database

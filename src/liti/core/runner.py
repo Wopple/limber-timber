@@ -41,8 +41,8 @@ class MigrateRunner:
 
         logger = NoOpLogger() if silent else log
 
-        if isinstance(self.target, str):
-            manifest = parse_manifest(get_manifest_path(Path(self.target)))
+        if self.target_dir:
+            manifest = parse_manifest(get_manifest_path(self.target_dir))
             target_operations = parse_operations(manifest)
 
             if manifest.templates:
@@ -52,6 +52,8 @@ class MigrateRunner:
                             fn(template.value)
         elif isinstance(self.target, list):
             target_operations: list[Operation] = self.target
+        else:
+            raise ValueError('Unable to determine target operations')
 
         for op in target_operations:
             op.set_defaults(self.db_backend)
