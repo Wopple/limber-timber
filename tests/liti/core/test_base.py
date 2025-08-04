@@ -1,9 +1,11 @@
 from typing import Any
 
 from pydantic import Field
-from pytest import mark
+from pytest import mark, raises
 
 from liti.core.base import LitiModel, STAR
+from liti.core.model.v1.datatype import BOOL
+from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, Table, TableName
 
 
 class ListNestedModel(LitiModel):
@@ -28,6 +30,35 @@ class TestModel(LitiModel):
     f_set: set[int] = Field(default_factory=set)
     f_nested: NestedModel = Field(default_factory=NestedModel)
     f_nested_sibling: NestedModel = Field(default_factory=NestedModel)
+
+
+def test_get_roots():
+    table_name = TableName('test_project.test_dataset.test_table')
+    foreign_table_name = TableName('test_project.test_dataset.test_foreign_table')
+
+    table = Table(
+        name=table_name,
+        columns=[Column(name=ColumnName('col_bool'), datatype=BOOL)],
+        foreign_keys=[ForeignKey(
+            foreign_table_name=foreign_table_name,
+            references=[ForeignReference(
+                local_column_name=ColumnName('col_bool'),
+                foreign_column_name=ColumnName('foreign_col_bool'),
+            )],
+        )],
+    )
+
+    roots = table.get_roots(TableName, STAR)
+    actual_table_name_1, actual_match_1 = next(roots)
+    actual_table_name_2, actual_match_2 = next(roots)
+
+    with raises(StopIteration):
+        next(roots)
+
+    assert actual_table_name_1 is table_name
+    assert actual_match_1 is STAR
+    assert actual_table_name_2 is foreign_table_name
+    assert actual_match_2 is STAR
 
 
 @mark.parametrize(
@@ -121,7 +152,7 @@ class TestModel(LitiModel):
 def test_get_update_fns_basic(field: str, match: Any, set_value: Any, expected: Any):
     model = TestModel()
 
-    for fn in model.get_update_fns([field], match):
+    for fn in model.get_update_fns([field], [match]):
         fn(set_value)
 
     assert model.model_dump()[field] == expected
@@ -156,7 +187,7 @@ def test_get_update_fns_basic(field: str, match: Any, set_value: Any, expected: 
 def test_get_update_fns_nested(path: list[str], match: Any, set_value: Any, expected: Any):
     model = TestModel()
 
-    for fn in model.get_update_fns(path, match):
+    for fn in model.get_update_fns(path, [match]):
         fn(set_value)
 
     assert model.model_dump()[path[0]][path[1]] == expected
@@ -221,7 +252,7 @@ def test_get_update_fns_list_nested(
 ):
     model = TestModel(f_nested=NestedModel(f_list_nested=models))
 
-    for fn in model.get_update_fns(path, match):
+    for fn in model.get_update_fns(path, [match]):
         fn(set_value)
 
     assert [m[path[2]] for m in model.model_dump()[path[0]][path[1]]] == expected

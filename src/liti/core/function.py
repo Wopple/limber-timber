@@ -4,7 +4,7 @@ from typing import Any, Iterator
 
 import yaml
 
-from liti.core.base import STAR
+from liti.core.base import LitiModel, STAR
 from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.manifest import Manifest, Template
 from liti.core.model.v1.operation.data.base import Operation
@@ -40,10 +40,6 @@ def extract_nested_datatype(table: Table, field_path: FieldPath) -> Datatype:
 
 
 def parse_operation(op_kind: str, op_data: dict) -> Operation:
-    # hack to import OperationOps subclasses
-    # noinspection PyUnresolvedReferences
-    import liti.core.model.v1.operation.ops.subclasses
-
     return Operation.get_kind(op_kind)(**op_data)
 
 
@@ -86,11 +82,13 @@ def parse_manifest(path: Path) -> Manifest:
         operation_files=[Path(filename) for filename in obj['operation_files']],
         templates=None if 'templates' not in obj else [
             Template(
-                path=t['path'],
-                value=t['value'],
-                match=t.get('match', STAR)
+                root_type=LitiModel.by_name(template['root_type']),
+                path=template['path'].split('.'),
+                value=template['value'],
+                full_match=template.get('full_match', STAR),
+                local_match=template.get('local_match', STAR),
             )
-            for t in obj['templates']
+            for template in obj['templates']
         ],
     )
 

@@ -9,11 +9,28 @@ from devtools import pformat
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.function import attach_ops, get_manifest_path, parse_manifest, parse_operations
 from liti.core.logger import NoOpLogger
+from liti.core.model.v1.manifest import Template
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, TableName
 
 log = logging.getLogger(__name__)
+
+
+def apply_templates(operations: list[Operation], templates: list[Template]):
+    # first collect all the update functions
+    update_fns = [
+        lambda fn=update_fn, v=template.value: fn(v)
+        for op in operations
+        for template in templates
+        for root, root_match in op.get_roots(template.root_type, template.full_match)
+        for update_fn in root.get_update_fns(template.path, [template.local_match, root_match])
+    ]
+
+    # Then apply them so templates do not read the replacements of other templates.
+    # If multiple templates update the same field, the last one wins.
+    for fn in update_fns:
+        fn()
 
 
 class MigrateRunner:
@@ -46,10 +63,7 @@ class MigrateRunner:
             target_operations = parse_operations(manifest)
 
             if manifest.templates:
-                for op in target_operations:
-                    for template in manifest.templates:
-                        for fn in op.get_update_fns(template.path, template.match):
-                            fn(template.value)
+                apply_templates(target_operations, manifest.templates)
         elif isinstance(self.target, list):
             target_operations: list[Operation] = self.target
         else:

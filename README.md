@@ -40,7 +40,7 @@ I am writing the migration system I always wanted but does not exist (yet).
 - Automatically inferred down migrations reduces developer burden
 - Writing migrations in data is cleaner and not specific to a database
 - Never parsing SQL reduces the complexity of the codebase
-- A lightweight open source library makes it each to add missing features
+- A lightweight open source library makes it easy to add missing features
 - JSON schema allows IDEs to be configured for migration file validation and auto-completion
 - Separation of database and metadata allows for more flexible metadata storage options
 - In-memory database and metadata allow for application unit testing
@@ -53,8 +53,7 @@ These are listed in rough priority order.
 
 - ✅ CLI
 - ✅ Publish to PyPI
-- ➡️ Templating
-    - To make it easy to swap out repeated values by making a change in one place
+- ✅ Templating
 - ➡️ JSON Schema
     - To validate and auto complete migration files in IDEs
 - ➡️ Unit Tests

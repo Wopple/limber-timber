@@ -5,12 +5,14 @@ from pytest import fixture, mark
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
     Numeric, Range, STRING, Struct, TIME, TIMESTAMP
+from liti.core.model.v1.manifest import Template
+from liti.core.model.v1.operation.data.column import AddColumn
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, IntervalLiteral, Partitioning, \
     PrimaryKey, \
     RoundingModeLiteral, Table, \
     TableName
-from liti.core.runner import MigrateRunner, sort_operations
+from liti.core.runner import apply_templates, MigrateRunner, sort_operations
 
 
 @fixture
@@ -901,6 +903,70 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
     assert table.column_map[ColumnName('col_bool')].description is None
+
+
+def test_template_database_and_schema(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
+    table_name = TableName('new_project.new_dataset.template_table')
+
+    set_runner = MigrateRunner(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target='tests/res/target_template_database_and_schema',
+    )
+
+    set_runner.run(wet_run=True)
+    table = db_backend.get_table(table_name)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+    assert ColumnName('col_bool') in table.column_map
+    assert ColumnName('add_col') in table.column_map
+
+
+def test_apply_templates():
+    table_name = TableName('test_project.test_dataset.test_table')
+    foreign_table_name = TableName('test_project.test_dataset.test_foreign_table')
+    add_table_name = TableName('test_project.test_dataset.test_table')
+
+    operations = [
+        CreateTable(table=Table(
+            name=table_name,
+            columns=[Column(name=ColumnName('col_bool'), datatype=BOOL)],
+            foreign_keys=[ForeignKey(
+                foreign_table_name=foreign_table_name,
+                references=[ForeignReference(
+                    local_column_name=ColumnName('col_bool'),
+                    foreign_column_name=ColumnName('foreign_col_bool'),
+                )],
+            )],
+        )),
+        AddColumn(
+            table_name=add_table_name,
+            column=Column(name=ColumnName('col_int'), datatype=INT64),
+        ),
+    ]
+
+    templates = [
+        Template(
+            root_type=TableName,
+            path=['database'],
+            value='new_project',
+        ),
+        Template(
+            root_type=TableName,
+            path=['schema_name'],
+            value='new_dataset',
+        ),
+    ]
+
+    apply_templates(operations, templates)
+
+    assert table_name.database.string == 'new_project'
+    assert table_name.schema_name.string == 'new_dataset'
+    assert foreign_table_name.database.string == 'new_project'
+    assert foreign_table_name.schema_name.string == 'new_dataset'
+    assert add_table_name.database.string == 'new_project'
+    assert add_table_name.schema_name.string == 'new_dataset'
 
 
 @mark.parametrize(

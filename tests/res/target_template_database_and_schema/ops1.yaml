@@ -1,0 +1,21 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: template_table
+      columns:
+      - name: col_bool
+        datatype: BOOL
+- kind: add_column
+  data:
+    table_name:
+      database: my_project
+      schema_name: my_dataset
+      table_name: template_table
+    column:
+      name: add_col
+      datatype: INT64

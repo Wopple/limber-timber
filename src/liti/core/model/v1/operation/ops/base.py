@@ -21,7 +21,11 @@ class OperationOps(ABC):
         return sim_db
 
     @classmethod
-    def get_attachment(cls, op: Operation) -> type:
+    def get_attachment(cls, op: Operation) -> type["OperationOps"]:
+        # ensure OperationOps subclasses are imported first
+        # noinspection PyUnresolvedReferences
+        import liti.core.model.v1.operation.ops.subclasses
+
         return {
             getattr(subclass, '__annotations__')['op']: subclass
             for subclass in OperationOps.__subclasses__()
