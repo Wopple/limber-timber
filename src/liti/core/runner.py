@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 def apply_templates(operations: list[Operation], templates: list[Template]):
     # first collect all the update functions
     update_fns = [
+        # setting default values to work around late binding pass-by-reference closures
         lambda fn=update_fn, v=template.value: fn(v)
         for op in operations
         for template in templates
