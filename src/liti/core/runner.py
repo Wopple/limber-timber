@@ -93,10 +93,7 @@ class MigrateRunner:
                 up_ops = attach_ops(up_op)
 
                 if not up_ops.is_up(self.db_backend, self.target_dir):
-                    if up:
-                        logger.info(f'\033[32m{pformat(up_op)}\033[0m')  # Green
-                    else:
-                        logger.info(f'\033[31m{pformat(up_op)}\033[0m')  # Red
+                    logger.info(pformat(up_op, highlight=True))
 
                     if wet_run:
                         up_ops.up(self.db_backend, self.meta_backend, self.target_dir)
@@ -138,7 +135,7 @@ def sort_operations(operations: list[Operation]) -> list[Operation]:
         satisfied_ops: dict[TableName, CreateTable] = {}
 
         for op in create_tables.values():
-            if all(fk.foreign_table_name in sorted_ops for fk in op.table.foreign_keys):
+            if all(fk.foreign_table_name in sorted_ops for fk in op.table.foreign_keys or []):
                 satisfied_ops[op.table.name] = op
 
         if not satisfied_ops:

@@ -3,7 +3,7 @@ from typing import ClassVar
 from pydantic import Field, field_validator
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import ColumnName, ForeignKey, Identifier, PrimaryKey, RoundingModeLiteral, Table, \
+from liti.core.model.v1.schema import ColumnName, ForeignKey, Identifier, PrimaryKey, RoundingMode, Table, \
     TableName
 
 
@@ -85,6 +85,6 @@ class SetTags(Operation):
 
 class SetDefaultRoundingMode(Operation):
     table_name: TableName
-    rounding_mode: RoundingModeLiteral = Field(default_factory=RoundingModeLiteral)
+    rounding_mode: RoundingMode | None = None
 
     KIND: ClassVar[str] = 'set_default_rounding_mode'

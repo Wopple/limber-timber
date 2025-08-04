@@ -12,7 +12,7 @@ DATABASE_CHARS = set(ascii_letters + digits + '_-')
 IDENTIFIER_CHARS = set(ascii_letters + digits + '_')
 FIELD_PATH_CHARS = set(ascii_letters + digits + '_.')
 
-RoundingMode = Literal[
+RoundingModeLiteral = Literal[
     'ROUND_HALF_AWAY_FROM_ZERO',
     'ROUND_HALF_EVEN',
 ]
@@ -37,10 +37,10 @@ class IntervalLiteral(LitiModel):
             raise ValueError(f'Interval values must be non-negative: {value}')
 
 
-class RoundingModeLiteral(LitiModel):
-    string: RoundingMode | None = None
+class RoundingMode(LitiModel):
+    string: RoundingModeLiteral
 
-    def __init__(self, string: RoundingMode | None = None, **kwargs):
+    def __init__(self, string: RoundingModeLiteral, **kwargs):
         """ Allows RoundingModeLiteral('rounding_mode') """
         if string is None:
             super().__init__(**kwargs)
@@ -52,7 +52,7 @@ class RoundingModeLiteral(LitiModel):
 
     @model_validator(mode='before')
     @classmethod
-    def allow_string_init(cls, data: RoundingMode | dict[str, RoundingMode]) -> dict[str, str]:
+    def allow_string_init(cls, data: RoundingModeLiteral | dict[str, RoundingModeLiteral]) -> dict[str, str]:
         if isinstance(data, str):
             return {'string': data}
         else:
@@ -60,8 +60,8 @@ class RoundingModeLiteral(LitiModel):
 
     @field_validator('string', mode='before')
     @classmethod
-    def validate_upper(cls, value: str | None) -> str | None:
-        return value and value.upper()
+    def validate_upper(cls, value: str) -> str:
+        return value.upper()
 
 
 class ValidatedString(LitiModel):
@@ -213,6 +213,7 @@ class ForeignKey(LitiModel):
 
     @model_validator(mode='after')
     def validate_model(self) -> 'ForeignKey':
+        # TODO: only generate the name when writing to a backend to avoid untemplated names
         if not self.name:
             local_names = '_'.join(ref.local_column_name.string for ref in self.references)
             foreign_table = self.foreign_table_name.string.replace('.', '_').replace('-', '_')
@@ -239,7 +240,7 @@ class Column(LitiModel):
     default_expression: str | None = None
     nullable: bool = False
     description: str | None = None
-    rounding_mode: RoundingModeLiteral | None = None
+    rounding_mode: RoundingMode | None = None
 
     @field_validator('datatype', mode='before')
     @classmethod
@@ -294,7 +295,7 @@ class Table(LitiModel):
     labels: dict[str, str] | None = None
     tags: dict[str, str] | None = None
     expiration_timestamp: datetime | None = None
-    default_rounding_mode: RoundingModeLiteral = Field(default_factory=RoundingModeLiteral)
+    default_rounding_mode: RoundingMode | None = None
     max_staleness: IntervalLiteral | None = None
     enable_change_history: bool | None = None
     enable_fine_grained_mutations: bool | None = None

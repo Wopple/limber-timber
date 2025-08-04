@@ -3,7 +3,7 @@ from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, PrimaryKey, \
-    RoundingModeLiteral, \
+    RoundingMode, \
     SchemaName, Table, TableName
 
 
@@ -60,7 +60,7 @@ class MemoryDbBackend(DbBackend):
     def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
         self.tables[table_name].tags = tags
 
-    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
+    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode | None):
         self.tables[table_name].default_rounding_mode = rounding_mode
 
     def add_column(self, table_name: TableName, column: Column):
@@ -89,7 +89,12 @@ class MemoryDbBackend(DbBackend):
         column = table.column_map[column_name]
         column.description = description
 
-    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingModeLiteral):
+    def set_column_rounding_mode(
+        self,
+        table_name: TableName,
+        column_name: ColumnName,
+        rounding_mode: RoundingMode | None,
+    ):
         table = self.get_table(table_name)
         column = table.column_map[column_name]
         column.rounding_mode = rounding_mode

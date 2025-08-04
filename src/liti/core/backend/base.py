@@ -5,7 +5,7 @@ from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, PrimaryKey, \
-    RoundingModeLiteral, SchemaName, Table, TableName
+    RoundingMode, SchemaName, Table, TableName
 
 
 class DbBackend(ABC, Defaulter, Validator):
@@ -53,7 +53,7 @@ class DbBackend(ABC, Defaulter, Validator):
     def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
         raise NotImplementedError('not supported')
 
-    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral):
+    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode | None):
         raise NotImplementedError('not supported')
 
     def add_column(self, table_name: TableName, column: Column):
@@ -114,7 +114,12 @@ class DbBackend(ABC, Defaulter, Validator):
     def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
         raise NotImplementedError('not supported')
 
-    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingModeLiteral):
+    def set_column_rounding_mode(
+        self,
+        table_name: TableName,
+        column_name: ColumnName,
+        rounding_mode: RoundingMode | None,
+    ):
         raise NotImplementedError('not supported')
 
     def execute_sql(self, sql: str):

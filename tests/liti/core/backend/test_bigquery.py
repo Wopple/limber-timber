@@ -12,7 +12,7 @@ from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, ForeignReference, \
-    Identifier, IntervalLiteral, Partitioning, PrimaryKey, RoundingModeLiteral, SchemaName, Table, TableName
+    Identifier, IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, TableName
 from tests.liti.util import NoRaise
 
 
@@ -1285,7 +1285,7 @@ def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
         labels={'l1': 'v1', 'l2': 'v2'},
         tags={'t1': 'v1', 't2': 'v2'},
         expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
-        default_rounding_mode=RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO'),
+        default_rounding_mode=RoundingMode('ROUND_HALF_AWAY_FROM_ZERO'),
         max_staleness=IntervalLiteral(hour=1),
         enable_change_history=True,
         enable_fine_grained_mutations=True,
@@ -1465,12 +1465,12 @@ def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags, expected
             f'SET OPTIONS(default_rounding_mode = NULL)\n',
         ],
         [
-            RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO'),
+            RoundingMode('ROUND_HALF_AWAY_FROM_ZERO'),
             f'ALTER TABLE `test_project.test_dataset.test_table`\n'
             f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\')\n',
         ],
         [
-            RoundingModeLiteral('ROUND_HALF_EVEN'),
+            RoundingMode('ROUND_HALF_EVEN'),
             f'ALTER TABLE `test_project.test_dataset.test_table`\n'
             f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_EVEN\')\n',
         ],

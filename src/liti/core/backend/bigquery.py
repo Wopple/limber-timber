@@ -14,7 +14,7 @@ from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, \
     ForeignReference, Identifier, \
-    IntervalLiteral, Partitioning, PrimaryKey, RoundingModeLiteral, SchemaName, Table, TableName
+    IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, TableName
 
 log = logging.getLogger(__name__)
 
@@ -395,6 +395,18 @@ def to_datatype_array(schema_field: bq.SchemaField) -> Datatype:
         return to_datatype(schema_field)
 
 
+def to_liti_rounding_mode(rounding_mode: str | bq.RoundingMode | None) -> RoundingMode | None:
+    if rounding_mode is None:
+        return None
+    # bq.RoundingMode subclasses str so we must check it first
+    elif isinstance(rounding_mode, bq.RoundingMode):
+        return RoundingMode(rounding_mode.name)
+    elif isinstance(rounding_mode, str):
+        return RoundingMode(rounding_mode)
+    else:
+        raise ValueError(f'bigquery.to_liti_rounding_mode unrecognized rounding_mode - {rounding_mode}')
+
+
 def to_column(schema_field: bq.SchemaField) -> Column:
     return Column(
         name=schema_field.name,
@@ -402,7 +414,7 @@ def to_column(schema_field: bq.SchemaField) -> Column:
         default_expression=schema_field.default_value_expression,
         nullable=schema_field.mode != REQUIRED,
         description=schema_field.description,
-        rounding_mode=schema_field.rounding_mode,
+        rounding_mode=schema_field.rounding_mode and RoundingMode(schema_field.rounding_mode),
     )
 
 
@@ -748,7 +760,7 @@ class BigQueryDbBackend(DbBackend):
     def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
         self.set_option(table_name, 'tags', option_dict_to_sql(tags) if tags else 'NULL')
 
-    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingModeLiteral | None):
+    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode | None):
         self.set_option(table_name, 'default_rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL')
 
     def add_column(self, table_name: TableName, column: Column):
@@ -813,8 +825,17 @@ class BigQueryDbBackend(DbBackend):
     def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
         self.set_column_option(table_name, column_name, 'description', f'\'{description}\'' if description else 'NULL')
 
-    def set_column_rounding_mode(self, table_name: TableName, column_name: ColumnName, rounding_mode: RoundingModeLiteral):
-        self.set_column_option(table_name, column_name, 'rounding_mode', f'\'{rounding_mode}\'')
+    def set_column_rounding_mode(
+        self,
+        table_name: TableName,
+        column_name: ColumnName,
+        rounding_mode: RoundingMode | None,
+    ):
+        self.set_column_option(
+            table_name,
+            column_name,
+            'rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL',
+        )
 
     def execute_sql(self, sql: str):
         self.client.query_and_wait(sql)

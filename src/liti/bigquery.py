@@ -17,6 +17,8 @@ from google.cloud.bigquery import (
 )
 
 # noinspection PyUnresolvedReferences
+from google.cloud.bigquery.enums import RoundingMode
+# noinspection PyUnresolvedReferences
 from google.cloud.bigquery.schema import _DEFAULT_VALUE as SCHEMA_DEFAULT_VALUE
 
 # noinspection PyUnresolvedReferences

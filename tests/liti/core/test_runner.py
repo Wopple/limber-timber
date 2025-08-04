@@ -10,7 +10,7 @@ from liti.core.model.v1.operation.data.column import AddColumn
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, IntervalLiteral, Partitioning, \
     PrimaryKey, \
-    RoundingModeLiteral, Table, \
+    RoundingMode, Table, \
     TableName
 from liti.core.runner import apply_templates, MigrateRunner, sort_operations
 
@@ -315,8 +315,8 @@ def test_all_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
 
     assert len(db_backend.tables) == 3
     assert len(meta_backend.get_applied_operations()) == 3
-    assert round_half_away_from_zero_table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO')
-    assert round_half_even_table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_EVEN')
+    assert round_half_away_from_zero_table.default_rounding_mode == RoundingMode('ROUND_HALF_AWAY_FROM_ZERO')
+    assert round_half_even_table.default_rounding_mode == RoundingMode('ROUND_HALF_EVEN')
 
     down_runner = MigrateRunner(
         db_backend=db_backend,
@@ -602,7 +602,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
-    assert table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_EVEN')
+    assert table.default_rounding_mode == RoundingMode('ROUND_HALF_EVEN')
 
     unset_runner = MigrateRunner(
         db_backend=db_backend,
@@ -615,7 +615,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
-    assert table.default_rounding_mode == RoundingModeLiteral('ROUND_HALF_AWAY_FROM_ZERO')
+    assert table.default_rounding_mode == RoundingMode('ROUND_HALF_AWAY_FROM_ZERO')
 
     down_runner = MigrateRunner(
         db_backend=db_backend,
@@ -628,7 +628,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert table.default_rounding_mode == RoundingModeLiteral()
+    assert table.default_rounding_mode is None
 
 
 def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend):
