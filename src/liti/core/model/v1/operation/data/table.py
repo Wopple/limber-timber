@@ -1,10 +1,11 @@
+from datetime import datetime
 from typing import ClassVar
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import ColumnName, ForeignKey, Identifier, PrimaryKey, RoundingMode, Table, \
-    TableName
+from liti.core.model.v1.schema import ColumnName, ForeignKey, Identifier, IntervalLiteral, PrimaryKey, RoundingMode, \
+    Table, TableName
 
 
 class CreateTable(Operation):
@@ -47,6 +48,20 @@ class DropConstraint(Operation):
     KIND: ClassVar[str] = 'drop_constraint'
 
 
+class SetPartitionExpiration(Operation):
+    table_name: TableName
+    expiration_days: float | None = None
+
+    KIND: ClassVar[str] = 'set_partition_expiration'
+
+
+class SetRequirePartitionFilter(Operation):
+    table_name: TableName
+    require_filter: bool
+
+    KIND: ClassVar[str] = 'set_require_partition_filter'
+
+
 class SetClustering(Operation):
     table_name: TableName
     column_names: list[ColumnName] | None = None
@@ -83,8 +98,43 @@ class SetTags(Operation):
     KIND: ClassVar[str] = 'set_tags'
 
 
+class SetExpirationTimestamp(Operation):
+    table_name: TableName
+    expiration_timestamp: datetime | None = None
+
+    KIND: ClassVar[str] = 'set_expiration_timestamp'
+
+
 class SetDefaultRoundingMode(Operation):
     table_name: TableName
     rounding_mode: RoundingMode | None = None
 
     KIND: ClassVar[str] = 'set_default_rounding_mode'
+
+
+class SetMaxStaleness(Operation):
+    table_name: TableName
+    max_staleness: IntervalLiteral | None = None
+
+    KIND: ClassVar[str] = 'set_max_staleness'
+
+
+class SetEnableChangeHistory(Operation):
+    table_name: TableName
+    enabled: bool
+
+    KIND: ClassVar[str] = 'set_enable_change_history'
+
+
+class SetEnableFineGrainedMutations(Operation):
+    table_name: TableName
+    enabled: bool
+
+    KIND: ClassVar[str] = 'set_enable_fine_grained_mutations'
+
+
+class SetKmsKeyName(Operation):
+    table_name: TableName
+    key_name: str | None = None
+
+    KIND: ClassVar[str] = 'set_kms_key_name'

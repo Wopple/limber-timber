@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from liti.core.base import Defaulter, Validator
 from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, PrimaryKey, \
-    RoundingMode, SchemaName, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
+    IntervalLiteral, PrimaryKey, RoundingMode, SchemaName, Table, TableName
 
 
 class DbBackend(ABC, Defaulter, Validator):
@@ -41,6 +42,12 @@ class DbBackend(ABC, Defaulter, Validator):
     def drop_constraint(self, table_name: TableName, constraint_name: Identifier):
         raise NotImplementedError('not supported')
 
+    def set_partition_expiration(self, table_name: TableName, expiration_days: float | None):
+        raise NotImplementedError('not supported')
+
+    def set_require_partition_filter(self, table_name: TableName, require_filter: bool):
+        raise NotImplementedError('not supported')
+
     def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
         raise NotImplementedError('not supported')
 
@@ -53,7 +60,22 @@ class DbBackend(ABC, Defaulter, Validator):
     def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
         raise NotImplementedError('not supported')
 
+    def set_expiration_timestamp(self, table_name: TableName, expiration_timestamp: datetime | None):
+        raise NotImplementedError('not supported')
+
     def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode | None):
+        raise NotImplementedError('not supported')
+
+    def set_max_staleness(self, table_name: TableName, max_staleness: IntervalLiteral | None):
+        raise NotImplementedError('not supported')
+
+    def set_enable_change_history(self, table_name: TableName, enabled: bool):
+        raise NotImplementedError('not supported')
+
+    def set_enable_fine_grained_mutations(self, table_name: TableName, enabled: bool):
+        raise NotImplementedError('not supported')
+
+    def set_kms_key_name(self, table_name: TableName, key_name: str | None):
         raise NotImplementedError('not supported')
 
     def add_column(self, table_name: TableName, column: Column):

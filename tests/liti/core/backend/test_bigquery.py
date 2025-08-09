@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 from unittest.mock import Mock
 
@@ -1394,6 +1394,48 @@ def test_drop_constraint(db_backend: BigQueryDbBackend, bq_client: Mock):
 
 
 @mark.parametrize(
+    'expiration_days, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(partition_expiration_days = NULL)\n',
+        ],
+        [
+            1.5,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(partition_expiration_days = 1.5)\n',
+        ],
+    ],
+)
+def test_set_partition_expiration(db_backend: BigQueryDbBackend, bq_client: Mock, expiration_days, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_partition_expiration(table_name, expiration_days)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'require_filter, expected',
+    [
+        [
+            True,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(require_partition_filter = TRUE)\n',
+        ],
+        [
+            False,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(require_partition_filter = FALSE)\n',
+        ],
+    ],
+)
+def test_set_require_partition_filter(db_backend: BigQueryDbBackend, bq_client: Mock, require_filter, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_require_partition_filter(table_name, require_filter)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
     'description, expected',
     [
         [
@@ -1457,6 +1499,32 @@ def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags, expected
 
 
 @mark.parametrize(
+    'expiration_timestamp, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(expiration_timestamp = NULL)\n',
+        ],
+        [
+            datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(expiration_timestamp = TIMESTAMP \'2025-01-02 03:04:05 UTC\')\n',
+        ],
+        [
+            datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone(timedelta(hours=1, minutes=30))),
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(expiration_timestamp = TIMESTAMP \'2025-01-02 01:34:05 UTC\')\n',
+        ],
+    ],
+)
+def test_set_expiration_timestamp(db_backend: BigQueryDbBackend, bq_client: Mock, expiration_timestamp, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_expiration_timestamp(table_name, expiration_timestamp)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
     'default_rounding_mode, expected',
     [
         [
@@ -1479,6 +1547,90 @@ def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags, expected
 def test_set_default_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock, default_rounding_mode, expected):
     table_name = TableName('test_project.test_dataset.test_table')
     db_backend.set_default_rounding_mode(table_name, default_rounding_mode)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'max_staleness, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(max_staleness = NULL)\n',
+        ],
+        [
+            IntervalLiteral(hour=1, minute=2, second=3, microsecond=4),
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(max_staleness = INTERVAL \'0-0 0 1:2:3.000004\' YEAR TO SECOND)\n',
+        ],
+    ],
+)
+def test_set_max_staleness(db_backend: BigQueryDbBackend, bq_client: Mock, max_staleness, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_max_staleness(table_name, max_staleness)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'enabled, expected',
+    [
+        [
+            True,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(enable_change_history = TRUE)\n',
+        ],
+        [
+            False,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(enable_change_history = FALSE)\n',
+        ],
+    ],
+)
+def test_set_enable_change_history(db_backend: BigQueryDbBackend, bq_client: Mock, enabled, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_enable_change_history(table_name, enabled)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'enabled, expected',
+    [
+        [
+            True,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(enable_fine_grained_mutations = TRUE)\n',
+        ],
+        [
+            False,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(enable_fine_grained_mutations = FALSE)\n',
+        ],
+    ],
+)
+def test_set_enable_fine_grained_mutations(db_backend: BigQueryDbBackend, bq_client: Mock, enabled, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_enable_fine_grained_mutations(table_name, enabled)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'key_name, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(kms_key_name = NULL)\n',
+        ],
+        [
+            'my/kms/key/name',
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'SET OPTIONS(kms_key_name = \'my/kms/key/name\')\n',
+        ],
+    ],
+)
+def test_set_kms_key_name(db_backend: BigQueryDbBackend, bq_client: Mock, key_name, expected):
+    table_name = TableName('test_project.test_dataset.test_table')
+    db_backend.set_kms_key_name(table_name, key_name)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 

@@ -1,9 +1,10 @@
 from pathlib import Path
 
 from liti.core.backend.base import DbBackend, MetaBackend
-from liti.core.model.v1.operation.data.table import AddForeignKey, CreateTable, DropConstraint, DropTable, RenameTable, \
-    SetClustering, \
-    SetDefaultRoundingMode, SetDescription, SetLabels, SetPrimaryKey, SetTags
+from liti.core.model.v1.operation.data.table import AddForeignKey, CreateTable, DropConstraint, DropTable, \
+    RenameTable, SetClustering, SetDefaultRoundingMode, SetDescription, SetEnableChangeHistory, \
+    SetEnableFineGrainedMutations, SetExpirationTimestamp, SetKmsKeyName, SetLabels, SetMaxStaleness, \
+    SetPartitionExpiration, SetPrimaryKey, SetRequirePartitionFilter, SetTags
 from liti.core.model.v1.operation.ops.base import OperationOps
 
 
@@ -118,6 +119,52 @@ class DropConstraintOps(OperationOps):
         return self.op.constraint_name not in db_backend.get_table(self.op.table_name).foreign_key_map
 
 
+class SetPartitionExpirationOps(OperationOps):
+    op: SetPartitionExpiration
+
+    def __init__(self, op: SetPartitionExpiration):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        db_backend.set_partition_expiration(self.op.table_name, self.op.days)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetPartitionExpiration:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+
+        return SetPartitionExpiration(
+            table_name=self.op.table_name,
+            expiration_days=sim_table.partitioning and sim_table.partitioning.expiration_days,
+        )
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        partitioning = db_backend.get_table(self.op.table_name).partitioning
+        return (partitioning and partitioning.expiration_days) == self.op.expiration_days
+
+
+class SetRequirePartitionFilterOps(OperationOps):
+    op: SetRequirePartitionFilter
+
+    def __init__(self, op: SetRequirePartitionFilter):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        db_backend.set_require_partition_filter(self.op.table_name, self.op.require_filter)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetRequirePartitionFilter:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+
+        return SetRequirePartitionFilter(
+            table_name=self.op.table_name,
+            require_filter=sim_table.partitioning and sim_table.partitioning.require_filter,
+        )
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        partitioning = db_backend.get_table(self.op.table_name).partitioning
+        return (partitioning and partitioning.require_filter) == self.op.require_filter
+
+
 class SetClusteringOps(OperationOps):
     op: SetClustering
 
@@ -190,6 +237,28 @@ class SetTagsOps(OperationOps):
         return db_backend.get_table(self.op.table_name).tags == self.op.tags
 
 
+class SetExpirationTimestampOps(OperationOps):
+    op: SetExpirationTimestamp
+
+    def __init__(self, op: SetExpirationTimestamp):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        db_backend.set_expiration_timestamp(self.op.table_name, self.op.expiration_timestamp)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetExpirationTimestamp:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+
+        return SetExpirationTimestamp(
+            table_name=self.op.table_name,
+            expiration_timestamp=sim_table.expiration_timestamp,
+        )
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        return db_backend.get_table(self.op.table_name).expiration_timestamp == self.op.expiration_timestamp
+
+
 class SetDefaultRoundingModeOps(OperationOps):
     op: SetDefaultRoundingMode
 
@@ -206,3 +275,79 @@ class SetDefaultRoundingModeOps(OperationOps):
 
     def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
         return db_backend.get_table(self.op.table_name).default_rounding_mode == self.op.rounding_mode
+
+
+class SetMaxStalenessOps(OperationOps):
+    op: SetMaxStaleness
+
+    def __init__(self, op: SetMaxStaleness):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        db_backend.set_max_staleness(self.op.table_name, self.op.max_staleness)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetMaxStaleness:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+        return SetMaxStaleness(table_name=self.op.table_name, max_staleness=sim_table.max_staleness)
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        return db_backend.get_table(self.op.table_name).max_staleness == self.op.max_staleness
+
+
+class SetEnableChangeHistoryOps(OperationOps):
+    op: SetEnableChangeHistory
+
+    def __init__(self, op: SetEnableChangeHistory):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        db_backend.set_enable_change_history(self.op.table_name, self.op.enabled)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetEnableChangeHistory:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+        return SetEnableChangeHistory(table_name=self.op.table_name, enabled=sim_table.enable_change_history)
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        return db_backend.get_table(self.op.table_name).enable_change_history == self.op.enabled
+
+
+class SetEnableFineGrainedMutationsOps(OperationOps):
+    op: SetEnableFineGrainedMutations
+
+    def __init__(self, op: SetEnableFineGrainedMutations):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        db_backend.set_enable_fine_grained_mutations(self.op.table_name, self.op.enabled)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetEnableFineGrainedMutations:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+
+        return SetEnableFineGrainedMutations(
+            table_name=self.op.table_name,
+            enabled=sim_table.enable_fine_grained_mutations,
+        )
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        return db_backend.get_table(self.op.table_name).enable_fine_grained_mutations == self.op.enabled
+
+
+class SetKmsKeyNameOps(OperationOps):
+    op: SetKmsKeyName
+
+    def __init__(self, op: SetKmsKeyName):
+        self.op = op
+
+    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+        db_backend.set_kms_key_name(self.op.table_name, self.op.rounding_mode)
+
+    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetKmsKeyName:
+        sim_db = self.simulate(meta_backend.get_previous_operations())
+        sim_table = sim_db.get_table(self.op.table_name)
+        return SetKmsKeyName(table_name=self.op.table_name, key_name=sim_table.kms_key_name)
+
+    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+        return db_backend.get_table(self.op.table_name).kms_key_name == self.op.key_name

@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from liti import bigquery as bq
@@ -746,6 +746,16 @@ class BigQueryDbBackend(DbBackend):
             f'DROP CONSTRAINT `{constraint_name}`\n'
         )
 
+    def set_partition_expiration(self, table_name: TableName, expiration_days: float | None):
+        self.set_option(
+            table_name,
+            'partition_expiration_days',
+            str(expiration_days) if expiration_days is not None else 'NULL',
+        )
+
+    def set_require_partition_filter(self, table_name: TableName, require_filter: bool):
+        self.set_option(table_name, 'require_partition_filter', 'TRUE' if require_filter else 'FALSE')
+
     def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
         bq_table = self.client.get_table(to_table_ref(table_name))
         bq_table.clustering_fields = [col.string for col in column_names] if column_names else None
@@ -760,8 +770,33 @@ class BigQueryDbBackend(DbBackend):
     def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
         self.set_option(table_name, 'tags', option_dict_to_sql(tags) if tags else 'NULL')
 
+    def set_expiration_timestamp(self, table_name: TableName, expiration_timestamp: datetime | None):
+        if expiration_timestamp:
+            utc_ts = expiration_timestamp.astimezone(timezone.utc)
+            formatted = f'TIMESTAMP \'{utc_ts.strftime("%Y-%m-%d %H:%M:%S UTC")}\''
+        else:
+            formatted = 'NULL'
+
+        self.set_option(table_name, 'expiration_timestamp', formatted)
+
     def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode | None):
         self.set_option(table_name, 'default_rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL')
+
+    def set_max_staleness(self, table_name: TableName, max_staleness: IntervalLiteral | None):
+        self.set_option(
+            table_name,
+            'max_staleness',
+            interval_literal_to_sql(max_staleness) if max_staleness else 'NULL',
+        )
+
+    def set_enable_change_history(self, table_name: TableName, enabled: bool):
+        self.set_option(table_name, 'enable_change_history', 'TRUE' if enabled else 'FALSE')
+
+    def set_enable_fine_grained_mutations(self, table_name: TableName, enabled: bool):
+        self.set_option(table_name, 'enable_fine_grained_mutations', 'TRUE' if enabled else 'FALSE')
+
+    def set_kms_key_name(self, table_name: TableName, key_name: str | None):
+        self.set_option(table_name, 'kms_key_name', f'\'{key_name}\'' if key_name else 'NULL')
 
     def add_column(self, table_name: TableName, column: Column):
         self.client.query_and_wait(
@@ -882,7 +917,7 @@ class BigQueryDbBackend(DbBackend):
 
     def table_defaults(self, node: Table):
         if node.expiration_timestamp is not None and node.expiration_timestamp.tzinfo is None:
-            node.expiration_timestamp = node.expiration_timestamp.replace(tzinfo=timezone.utc)
+            node.expiration_timestamp = node.expiration_timestamp.astimezone(timezone.utc)
 
         if node.enable_change_history is None:
             node.enable_change_history = False

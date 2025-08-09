@@ -1,10 +1,11 @@
+from datetime import datetime
+
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, PrimaryKey, \
-    RoundingMode, \
-    SchemaName, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, IntervalLiteral, \
+    PrimaryKey, RoundingMode, SchemaName, Table, TableName
 
 
 class MemoryDbBackend(DbBackend):
@@ -48,6 +49,12 @@ class MemoryDbBackend(DbBackend):
     def drop_constraint(self, table_name: TableName, constraint_name: Identifier):
         self.tables[table_name].drop_constraint(constraint_name)
 
+    def set_partition_expiration(self, table_name: TableName, expiration_days: float | None):
+        self.tables[table_name].partitioning.expiration_days = expiration_days
+
+    def set_require_partition_filter(self, table_name: TableName, require_filter: bool):
+        self.tables[table_name].partitioning.require_filter = require_filter
+
     def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
         self.tables[table_name].clustering = column_names
 
@@ -60,8 +67,23 @@ class MemoryDbBackend(DbBackend):
     def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
         self.tables[table_name].tags = tags
 
+    def set_expiration_timestamp(self, table_name: TableName, expiration_timestamp: datetime | None):
+        self.tables[table_name].expiration_timestamp = expiration_timestamp
+
     def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode | None):
         self.tables[table_name].default_rounding_mode = rounding_mode
+
+    def set_max_staleness(self, table_name: TableName, max_staleness: IntervalLiteral | None):
+        self.tables[table_name].max_staleness = max_staleness
+
+    def set_enable_change_history(self, table_name: TableName, enabled: bool):
+        self.tables[table_name].enable_change_history = enabled
+
+    def set_enable_fine_grained_mutations(self, table_name: TableName, enabled: bool):
+        self.tables[table_name].enable_fine_grained_mutations = enabled
+
+    def set_kms_key_name(self, table_name: TableName, key_name: str | None):
+        self.tables[table_name].kms_key_name = key_name
 
     def add_column(self, table_name: TableName, column: Column):
         self.get_table(table_name).columns.append(column.model_copy(deep=True))
