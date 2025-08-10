@@ -82,6 +82,7 @@ def parse_manifest(path: Path) -> Manifest:
         operation_files=[Path(filename) for filename in obj['operation_files']],
         templates=None if 'templates' not in obj else [
             Template(
+                operation_types=[LitiModel.by_name(name) for name in template.get('operation_types', [])],
                 root_type=LitiModel.by_name(template['root_type']),
                 path=template['path'].split('.'),
                 value=template['value'],

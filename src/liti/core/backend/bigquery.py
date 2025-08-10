@@ -196,6 +196,8 @@ def to_bq_table(table: Table) -> bq.Table:
         )
 
     if table.partitioning:
+        bq_table.require_partition_filter = table.partitioning.require_filter
+
         if table.partitioning.kind == 'TIME':
             if table.partitioning.expiration_days is not None:
                 expiration_ms = int(table.partitioning.expiration_days * ONE_DAY_IN_MILLIS)
@@ -206,7 +208,6 @@ def to_bq_table(table: Table) -> bq.Table:
                 type_=table.partitioning.time_unit,
                 field=table.partitioning.column.string if table.partitioning.column else None,
                 expiration_ms=expiration_ms,
-                require_partition_filter=table.partitioning.require_filter,
             )
         elif table.partitioning.kind == 'INT':
             bq_table.range_partitioning = bq.RangePartitioning(

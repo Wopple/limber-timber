@@ -407,6 +407,7 @@ def test_to_bq_table():
             kind='TIME',
             column=ColumnName('col_date'),
             time_unit='DAY',
+            require_filter=True,
         ),
         clustering=[ColumnName('col_date')],
         friendly_name='test_friendly',
@@ -442,8 +443,8 @@ def test_to_bq_table():
     assert actual.time_partitioning == bq.TimePartitioning(
         type_='DAY',
         field='col_date',
-        require_partition_filter=False,
     )
+    assert actual.require_partition_filter is True
     assert actual.clustering_fields == ['col_date']
     assert actual.friendly_name == 'test_friendly'
     assert actual.description == 'test_description'

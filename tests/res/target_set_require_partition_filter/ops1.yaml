@@ -1,0 +1,24 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: partitioning_table
+      columns:
+      - name: col_date
+        datatype: DATE
+      partitioning:
+        kind: TIME
+        column: col_date
+        time_unit: MONTH
+        require_filter: true
+- kind: set_require_partition_filter
+  data:
+    table_name:
+      database: my_project
+      schema_name: my_dataset
+      table_name: partitioning_table
+    require_filter: false

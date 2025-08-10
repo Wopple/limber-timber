@@ -1,13 +1,16 @@
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from liti.core.base import LitiModel, Star, STAR
 
 
 class Template(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    # the types of top level operations to perform replacements within, empty means all
+    operation_types: list[type[LitiModel]] = Field(default_factory=list)
 
     # the root type from which to start looking for the value to replace
     root_type: type[LitiModel]

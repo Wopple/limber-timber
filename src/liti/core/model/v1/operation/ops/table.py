@@ -126,7 +126,7 @@ class SetPartitionExpirationOps(OperationOps):
         self.op = op
 
     def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
-        db_backend.set_partition_expiration(self.op.table_name, self.op.days)
+        db_backend.set_partition_expiration(self.op.table_name, self.op.expiration_days)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetPartitionExpiration:
         sim_db = self.simulate(meta_backend.get_previous_operations())
@@ -342,7 +342,7 @@ class SetKmsKeyNameOps(OperationOps):
         self.op = op
 
     def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
-        db_backend.set_kms_key_name(self.op.table_name, self.op.rounding_mode)
+        db_backend.set_kms_key_name(self.op.table_name, self.op.key_name)
 
     def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> SetKmsKeyName:
         sim_db = self.simulate(meta_backend.get_previous_operations())

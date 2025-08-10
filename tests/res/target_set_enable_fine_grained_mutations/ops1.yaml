@@ -1,0 +1,20 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: fine_grained_mutations_table
+      columns:
+      - name: col_date
+        datatype: DATE
+      enable_fine_grained_mutations: true
+- kind: set_enable_fine_grained_mutations
+  data:
+    table_name:
+      database: my_project
+      schema_name: my_dataset
+      table_name: fine_grained_mutations_table
+    enabled: false

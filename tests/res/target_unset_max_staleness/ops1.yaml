@@ -1,0 +1,14 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: staleness_table
+      columns:
+      - name: col_date
+        datatype: DATE
+      max_staleness:
+        minute: 30

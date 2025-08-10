@@ -19,13 +19,13 @@ class NestedModel(LitiModel):
     f_list_nested: list[ListNestedModel] = Field(default_factory=list)
 
 
-class TestModel(LitiModel):
+class Model(LitiModel):
     f_none: bool | None = False
     f_bool: bool = False
     f_int: int = 0
     f_float: float = 0.1
     f_string: str = ''
-    f_tuple: tuple[int] = ()
+    f_tuple: tuple[int, ...] = ()
     f_list: list[int] = Field(default_factory=list)
     f_set: set[int] = Field(default_factory=set)
     f_nested: NestedModel = Field(default_factory=NestedModel)
@@ -150,7 +150,7 @@ def test_get_roots():
     ],
 )
 def test_get_update_fns_basic(field: str, match: Any, set_value: Any, expected: Any):
-    model = TestModel()
+    model = Model()
 
     for fn in model.get_update_fns([field], [match]):
         fn(set_value)
@@ -185,7 +185,7 @@ def test_get_update_fns_basic(field: str, match: Any, set_value: Any, expected: 
     ],
 )
 def test_get_update_fns_nested(path: list[str], match: Any, set_value: Any, expected: Any):
-    model = TestModel()
+    model = Model()
 
     for fn in model.get_update_fns(path, [match]):
         fn(set_value)
@@ -250,7 +250,7 @@ def test_get_update_fns_list_nested(
     set_value: Any,
     expected: Any,
 ):
-    model = TestModel(f_nested=NestedModel(f_list_nested=models))
+    model = Model(f_nested=NestedModel(f_list_nested=models))
 
     for fn in model.get_update_fns(path, [match]):
         fn(set_value)

@@ -1,0 +1,13 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: kms_key_name_table
+      columns:
+      - name: col_date
+        datatype: DATE
+      kms_key_name: my/kms/key/name
