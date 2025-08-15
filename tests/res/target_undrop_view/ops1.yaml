@@ -1,0 +1,10 @@
+version: 1
+operations:
+- kind: create_or_replace_view
+  data:
+    view:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: view_table
+      select_file: ../sql/create_view.sql

@@ -26,6 +26,11 @@ def db_backend(bq_client) -> BigQueryDbBackend:
     return BigQueryDbBackend(bq_client, raise_unsupported=set())
 
 
+@fixture
+def context() -> Mock:
+    return Mock()
+
+
 def test_to_dataset_ref():
     actual = to_dataset_ref(DatabaseName('test_project'), SchemaName('test_dataset'))
     assert actual == bq.DatasetReference('test_project', 'test_dataset')
@@ -113,10 +118,10 @@ def test_to_field_type(datatype, expected):
 @mark.parametrize(
     'column, expected',
     [
-        [Column(name=ColumnName('test_name'), datatype=BOOL, nullable=False), REQUIRED],
-        [Column(name=ColumnName('test_name'), datatype=BOOL, nullable=True), NULLABLE],
-        [Column(name=ColumnName('test_name'), datatype=Array(inner=BOOL), nullable=False), REPEATED],
-        [Column(name=ColumnName('test_name'), datatype=Array(inner=BOOL), nullable=True), REPEATED],
+        [Column('test_name', BOOL, nullable=False), REQUIRED],
+        [Column('test_name', BOOL, nullable=True), NULLABLE],
+        [Column('test_name', Array(inner=BOOL), nullable=False), REPEATED],
+        [Column('test_name', Array(inner=BOOL), nullable=True), REPEATED],
     ],
 )
 def test_to_mode(column, expected):
@@ -393,7 +398,7 @@ def test_to_schema_field(column, expected):
 def test_to_bq_table():
     table = Table(
         name=TableName('test_project.test_dataset.test_table'),
-        columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
+        columns=[Column('col_date', DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
             name='fk_test',
@@ -1180,7 +1185,7 @@ def test_to_liti_table():
 
     expected = Table(
         name=TableName('test_project.test_dataset.test_table'),
-        columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
+        columns=[Column('col_date', DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
             name='fk_test',
@@ -1263,7 +1268,7 @@ def test_can_coerce(from_dt, to_dt, expected):
 def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
     table = Table(
         name=TableName('test_project.test_dataset.test_table'),
-        columns=[Column(name=ColumnName('col_date'), datatype=DATE)],
+        columns=[Column('col_date', DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
             name='fk_test',
@@ -1637,7 +1642,7 @@ def test_set_kms_key_name(db_backend: BigQueryDbBackend, bq_client: Mock, key_na
 
 def test_add_column(db_backend: BigQueryDbBackend, bq_client: Mock):
     table_name = TableName('test_project.test_dataset.test_table')
-    column = Column(name=ColumnName('col_date'), datatype=DATE)
+    column = Column('col_date', DATE)
     db_backend.add_column(table_name, column)
 
     bq_client.query_and_wait.assert_called_once_with(
@@ -1733,28 +1738,28 @@ def test_set_column_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
-def test_int_defaults(db_backend: BigQueryDbBackend):
+def test_int_defaults(db_backend: BigQueryDbBackend, context: Mock):
     node = Int()
-    node.set_defaults(db_backend)
+    node.set_defaults(db_backend, context)
     assert node.bits == 64
 
 
-def test_float_defaults(db_backend: BigQueryDbBackend):
+def test_float_defaults(db_backend: BigQueryDbBackend, context: Mock):
     node = Float()
-    node.set_defaults(db_backend)
+    node.set_defaults(db_backend, context)
     assert node.bits == 64
 
 
-def test_numeric_defaults(db_backend: BigQueryDbBackend):
+def test_numeric_defaults(db_backend: BigQueryDbBackend, context: Mock):
     node = Numeric()
-    node.set_defaults(db_backend)
+    node.set_defaults(db_backend, context)
     assert node.precision == 38
     assert node.scale == 9
 
 
-def test_big_numeric_defaults(db_backend: BigQueryDbBackend):
+def test_big_numeric_defaults(db_backend: BigQueryDbBackend, context: Mock):
     node = BigNumeric()
-    node.set_defaults(db_backend)
+    node.set_defaults(db_backend, context)
     assert node.precision == 76
     assert node.scale == 38
 
@@ -1770,11 +1775,11 @@ def test_big_numeric_defaults(db_backend: BigQueryDbBackend):
         [128, raises(ValueError)],
     ],
 )
-def test_validate_int(db_backend: BigQueryDbBackend, bits: int | None, raise_ctx):
+def test_validate_int(db_backend: BigQueryDbBackend, context: Mock, bits: int | None, raise_ctx):
     node = Int(bits=bits)
 
     with raise_ctx:
-        node.liti_validate(db_backend)
+        node.liti_validate(db_backend, context)
 
 
 @mark.parametrize(
@@ -1788,11 +1793,11 @@ def test_validate_int(db_backend: BigQueryDbBackend, bits: int | None, raise_ctx
         [128, raises(ValueError)],
     ],
 )
-def test_validate_float(db_backend: BigQueryDbBackend, bits: int | None, raise_ctx):
+def test_validate_float(db_backend: BigQueryDbBackend, context: Mock, bits: int | None, raise_ctx):
     node = Float(bits=bits)
 
     with raise_ctx:
-        node.liti_validate(db_backend)
+        node.liti_validate(db_backend, context)
 
 
 @mark.parametrize(
@@ -1820,11 +1825,11 @@ def test_validate_float(db_backend: BigQueryDbBackend, bits: int | None, raise_c
         ],
     ],
 )
-def test_validate_numeric(db_backend: BigQueryDbBackend, precision: int, scale: int, raise_ctx):
+def test_validate_numeric(db_backend: BigQueryDbBackend, context: Mock, precision: int, scale: int, raise_ctx):
     node = Numeric(precision=precision, scale=scale)
 
     with raise_ctx:
-        node.liti_validate(db_backend)
+        node.liti_validate(db_backend, context)
 
 
 @mark.parametrize(
@@ -1852,11 +1857,11 @@ def test_validate_numeric(db_backend: BigQueryDbBackend, precision: int, scale: 
         ],
     ],
 )
-def test_validate_big_numeric(db_backend: BigQueryDbBackend, precision: int, scale: int, raise_ctx):
+def test_validate_big_numeric(db_backend: BigQueryDbBackend, context: Mock, precision: int, scale: int, raise_ctx):
     node = BigNumeric(precision=precision, scale=scale)
 
     with raise_ctx:
-        node.liti_validate(db_backend)
+        node.liti_validate(db_backend, context)
 
 
 @mark.parametrize(
@@ -1882,11 +1887,11 @@ def test_validate_big_numeric(db_backend: BigQueryDbBackend, precision: int, sca
         [Struct(fields={'field': BOOL}), NoRaise()],
     ],
 )
-def test_validate_array(db_backend: BigQueryDbBackend, inner: Datatype, raise_ctx):
+def test_validate_array(db_backend: BigQueryDbBackend, context: Mock, inner: Datatype, raise_ctx):
     node = Array(inner=inner)
 
     with raise_ctx:
-        node.liti_validate(db_backend)
+        node.liti_validate(db_backend, context)
 
 
 @mark.parametrize(
@@ -1917,6 +1922,7 @@ def test_validate_array(db_backend: BigQueryDbBackend, inner: Datatype, raise_ct
 )
 def test_validate_partitioning(
     db_backend: BigQueryDbBackend,
+    context: Mock,
     kind: Literal['TIME', 'INT'],
     time_unit: Literal['YEAR', 'MONTH', 'DAY', 'HOUR'] | None,
     int_start: int | None,
@@ -1933,4 +1939,4 @@ def test_validate_partitioning(
     )
 
     with raise_ctx:
-        node.liti_validate(db_backend)
+        node.liti_validate(db_backend, context)

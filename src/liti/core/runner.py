@@ -7,9 +7,10 @@ import yaml
 from devtools import pformat
 
 from liti.core.backend.base import DbBackend, MetaBackend
+from liti.core.context import Context
 from liti.core.function import attach_ops, get_manifest_path, parse_manifest, parse_operations
 from liti.core.logger import NoOpLogger
-from liti.core.model.v1.manifest import Template
+from liti.core.model.v1.manifest import Manifest, Template
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, TableName
@@ -36,49 +37,63 @@ def apply_templates(operations: list[Operation], templates: list[Template]):
 
 
 class MigrateRunner:
-    def __init__(
-        self,
-        db_backend: DbBackend,
-        meta_backend: MetaBackend,
-        target: str | list[Operation],  # either path to target dir or a list of the operations
-    ):
-        self.db_backend = db_backend
-        self.meta_backend = meta_backend
-        self.target = target
+    def __init__(self, context: Context):
+        self.context = context
+
+    @property
+    def db_backend(self) -> DbBackend:
+        return self.context.db_backend
+
+    @property
+    def meta_backend(self) -> MetaBackend:
+        return self.context.meta_backend
+
+    @property
+    def target_dir(self) -> Path | None:
+        return self.context.target_dir
+
+    @property
+    def manifest(self) -> Manifest:
+        if self.context.manifest is None:
+            self.context.manifest = parse_manifest(get_manifest_path(self.target_dir))
+
+        return self.context.manifest
+
+    @property
+    def target_operations(self) -> list[Operation]:
+        if self.context.target_operations is None:
+            manifest = self.manifest
+            operations = parse_operations(manifest.operation_files, self.target_dir)
+
+            if manifest.templates:
+                apply_templates(operations, manifest.templates)
+
+            self.context.target_operations = operations
+
+        return self.context.target_operations
 
     def run(
         self,
-        wet_run: bool = False,
-        allow_down: bool = False,
-        silent: bool = False,
+        wet_run: bool | None = None,
+        allow_down: bool | None = None,
     ):
         """
         :param wet_run: [False] True to run the migrations, False to simulate them
         :param allow_down: [False] True to allow down migrations, False will raise if down migrations are required
-        :param silent: [False] True to suppress logging
         """
 
-        logger = NoOpLogger() if silent else log
+        wet_run = wet_run if wet_run is not None else False
+        allow_down = allow_down if allow_down is not None else False
+        logger = NoOpLogger() if self.context.silent else log
 
-        if self.target_dir:
-            manifest = parse_manifest(get_manifest_path(self.target_dir))
-            target_operations = parse_operations(manifest)
-
-            if manifest.templates:
-                apply_templates(target_operations, manifest.templates)
-        elif isinstance(self.target, list):
-            target_operations: list[Operation] = self.target
-        else:
-            raise ValueError('Unable to determine target operations')
-
-        for op in target_operations:
-            op.set_defaults(self.db_backend)
-            op.liti_validate(self.db_backend)
+        for op in self.target_operations:
+            op.set_defaults(self.db_backend, self.context)
+            op.liti_validate(self.db_backend, self.context)
 
         if wet_run:
             self.meta_backend.initialize()
 
-        migration_plan = self.meta_backend.get_migration_plan(target_operations)
+        migration_plan = self.meta_backend.get_migration_plan(self.target_operations)
 
         if not allow_down and migration_plan['down']:
             raise RuntimeError('Down migrations required but not allowed. Use --down')
@@ -89,15 +104,15 @@ class MigrateRunner:
                     up_op = op
                 else:
                     # Down migrations apply the inverse operation
-                    up_op = attach_ops(op).down(self.db_backend, self.meta_backend)
+                    up_op = attach_ops(op, self.context).down()
 
-                up_ops = attach_ops(up_op)
+                up_ops = attach_ops(up_op, self.context)
 
-                if not up_ops.is_up(self.db_backend, self.target_dir):
+                if not up_ops.is_up():
                     logger.info(pformat(up_op, highlight=True))
 
                     if wet_run:
-                        up_ops.up(self.db_backend, self.meta_backend, self.target_dir)
+                        up_ops.up()
 
                 if wet_run:
                     if up:
@@ -110,13 +125,6 @@ class MigrateRunner:
         logger.info('Up')
         apply_operations(migration_plan['up'], True)
         logger.info('Done')
-
-    @property
-    def target_dir(self) -> Path | None:
-        if isinstance(self.target, str):
-            return Path(self.target)
-        else:
-            return None
 
 
 def sort_operations(operations: list[Operation]) -> list[Operation]:

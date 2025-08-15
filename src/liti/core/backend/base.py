@@ -6,7 +6,7 @@ from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
-    IntervalLiteral, PrimaryKey, RoundingMode, SchemaName, Table, TableName
+    IntervalLiteral, PrimaryKey, RoundingMode, SchemaName, Table, TableName, View
 
 
 class DbBackend(ABC, Defaulter, Validator):
@@ -142,6 +142,18 @@ class DbBackend(ABC, Defaulter, Validator):
         column_name: ColumnName,
         rounding_mode: RoundingMode | None,
     ):
+        raise NotImplementedError('not supported')
+
+    def has_view(self, name: TableName) -> bool:
+        raise NotImplementedError('not supported')
+
+    def get_view(self, name: TableName) -> View | None:
+        raise NotImplementedError('not supported')
+
+    def create_or_replace_view(self, view: View):
+        raise NotImplementedError('not supported')
+
+    def drop_view(self, name: TableName):
         raise NotImplementedError('not supported')
 
     def execute_sql(self, sql: str):

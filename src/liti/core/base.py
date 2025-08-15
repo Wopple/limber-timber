@@ -3,11 +3,13 @@ from typing import Any, Callable, ClassVar, Generator, TYPE_CHECKING
 
 from pydantic import BaseModel
 
+from liti.core.context import Context
+
 # avoid circular import errors by delaying the import of model types
 # which need to use types from this file
 if TYPE_CHECKING:
     from liti.core.model.v1.datatype import Array, BigNumeric, Float, Int, Numeric
-    from liti.core.model.v1.schema import Partitioning, Table
+    from liti.core.model.v1.schema import Partitioning, Table, View
 
 
 class Defaulter:
@@ -16,26 +18,31 @@ class Defaulter:
     Default methods update None values to their defaults.
     """
 
-    def defaults_noop(self, node: Any):
+    def defaults_noop(self, node: Any, context: Context):
         pass
 
-    def int_defaults(self, node: 'Int'):
+    def int_defaults(self, node: 'Int', context: Context):
         pass
 
-    def float_defaults(self, node: 'Float'):
+    def float_defaults(self, node: 'Float', context: Context):
         pass
 
-    def numeric_defaults(self, node: 'Numeric'):
+    def numeric_defaults(self, node: 'Numeric', context: Context):
         pass
 
-    def big_numeric_defaults(self, node: 'BigNumeric'):
+    def big_numeric_defaults(self, node: 'BigNumeric', context: Context):
         pass
 
-    def partitioning_defaults(self, node: 'Partitioning'):
+    def partitioning_defaults(self, node: 'Partitioning', context: Context):
         pass
 
-    def table_defaults(self, node: 'Table'):
+    def table_defaults(self, node: 'Table', context: Context):
         pass
+
+    def view_defaults(self, node: 'View', context: Context):
+        if node.select_sql is None and node.select_file is not None:
+            with open(context.target_dir / node.select_file) as f:
+                node.select_sql = f.read()
 
 
 class Defaultable:
@@ -43,13 +50,13 @@ class Defaultable:
 
     DEFAULT_METHOD: ClassVar[str] = 'defaults_noop'
 
-    def set_defaults(self, defaulter: Defaulter):
+    def set_defaults(self, defaulter: Defaulter, context: Context):
         """ Updates the object with defaults applied
 
         This method should call set_defaults on the object's children.
         """
 
-        getattr(defaulter, self.__class__.DEFAULT_METHOD)(self)
+        getattr(defaulter, self.__class__.DEFAULT_METHOD)(self, context)
 
 
 class Validator:
@@ -58,26 +65,30 @@ class Validator:
     Validation methods fix invalid values and raise if still invalid.
     """
 
-    def noop_validate(self, node: Any):
+    def noop_validate(self, node: Any, context: Context):
         pass
 
-    def validate_int(self, node: 'Int'):
+    def validate_int(self, node: 'Int', context: Context):
         pass
 
-    def validate_float(self, node: 'Float'):
+    def validate_float(self, node: 'Float', context: Context):
         pass
 
-    def validate_numeric(self, node: 'Numeric'):
+    def validate_numeric(self, node: 'Numeric', context: Context):
         pass
 
-    def validate_big_numeric(self, node: 'BigNumeric'):
+    def validate_big_numeric(self, node: 'BigNumeric', context: Context):
         pass
 
-    def validate_array(self, node: 'Array'):
+    def validate_array(self, node: 'Array', context: Context):
         pass
 
-    def validate_partitioning(self, node: 'Partitioning'):
+    def validate_partitioning(self, node: 'Partitioning', context: Context):
         pass
+
+    def validate_view(self, node: 'View', context: Context):
+        if not node.select_sql:
+            raise ValueError(f"View {node.name} has no select SQL")
 
 
 class Validatable:
@@ -85,13 +96,13 @@ class Validatable:
 
     VALIDATE_METHOD: ClassVar[str] = 'noop_validate'
 
-    def liti_validate(self, validator: Validator):
+    def liti_validate(self, validator: Validator, context: Context):
         """ Raises if not valid
 
         This method should call liti_validate on the object's children.
         """
 
-        getattr(validator, self.__class__.VALIDATE_METHOD)(self)
+        getattr(validator, self.__class__.VALIDATE_METHOD)(self, context)
 
 
 def is_match(match: Any, value: Any) -> bool:
@@ -147,23 +158,23 @@ class LitiModel(BaseModel, Defaultable, Validatable):
             for subclass in LitiModel.__subclasses__()
         }[name]
 
-    def set_defaults(self, defaulter: Defaulter):
+    def set_defaults(self, defaulter: Defaulter, context: Context):
         for field_name in self.__pydantic_fields__.keys():
             field = getattr(self, field_name)
 
             if isinstance(field, Defaultable):
-                field.set_defaults(defaulter)
+                field.set_defaults(defaulter, context)
 
-        super().set_defaults(defaulter)
+        super().set_defaults(defaulter, context)
 
-    def liti_validate(self, validator: Validator):
+    def liti_validate(self, validator: Validator, context: Context):
         for field_name in self.__pydantic_fields__.keys():
             field = getattr(self, field_name)
 
             if isinstance(field, Validatable):
-                field.liti_validate(validator)
+                field.liti_validate(validator, context)
 
-        super().liti_validate(validator)
+        super().liti_validate(validator, context)
 
     def get_roots(self, root: type["LitiModel"], full_match: Any) -> Generator[tuple["LitiModel", Any], None, None]:
         """ Yields all the root nodes of the given type that match the provided `full_match`

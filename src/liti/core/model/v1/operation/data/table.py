@@ -9,12 +9,16 @@ from liti.core.model.v1.schema import ColumnName, ForeignKey, Identifier, Interv
 
 
 class CreateTable(Operation):
+    """ Semantics: CREATE """
+
     table: Table
 
     KIND: ClassVar[str] = 'create_table'
 
 
 class DropTable(Operation):
+    """ Semantics: DROP """
+
     table_name: TableName
 
     KIND: ClassVar[str] = 'drop_table'

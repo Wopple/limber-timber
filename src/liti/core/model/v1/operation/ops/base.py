@@ -2,11 +2,25 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from liti.core.backend.base import DbBackend, MetaBackend
+from liti.core.context import Context
 from liti.core.model.v1.operation.data.base import Operation
 
 
 class OperationOps(ABC):
     op: Operation
+    context: Context
+
+    @property
+    def db_backend(self) -> DbBackend:
+        return self.context.db_backend
+
+    @property
+    def meta_backend(self) -> MetaBackend:
+        return self.context.meta_backend
+
+    @property
+    def target_dir(self) -> Path | None:
+        return self.context.target_dir
 
     @staticmethod
     def simulate(operations: list[Operation]) -> DbBackend:
@@ -14,11 +28,15 @@ class OperationOps(ABC):
         from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
         from liti.core.runner import MigrateRunner
 
-        sim_db = MemoryDbBackend()
-        sim_meta = MemoryMetaBackend()
-        sim_runner = MigrateRunner(db_backend=sim_db, meta_backend=sim_meta, target=operations)
-        sim_runner.run(wet_run=True, silent=True)
-        return sim_db
+        sim_context = Context(
+            db_backend=MemoryDbBackend(),
+            meta_backend=MemoryMetaBackend(),
+            target_operations=operations,
+            silent=True,
+        )
+
+        MigrateRunner(context=sim_context).run(wet_run=True)
+        return sim_context.db_backend
 
     @classmethod
     def get_attachment(cls, op: Operation) -> type["OperationOps"]:
@@ -32,17 +50,17 @@ class OperationOps(ABC):
         }[type(op)]
 
     @abstractmethod
-    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
+    def up(self):
         """ Apply the operation """
         pass
 
     @abstractmethod
-    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> Operation:
+    def down(self) -> Operation:
         """ Build the inverse operation """
         pass
 
     @abstractmethod
-    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
+    def is_up(self) -> bool:
         """ True if the operation is applied
 
         If the operation is applied when `is_up` is called, it assumes this is the most recently applied operation.

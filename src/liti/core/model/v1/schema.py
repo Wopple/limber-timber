@@ -242,6 +242,28 @@ class Column(LitiModel):
     description: str | None = None
     rounding_mode: RoundingMode | None = None
 
+    def __init__(
+        self,
+        name: str | ColumnName,
+        datatype: Datatype,
+        default_expression: str | None = None,
+        nullable: bool = False,
+        description: str | None = None,
+        rounding_mode: RoundingMode | None = None,
+    ):
+        """ Allows shorthand instantiation """
+
+        name = ColumnName(name) if isinstance(name, str) else name
+
+        super().__init__(
+            name=name,
+            datatype=datatype,
+            default_expression=default_expression,
+            nullable=nullable,
+            description=description,
+            rounding_mode=rounding_mode,
+        )
+
     @field_validator('datatype', mode='before')
     @classmethod
     def validate_datatype(cls, value: Datatype | str | dict[str, Any]) -> Datatype:
@@ -340,3 +362,30 @@ class Table(LitiModel):
         self.foreign_keys = [
             fk for fk in self.foreign_keys if fk.name != constraint_name
         ]
+
+
+class View(LitiModel):
+    name: TableName
+    columns: list[Column] | None = None
+    select_sql: str | None = None
+    select_file: str | None = None
+    expiration_timestamp: datetime | None = None
+    friendly_name: str | None = None
+    description: str | None = None
+    labels: dict[str, str] | None = None
+    tags: dict[str, str] | None = None
+    privacy_policy: dict[str, Any] | None = None
+
+    DEFAULT_METHOD = 'view_defaults'
+    VALIDATE_METHOD = 'validate_view'
+
+    def __eq__(self, other):
+        if not isinstance(other, View):
+            return False
+
+        return self.model_dump(exclude={'select_file'}) == other.model_dump(exclude={'select_file'})
+
+    @property
+    def column_map(self) -> dict[ColumnName, Column]:
+        # Recreate the map to ensure it is up-to-date
+        return {column.name: column for column in self.columns} if self.columns else {}

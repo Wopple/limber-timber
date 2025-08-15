@@ -1,6 +1,6 @@
 from typing import Any, ClassVar
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 
 from liti.core.model.v1.datatype import Datatype, parse_datatype
 from liti.core.model.v1.operation.data.base import Operation

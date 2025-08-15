@@ -6,6 +6,7 @@ from typing import Any
 from liti import bigquery as bq
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
+from liti.core.context import Context
 from liti.core.error import Unsupported, UnsupportedError
 from liti.core.function import parse_operation
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, Date, DATE_TIME, DateTime, Float, \
@@ -14,7 +15,7 @@ from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, \
     ForeignReference, Identifier, \
-    IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, TableName
+    IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, TableName, View
 
 log = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ def to_fields(datatype: Datatype) -> tuple[bq.SchemaField, ...]:
         return to_fields(datatype.inner)
     if isinstance(datatype, Struct):
         return tuple(
-            to_schema_field(Column(name=name, datatype=dt, nullable=True))
+            to_schema_field(Column(name, dt, nullable=True))
             for name, dt in datatype.fields.items()
         )
     else:
@@ -873,6 +874,62 @@ class BigQueryDbBackend(DbBackend):
             'rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL',
         )
 
+    def has_view(self, name: TableName) -> bool:
+        return self.has_table(name)
+
+    def create_or_replace_view(self, view: View):
+        column_sqls = [column_to_sql(column) for column in view.columns]
+        options = []
+
+        if view.friendly_name:
+            options.append(f'friendly_name = \'{view.friendly_name}\'')
+
+        if view.description:
+            options.append(f'description = \'{view.description}\'')
+
+        if view.labels:
+            options.append(f'labels = {option_dict_to_sql(view.labels)}')
+
+        if view.tags:
+            options.append(f'tags = {option_dict_to_sql(view.tags)}')
+
+        if view.expiration_timestamp:
+            utc_ts = view.expiration_timestamp.astimezone(timezone.utc)
+            options.append(f'expiration_timestamp = TIMESTAMP \'{utc_ts.strftime("%Y-%m-%d %H:%M:%S UTC")}\'')
+
+        if view.privacy_policy:
+            options.append(f'privacy_policy = \'{json.dumps(view.privacy_policy)}\'')
+
+        if options:
+            joined_options = ',\n    '.join(options)
+
+            options_sql = (
+                f'OPTIONS(\n'
+                f'    {joined_options}\n'
+                f')\n'
+            )
+        else:
+            options_sql = ''
+
+        columns_sql = ',\n    '.join(column_sqls)
+
+        if columns_sql:
+            columns_sql = (
+                f' (\n'
+                f'    {column_sqls}\n'
+                f')'
+            )
+
+        self.client.query_and_wait(
+            f'CREATE OR REPLACE VIEW `{view.name}`{columns_sql}\n'
+            f'{options_sql}\n'
+            f'AS\n'
+            f'{view.select_sql}'
+        )
+
+    def drop_view(self, name: TableName):
+        self.drop_table(name)
+
     def execute_sql(self, sql: str):
         self.client.query_and_wait(sql)
 
@@ -896,27 +953,27 @@ class BigQueryDbBackend(DbBackend):
 
     # default methods
 
-    def int_defaults(self, node: Int):
+    def int_defaults(self, node: Int, context: Context):
         node.bits = node.bits or 64
 
-    def float_defaults(self, node: Float):
+    def float_defaults(self, node: Float, context: Context):
         node.bits = node.bits or 64
 
-    def numeric_defaults(self, node: Numeric):
+    def numeric_defaults(self, node: Numeric, context: Context):
         node.precision = node.precision or 38
         node.scale = node.scale or 9
 
-    def big_numeric_defaults(self, node: BigNumeric):
+    def big_numeric_defaults(self, node: BigNumeric, context: Context):
         node.precision = node.precision or 76
         node.scale = node.scale or 38
 
-    def partitioning_defaults(self, node: Partitioning):
+    def partitioning_defaults(self, node: Partitioning, context: Context):
         if node.kind == 'TIME':
             node.time_unit = node.time_unit or 'DAY'
         elif node.kind == 'INT':
             node.int_step = node.int_step or 1
 
-    def table_defaults(self, node: Table):
+    def table_defaults(self, node: Table, context: Context):
         if node.expiration_timestamp is not None and node.expiration_timestamp.tzinfo is None:
             node.expiration_timestamp = node.expiration_timestamp.astimezone(timezone.utc)
 
@@ -926,17 +983,23 @@ class BigQueryDbBackend(DbBackend):
         if node.enable_fine_grained_mutations is None:
             node.enable_fine_grained_mutations = False
 
+    def view_defaults(self, node: View, context: Context):
+        super().view_defaults(node, context)
+
+        if node.expiration_timestamp is not None and node.expiration_timestamp.tzinfo is None:
+            node.expiration_timestamp = node.expiration_timestamp.astimezone(timezone.utc)
+
     # validation methods
 
-    def validate_int(self, node: Int):
+    def validate_int(self, node: Int, context: Context):
         if node.bits != 64:
             raise ValueError(f'Int.bits must be 64: {node.bits}')
 
-    def validate_float(self, node: Float):
+    def validate_float(self, node: Float, context: Context):
         if node.bits != 64:
             raise ValueError(f'Float.bits must be 64: {node.bits}')
 
-    def validate_numeric(self, node: Numeric):
+    def validate_numeric(self, node: Numeric, context: Context):
         if not (0 <= node.scale <= 9):
             raise ValueError(f'Numeric.scale must be between 0 and 9: {node.scale}')
 
@@ -944,18 +1007,18 @@ class BigQueryDbBackend(DbBackend):
             raise ValueError(
                 f'Numeric.precision must be between {max(1, node.scale)} and {node.scale + 29}: {node.precision}')
 
-    def validate_big_numeric(self, node: BigNumeric):
+    def validate_big_numeric(self, node: BigNumeric, context: Context):
         if not (0 <= node.scale <= 38):
             raise ValueError(f'Scale must be between 0 and 38: {node.scale}')
 
         if not (max(1, node.scale) <= node.precision <= node.scale + 38):
             raise ValueError(f'Precision must be between {max(1, node.scale)} and {node.scale + 38}: {node.precision}')
 
-    def validate_array(self, node: Array):
+    def validate_array(self, node: Array, context: Context):
         if isinstance(node.inner, Array):
             raise ValueError('Nested arrays are not allowed')
 
-    def validate_partitioning(self, node: Partitioning):
+    def validate_partitioning(self, node: Partitioning, context: Context):
         if node.kind == 'TIME':
             required = ['kind', 'time_unit', 'require_filter']
             allowed = required + ['column', 'expiration_days']

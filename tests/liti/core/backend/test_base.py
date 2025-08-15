@@ -9,7 +9,7 @@ def table_name(num: int) -> TableName:
 
 
 def column(num: int) -> Column:
-    return Column(name=f'col_{num}', datatype=INT64)
+    return Column(f'col_{num}', INT64)
 
 
 def create_table(num: int) -> CreateTable:

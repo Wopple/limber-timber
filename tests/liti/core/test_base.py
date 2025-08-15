@@ -38,7 +38,7 @@ def test_get_roots():
 
     table = Table(
         name=table_name,
-        columns=[Column(name=ColumnName('col_bool'), datatype=BOOL)],
+        columns=[Column('col_bool', BOOL)],
         foreign_keys=[ForeignKey(
             foreign_table_name=foreign_table_name,
             references=[ForeignReference(

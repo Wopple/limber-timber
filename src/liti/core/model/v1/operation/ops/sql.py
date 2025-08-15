@@ -1,6 +1,3 @@
-from pathlib import Path
-
-from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.model.v1.operation.data.sql import ExecuteSql
 from liti.core.model.v1.operation.ops.base import OperationOps
 
@@ -11,18 +8,18 @@ class ExecuteSqlOps(OperationOps):
     def __init__(self, op: ExecuteSql):
         self.op = op
 
-    def up(self, db_backend: DbBackend, meta_backend: MetaBackend, target_dir: Path | None):
-        if target_dir is not None:
-            path = target_dir / self.op.is_up
+    def up(self):
+        if self.context.target_dir is not None:
+            path = self.context.target_dir / self.op.up
         else:
-            path = self.op.is_up
+            path = self.op.up
 
         with open(path) as f:
             sql = f.read()
 
-        db_backend.execute_sql(sql)
+        self.context.db_backend.execute_sql(sql)
 
-    def down(self, db_backend: DbBackend, meta_backend: MetaBackend) -> ExecuteSql:
+    def down(self) -> ExecuteSql:
         return ExecuteSql(
             up=self.op.down,
             down=self.op.up,
@@ -30,9 +27,9 @@ class ExecuteSqlOps(OperationOps):
             is_down=self.op.is_up,
         )
 
-    def is_up(self, db_backend: DbBackend, target_dir: Path | None) -> bool:
-        if target_dir is not None:
-            path = target_dir / self.op.is_up
+    def is_up(self) -> bool:
+        if self.context.target_dir is not None:
+            path = self.context.target_dir / self.op.is_up
         else:
             path = self.op.is_up
 
@@ -40,7 +37,7 @@ class ExecuteSqlOps(OperationOps):
             with open(path) as f:
                 sql = f.read()
 
-            return db_backend.execute_bool_value_query(sql)
+            return self.context.db_backend.execute_bool_value_query(sql)
         elif isinstance(self.op.is_up, bool):
             return self.op.is_up
         else:

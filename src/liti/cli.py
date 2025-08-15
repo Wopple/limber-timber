@@ -1,5 +1,6 @@
 import logging
 from argparse import ArgumentParser, BooleanOptionalAction, Namespace
+from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
@@ -8,6 +9,7 @@ from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.backend.bigquery import BigQueryDbBackend, BigQueryMetaBackend
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.client.bigquery import BqClient
+from liti.core.context import Context
 from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, TableName
 from liti.core.runner import MigrateRunner, ScanRunner
 
@@ -122,16 +124,16 @@ def migrate():
     db_backend = build_db_backend(args, clients)
     meta_backend = build_meta_backend(args, clients)
 
-    runner = MigrateRunner(
+    runner = MigrateRunner(context=Context(
         db_backend=db_backend,
         meta_backend=meta_backend,
-        target=args.target,
-    )
+        target_dir=args.target and Path(args.target),
+        silent=silent,
+    ))
 
     runner.run(
         wet_run=args.wet,
         allow_down=args.down,
-        silent=silent,
     )
 
 

@@ -4,7 +4,12 @@
 
 ---
 
-This project is in alpha: it needs to be battle tested to work out the kinks.
+![status](https://img.shields.io/pypi/status/limber-timber)
+[![PyPI version](https://img.shields.io/pypi/v/limber-timber)](https://pypi.org/project/limber-timber/)
+![Python](https://img.shields.io/pypi/pyversions/limber-timber)
+[![Tests](https://github.com/Wopple/limber-timber/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Wopple/limber-timber/actions/workflows/unit-tests.yml)
+![Last Commit](https://img.shields.io/github/last-commit/Wopple/limber-timber)
+[![License](https://img.shields.io/github/license/Wopple/limber-timber)](LICENSE)
 
 ```shell
 pip install limber-timber

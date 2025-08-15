@@ -30,6 +30,5 @@ class Template(BaseModel):
 
 class Manifest(BaseModel):
     version: int
-    target_dir: Path
     operation_files: list[Path]
     templates: list[Template] | None

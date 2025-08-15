@@ -5,12 +5,13 @@ from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, IntervalLiteral, \
-    PrimaryKey, RoundingMode, SchemaName, Table, TableName
+    PrimaryKey, RoundingMode, SchemaName, Table, TableName, View
 
 
 class MemoryDbBackend(DbBackend):
     def __init__(self):
         self.tables: dict[TableName, Table] = {}
+        self.views: dict[TableName, View] = {}
 
     def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
         return [
@@ -32,9 +33,15 @@ class MemoryDbBackend(DbBackend):
         return self.tables.get(name)
 
     def create_table(self, table: Table):
+        if table.name in self.tables:
+            raise ValueError(f'Table {table.name} already exists')
+
         self.tables[table.name] = table.model_copy(deep=True)
 
     def drop_table(self, name: TableName):
+        if name not in self.tables:
+            raise ValueError(f'Table {name} does not exist')
+
         del self.tables[name]
 
     def rename_table(self, from_name: TableName, to_name: Identifier):
@@ -120,6 +127,21 @@ class MemoryDbBackend(DbBackend):
         table = self.get_table(table_name)
         column = table.column_map[column_name]
         column.rounding_mode = rounding_mode
+
+    def has_view(self, name: TableName) -> bool:
+        return name in self.views
+
+    def get_view(self, name: TableName) -> View | None:
+        return self.views.get(name)
+
+    def create_or_replace_view(self, view: View):
+        self.views[view.name] = view.model_copy(deep=True)
+
+    def drop_view(self, name: TableName):
+        if name not in self.views:
+            raise ValueError(f'View {name} does not exist')
+
+        del self.views[name]
 
 
 class MemoryMetaBackend(MetaBackend):

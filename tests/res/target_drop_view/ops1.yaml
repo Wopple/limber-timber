@@ -1,0 +1,31 @@
+version: 1
+operations:
+- kind: create_or_replace_view
+  data:
+    view:
+      name:
+        database: my_project
+        schema_name: my_dataset
+        table_name: view_table
+      select_file: ../sql/create_view.sql
+      columns:
+      - name: foo
+        datatype: INT64
+      friendly_name: my_friendly_name
+      description: "My description"
+      labels:
+        key_1: value_1
+        key_2: value_2
+      tags:
+        key_3: value_3
+        key_4: value_4
+      expiration_timestamp: "2000-01-02 03:04:05"
+      privacy_policy:
+        p1: 123
+        p2: "baz"
+- kind: drop_view
+  data:
+    view_name:
+      database: my_project
+      schema_name: my_dataset
+      table_name: view_table

@@ -1,18 +1,18 @@
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Callable
 
 from pytest import fixture, mark
 
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
+from liti.core.context import Context
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
     Numeric, Range, STRING, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.manifest import Template
 from liti.core.model.v1.operation.data.column import AddColumn
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, IntervalLiteral, Partitioning, \
-    PrimaryKey, \
-    RoundingMode, Table, \
-    TableName
+    PrimaryKey, RoundingMode, Table, TableName
 from liti.core.runner import apply_templates, MigrateRunner, sort_operations
 
 MakeRunner = Callable[[str], MigrateRunner]
@@ -30,7 +30,11 @@ def meta_backend() -> MemoryMetaBackend:
 
 @fixture
 def make_runner(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend) -> MakeRunner:
-    return lambda filename: MigrateRunner(db_backend, meta_backend, f'tests/res/{filename}')
+    return lambda filename: MigrateRunner(context=Context(
+        db_backend=db_backend,
+        meta_backend=meta_backend,
+        target_dir=Path(f'tests/res/{filename}'),
+    ))
 
 
 def test_all_datatypes(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
@@ -45,28 +49,28 @@ def test_all_datatypes(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
     assert datatypes_table == Table(
         name=table_name,
         columns=[
-            Column(name=ColumnName('col_bool'), datatype=BOOL),
-            Column(name=ColumnName('col_int_64'), datatype=INT64),
-            Column(name=ColumnName('col_float_64'), datatype=FLOAT64),
-            Column(name=ColumnName('col_int_64_bits'), datatype=INT64),
-            Column(name=ColumnName('col_float_64_bits'), datatype=FLOAT64),
-            Column(name=ColumnName('col_geography'), datatype=GEOGRAPHY),
-            Column(name=ColumnName('col_numeric'), datatype=Numeric(precision=38, scale=9)),
-            Column(name=ColumnName('col_big_numeric'), datatype=BigNumeric(precision=76, scale=38)),
-            Column(name=ColumnName('col_string'), datatype=STRING),
-            Column(name=ColumnName('col_json'), datatype=JSON),
-            Column(name=ColumnName('col_date'), datatype=DATE),
-            Column(name=ColumnName('col_time'), datatype=TIME),
-            Column(name=ColumnName('col_date_time'), datatype=DATE_TIME),
-            Column(name=ColumnName('col_timestamp'), datatype=TIMESTAMP),
-            Column(name=ColumnName('col_range_date'), datatype=Range(kind='DATE')),
-            Column(name=ColumnName('col_range_datetime'), datatype=Range(kind='DATETIME')),
-            Column(name=ColumnName('col_range_timestamp'), datatype=Range(kind='TIMESTAMP')),
-            Column(name=ColumnName('col_array'), datatype=Array(inner=Struct(fields={'field_bool': BOOL}))),
-            Column(
-                name=ColumnName('col_struct'),
-                datatype=Struct(fields={'field_bool': BOOL, 'field_array': Array(inner=BOOL)}),
-            ),
+            Column('col_bool', BOOL),
+            Column('col_int_64', INT64),
+            Column('col_float_64', FLOAT64),
+            Column('col_int_64_bits', INT64),
+            Column('col_float_64_bits', FLOAT64),
+            Column('col_geography', GEOGRAPHY),
+            Column('col_numeric', Numeric(precision=38, scale=9)),
+            Column('col_big_numeric', BigNumeric(precision=76, scale=38)),
+            Column('col_string', STRING),
+            Column('col_json', JSON),
+            Column('col_date', DATE),
+            Column('col_time', TIME),
+            Column('col_date_time', DATE_TIME),
+            Column('col_timestamp', TIMESTAMP),
+            Column('col_range_date', Range(kind='DATE')),
+            Column('col_range_datetime', Range(kind='DATETIME')),
+            Column('col_range_timestamp', Range(kind='TIMESTAMP')),
+            Column('col_array', Array(inner=Struct(fields={'field_bool': BOOL}))),
+            Column('col_struct', Struct(fields={
+                'field_bool': BOOL,
+                'field_array': Array(inner=BOOL),
+            })),
         ],
     )
 
@@ -123,9 +127,7 @@ def test_drop_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
 
     assert revert_table == Table(
         name=table_name,
-        columns=[
-            Column(name='col_bool', datatype=BOOL),
-        ],
+        columns=[Column('col_bool', BOOL)],
     )
 
 
@@ -749,6 +751,83 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     assert table.column_map[ColumnName('col_bool')].description is None
 
 
+def test_create_or_replace_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
+    table_name = TableName('my_project.my_dataset.view_table')
+
+    make_runner('target_create_view').run(wet_run=True)
+    view = db_backend.get_view(table_name)
+
+    assert len(db_backend.views) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert view.select_sql == 'SELECT 1 AS foo;\n'
+    assert view.columns == [Column('foo', INT64)]
+    assert view.friendly_name == 'my_friendly_name'
+    assert view.description == 'My description'
+    assert view.labels == {"key_1": "value_1", "key_2": "value_2"}
+    assert view.tags == {"key_3": "value_3", "key_4": "value_4"}
+
+    assert view.expiration_timestamp == datetime(
+        year=2000,
+        month=1,
+        day=2,
+        hour=3,
+        minute=4,
+        second=5,
+    )
+
+    assert view.privacy_policy == {"p1": 123, "p2": "baz"}
+
+    make_runner('target_replace_view').run(wet_run=True)
+    view = db_backend.get_view(table_name)
+
+    assert len(db_backend.views) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+    assert view.select_sql == 'SELECT 2 AS bar;\n'
+    assert view.columns == [Column('bar', INT64)]
+
+    make_runner('target_create_view').run(wet_run=True, allow_down=True)
+    view = db_backend.get_view(table_name)
+
+    assert len(db_backend.views) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert view.select_sql == 'SELECT 1 AS foo;\n'
+    assert view.columns == [Column('foo', INT64)]
+
+
+def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
+    table_name = TableName('my_project.my_dataset.view_table')
+
+    make_runner('target_drop_view').run(wet_run=True)
+    view = db_backend.get_view(table_name)
+
+    assert len(db_backend.views) == 0
+    assert len(meta_backend.get_applied_operations()) == 2
+    assert view is None
+
+    make_runner('target_create_view').run(wet_run=True, allow_down=True)
+    view = db_backend.get_view(table_name)
+
+    assert len(db_backend.views) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert view.select_sql == 'SELECT 1 AS foo;\n'
+    assert view.columns == [Column('foo', INT64)]
+    assert view.friendly_name == 'my_friendly_name'
+    assert view.description == 'My description'
+    assert view.labels == {"key_1": "value_1", "key_2": "value_2"}
+    assert view.tags == {"key_3": "value_3", "key_4": "value_4"}
+
+    assert view.expiration_timestamp == datetime(
+        year=2000,
+        month=1,
+        day=2,
+        hour=3,
+        minute=4,
+        second=5,
+    )
+
+    assert view.privacy_policy == {"p1": 123, "p2": "baz"}
+
+
 def test_template_database_and_schema(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
     table_name = TableName('new_project.new_dataset.template_table')
 
@@ -769,7 +848,7 @@ def test_apply_templates():
     operations = [
         CreateTable(table=Table(
             name=table_name,
-            columns=[Column(name=ColumnName('col_bool'), datatype=BOOL)],
+            columns=[Column('col_bool', BOOL)],
             foreign_keys=[ForeignKey(
                 foreign_table_name=foreign_table_name,
                 references=[ForeignReference(
@@ -780,7 +859,7 @@ def test_apply_templates():
         )),
         AddColumn(
             table_name=add_table_name,
-            column=Column(name=ColumnName('col_int'), datatype=INT64),
+            column=Column('col_int', INT64),
         ),
     ]
 
@@ -855,7 +934,7 @@ def test_sort_operations(graph, expected):
     def to_table(local_table: str, foreign_tables: list[str]) -> Table:
         return Table(
             name=to_table_name(local_table),
-            columns=[Column(name=ColumnName('col_bool'), datatype=BOOL)],
+            columns=[Column('col_bool', BOOL)],
             foreign_keys=[
                 ForeignKey(
                     foreign_table_name=to_table_name(name),

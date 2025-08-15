@@ -5,6 +5,7 @@ from typing import Any, Iterator
 import yaml
 
 from liti.core.base import LitiModel, STAR
+from liti.core.context import Context
 from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.manifest import Manifest, Template
 from liti.core.model.v1.operation.data.base import Operation
@@ -43,8 +44,8 @@ def parse_operation(op_kind: str, op_data: dict) -> Operation:
     return Operation.get_kind(op_kind)(**op_data)
 
 
-def attach_ops(operation: Operation) -> OperationOps:
-    return OperationOps.get_attachment(operation)(operation)
+def attach_ops(operation: Operation, context: Context) -> OperationOps:
+    return OperationOps.get_attachment(operation)(operation, context)
 
 
 def parse_json_or_yaml_file(path: Path) -> list | dict:
@@ -78,7 +79,6 @@ def parse_manifest(path: Path) -> Manifest:
 
     return Manifest(
         version=obj['version'],
-        target_dir=path.parent,
         operation_files=[Path(filename) for filename in obj['operation_files']],
         templates=None if 'templates' not in obj else [
             Template(
@@ -99,9 +99,9 @@ def parse_operation_file(path: Path) -> list[Operation]:
     return [parse_operation(op['kind'], op['data']) for op in obj['operations']]
 
 
-def parse_operations(manifest: Manifest) -> list[Operation]:
+def parse_operations(operation_files: list[Path], target_dir: Path) -> list[Operation]:
     return [
         operation
-        for filename in manifest.operation_files
-        for operation in parse_operation_file(manifest.target_dir.joinpath(filename))
+        for filename in operation_files
+        for operation in parse_operation_file(target_dir.joinpath(filename))
     ]
