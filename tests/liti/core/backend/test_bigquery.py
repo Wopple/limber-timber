@@ -1780,6 +1780,7 @@ def test_create_view_full(db_backend: BigQueryDbBackend, bq_client: Mock):
         labels={'l1': 'v1', 'l2': 'v2'},
         tags={'t1': 'v1', 't2': 'v2'},
         expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+        privacy_policy={"p1": 123, "p2": "baz"},
     )
 
     db_backend.create_or_replace_view(view)
@@ -1793,7 +1794,8 @@ def test_create_view_full(db_backend: BigQueryDbBackend, bq_client: Mock):
         f'    description = \'Test description\',\n'
         f'    labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')],\n'
         f'    tags = [(\'t1\', \'v1\'), (\'t2\', \'v2\')],\n'
-        f'    expiration_timestamp = TIMESTAMP \'2025-01-01 00:00:00 UTC\'\n'
+        f'    expiration_timestamp = TIMESTAMP \'2025-01-01 00:00:00 UTC\',\n'
+        f'    privacy_policy = \'{{"p1": 123, "p2": "baz"}}\'\n'
         f')\n'
         f'AS\n'
         f'SELECT DATE \'2025-01-01\' AS col_date;\n'
