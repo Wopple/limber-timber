@@ -12,12 +12,12 @@ def test_serialize_bool():
 @mark.parametrize(
     'bits, expected',
     [
-        (None, {"type": "INT", "bits": None}),
+        (None, {'type': 'INT', 'bits': None}),
         (8, 'INT8'),
         (16, 'INT16'),
         (32, 'INT32'),
         (64, 'INT64'),
-        (128, {"type": "INT", "bits": 128}),
+        (128, {'type': 'INT', 'bits': 128}),
     ],
 )
 def test_serialize_int(bits, expected):
@@ -28,12 +28,12 @@ def test_serialize_int(bits, expected):
 @mark.parametrize(
     'bits, expected',
     [
-        (None, {"type": "FLOAT", "bits": None}),
+        (None, {'type': 'FLOAT', 'bits': None}),
         (8, 'FLOAT8'),
         (16, 'FLOAT16'),
         (32, 'FLOAT32'),
         (64, 'FLOAT64'),
-        (128, {"type": "FLOAT", "bits": 128}),
+        (128, {'type': 'FLOAT', 'bits': 128}),
     ],
 )
 def test_serialize_float(bits, expected):
@@ -44,11 +44,11 @@ def test_serialize_float(bits, expected):
 @mark.parametrize(
     'precision, scale, expected',
     [
-        (None, None, {"type": "NUMERIC", "precision": None, "scale": None}),
-        (1, None, {"type": "NUMERIC", "precision": 1, "scale": None}),
-        (None, 0, {"type": "NUMERIC", "precision": None, "scale": 0}),
-        (1, 0, {"type": "NUMERIC", "precision": 1, "scale": 0}),
-        (38, 9, {"type": "NUMERIC", "precision": 38, "scale": 9}),
+        (None, None, {'type': 'NUMERIC', 'precision': None, 'scale': None}),
+        (1, None, {'type': 'NUMERIC', 'precision': 1, 'scale': None}),
+        (None, 0, {'type': 'NUMERIC', 'precision': None, 'scale': 0}),
+        (1, 0, {'type': 'NUMERIC', 'precision': 1, 'scale': 0}),
+        (38, 9, {'type': 'NUMERIC', 'precision': 38, 'scale': 9}),
     ],
 )
 def test_serialize_numeric(precision, scale, expected):
@@ -59,11 +59,11 @@ def test_serialize_numeric(precision, scale, expected):
 @mark.parametrize(
     'precision, scale, expected',
     [
-        (None, None, {"type": "BIGNUMERIC", "precision": None, "scale": None}),
-        (1, None, {"type": "BIGNUMERIC", "precision": 1, "scale": None}),
-        (None, 0, {"type": "BIGNUMERIC", "precision": None, "scale": 0}),
-        (1, 0, {"type": "BIGNUMERIC", "precision": 1, "scale": 0}),
-        (76, 38, {"type": "BIGNUMERIC", "precision": 76, "scale": 38}),
+        (None, None, {'type': 'BIGNUMERIC', 'precision': None, 'scale': None}),
+        (1, None, {'type': 'BIGNUMERIC', 'precision': 1, 'scale': None}),
+        (None, 0, {'type': 'BIGNUMERIC', 'precision': None, 'scale': 0}),
+        (1, 0, {'type': 'BIGNUMERIC', 'precision': 1, 'scale': 0}),
+        (76, 38, {'type': 'BIGNUMERIC', 'precision': 76, 'scale': 38}),
     ],
 )
 def test_serialize_big_numeric(precision, scale, expected):
@@ -109,9 +109,9 @@ def test_serialize_timestamp():
 @mark.parametrize(
     'kind, expected',
     [
-        ('DATE', {"type": "RANGE", "kind": 'DATE'}),
-        ('DATETIME', {"type": "RANGE", "kind": 'DATETIME'}),
-        ('TIMESTAMP', {"type": "RANGE", "kind": 'TIMESTAMP'}),
+        ('DATE', {'type': 'RANGE', 'kind': 'DATE'}),
+        ('DATETIME', {'type': 'RANGE', 'kind': 'DATETIME'}),
+        ('TIMESTAMP', {'type': 'RANGE', 'kind': 'TIMESTAMP'}),
     ],
 )
 def test_serialize_range(kind, expected):

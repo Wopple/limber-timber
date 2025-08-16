@@ -88,7 +88,7 @@ class Validator:
 
     def validate_view(self, node: 'View', context: Context):
         if not node.select_sql:
-            raise ValueError(f"View {node.name} has no select SQL")
+            raise ValueError(f'View {node.name} has no select SQL')
 
 
 class Validatable:
@@ -148,7 +148,7 @@ class LitiModel(BaseModel, Defaultable, Validatable):
     """ Base class for all Liti model classes """
 
     @classmethod
-    def by_name(cls, name: str) -> type["LitiModel"]:
+    def by_name(cls, name: str) -> type['LitiModel']:
         # ensure LitiModel subclasses are imported first
         # noinspection PyUnresolvedReferences
         import liti.core.model.v1.subclasses
@@ -176,7 +176,7 @@ class LitiModel(BaseModel, Defaultable, Validatable):
 
         super().liti_validate(validator, context)
 
-    def get_roots(self, root: type["LitiModel"], full_match: Any) -> Generator[tuple["LitiModel", Any], None, None]:
+    def get_roots(self, root: type['LitiModel'], full_match: Any) -> Generator[tuple['LitiModel', Any], None, None]:
         """ Yields all the root nodes of the given type that match the provided `full_match`
 
         Also yields the remaining local match portion associated with each root in case the template path traverses

@@ -67,7 +67,6 @@ These are listed in rough priority order.
 - ✅ In-memory Database
 - ✅ In-memory Metadata
 - ➡️ Big Query Database
-  - ➡️ Create View
   - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table
   - ➡️ Create Table Clone

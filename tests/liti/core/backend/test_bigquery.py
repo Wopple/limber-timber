@@ -12,7 +12,7 @@ from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, ForeignReference, \
-    Identifier, IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, TableName
+    Identifier, IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, TableName, View
 from tests.liti.util import NoRaise
 
 
@@ -1265,7 +1265,22 @@ def test_can_coerce(from_dt, to_dt, expected):
     assert actual == expected
 
 
-def test_create_table(db_backend: BigQueryDbBackend, bq_client: Mock):
+def test_create_table_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
+    table = Table(
+        name=TableName('test_project.test_dataset.test_table'),
+        columns=[Column('col_date', DATE)],
+    )
+
+    db_backend.create_table(table)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'CREATE TABLE `test_project.test_dataset.test_table` (\n'
+        f'    `col_date` DATE NOT NULL\n'
+        f')\n'
+    )
+
+
+def test_create_table_full(db_backend: BigQueryDbBackend, bq_client: Mock):
     table = Table(
         name=TableName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
@@ -1736,6 +1751,53 @@ def test_set_column_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock
     column_name = ColumnName('col_num')
     db_backend.set_column_rounding_mode(table_name, column_name, rounding_mode)
     bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+def test_create_view_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
+    view = View(
+        name=TableName('test_project.test_dataset.test_view'),
+        select_sql='SELECT DATE \'2025-01-01\' AS col_date;',
+        select_file='some/path.sql',
+    )
+
+    db_backend.create_or_replace_view(view)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'CREATE OR REPLACE VIEW `test_project.test_dataset.test_view`\n'
+        f'AS\n'
+        f'SELECT DATE \'2025-01-01\' AS col_date;\n'
+    )
+
+
+def test_create_view_full(db_backend: BigQueryDbBackend, bq_client: Mock):
+    view = View(
+        name=TableName('test_project.test_dataset.test_view'),
+        columns=[Column('col_date', description='Test column description')],
+        select_sql='SELECT DATE \'2025-01-01\' AS col_date;',
+        select_file='some/path.sql',
+        friendly_name='test_friendly',
+        description='Test description',
+        labels={'l1': 'v1', 'l2': 'v2'},
+        tags={'t1': 'v1', 't2': 'v2'},
+        expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    )
+
+    db_backend.create_or_replace_view(view)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'CREATE OR REPLACE VIEW `test_project.test_dataset.test_view` (\n'
+        f'    `col_date` OPTIONS(description = \'Test column description\')\n'
+        f')\n'
+        f'OPTIONS(\n'
+        f'    friendly_name = \'test_friendly\',\n'
+        f'    description = \'Test description\',\n'
+        f'    labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')],\n'
+        f'    tags = [(\'t1\', \'v1\'), (\'t2\', \'v2\')],\n'
+        f'    expiration_timestamp = TIMESTAMP \'2025-01-01 00:00:00 UTC\'\n'
+        f')\n'
+        f'AS\n'
+        f'SELECT DATE \'2025-01-01\' AS col_date;\n'
+    )
 
 
 def test_int_defaults(db_backend: BigQueryDbBackend, context: Mock):

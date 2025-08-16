@@ -329,6 +329,15 @@ def column_to_sql(column: Column) -> str:
     return f'`{column.name}` {datatype_to_sql(column.datatype)}{column_schema}'
 
 
+def view_column_to_sql(column: Column) -> str:
+    if column.description:
+        options_sql = f' OPTIONS(description = \'{column.description}\')'
+    else:
+        options_sql = ''
+
+    return f'`{column.name}`{options_sql}'
+
+
 def option_dict_to_sql(option: dict[str, str]) -> str:
     join_sql = ', '.join(f'(\'{k}\', \'{v}\')' for k, v in option.items())
     return f'[{join_sql}]'
@@ -878,7 +887,7 @@ class BigQueryDbBackend(DbBackend):
         return self.has_table(name)
 
     def create_or_replace_view(self, view: View):
-        column_sqls = [column_to_sql(column) for column in view.columns]
+        column_sqls = [view_column_to_sql(column) for column in view.columns or []]
         options = []
 
         if view.friendly_name:
@@ -916,15 +925,15 @@ class BigQueryDbBackend(DbBackend):
         if columns_sql:
             columns_sql = (
                 f' (\n'
-                f'    {column_sqls}\n'
+                f'    {columns_sql}\n'
                 f')'
             )
 
         self.client.query_and_wait(
             f'CREATE OR REPLACE VIEW `{view.name}`{columns_sql}\n'
-            f'{options_sql}\n'
+            f'{options_sql}'
             f'AS\n'
-            f'{view.select_sql}'
+            f'{view.select_sql}\n'
         )
 
     def drop_view(self, name: TableName):

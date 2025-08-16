@@ -236,7 +236,7 @@ class ForeignKey(LitiModel):
 
 class Column(LitiModel):
     name: ColumnName
-    datatype: Datatype
+    datatype: Datatype | None = None
     default_expression: str | None = None
     nullable: bool = False
     description: str | None = None
@@ -245,7 +245,7 @@ class Column(LitiModel):
     def __init__(
         self,
         name: str | ColumnName,
-        datatype: Datatype,
+        datatype: Datatype | None = None,
         default_expression: str | None = None,
         nullable: bool = False,
         description: str | None = None,
@@ -266,8 +266,8 @@ class Column(LitiModel):
 
     @field_validator('datatype', mode='before')
     @classmethod
-    def validate_datatype(cls, value: Datatype | str | dict[str, Any]) -> Datatype:
-        return parse_datatype(value)
+    def validate_datatype(cls, value: Datatype | str | dict[str, Any] | None) -> Datatype | None:
+        return value and parse_datatype(value)
 
     @field_serializer('datatype')
     @classmethod

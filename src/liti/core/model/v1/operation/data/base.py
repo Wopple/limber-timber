@@ -7,7 +7,7 @@ class Operation(LitiModel):
     KIND: ClassVar[str]
 
     @classmethod
-    def get_kind(cls, kind: str) -> type["Operation"]:
+    def get_kind(cls, kind: str) -> type['Operation']:
         # ensure Operation subclasses are imported first
         # noinspection PyUnresolvedReferences
         import liti.core.model.v1.operation.data.subclasses
