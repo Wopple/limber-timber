@@ -2,11 +2,11 @@ version: 1
 operation_files:
 - ops1.yaml
 templates:
-# match all TableName.database, and replace their values with "new_project"
-- root_type: TableName
+# match all QualifiedName.database, and replace their values with "new_project"
+- root_type: QualifiedName
   path: database
   value: new_project
-# match all TableName.schema_name, and replace their values with "new_dataset"
-- root_type: TableName
-  path: schema_name
+# match all QualifiedName.schema, and replace their values with "new_dataset"
+- root_type: QualifiedName
+  path: schema
   value: new_dataset

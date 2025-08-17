@@ -5,8 +5,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: datatype_table
+        schema: my_dataset
+        name: datatype_table
       columns:
       - name: col_int
         datatype: INT64

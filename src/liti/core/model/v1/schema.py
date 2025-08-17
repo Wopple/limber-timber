@@ -138,61 +138,57 @@ class ColumnName(Identifier):
         super().__init__(string, **kwargs)
 
 
-class TableName(LitiModel):
+class QualifiedName(LitiModel):
     database: DatabaseName
-    schema_name: SchemaName
-    table_name: Identifier
+    schema: SchemaName
+    name: Identifier
 
-    def __init__(self, name: str | None = None, **kwargs):
-        """ Allows TableName('database.schema_name.table_name') """
+    def __init__(self, name: str | None = None, /, **kwargs):
+        """ Allows QualifiedName('database.schema.table_name') """
 
         if name is None:
             super().__init__(**kwargs)
         else:
-            database, schema_name, table_name = self.name_parts(name)
+            database, schema, name = self.name_parts(name)
 
             super().__init__(
                 database=database,
-                schema_name=schema_name,
-                table_name=table_name,
+                schema=schema,
+                name=name,
             )
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.database, self.schema_name, self.table_name))
+        return hash((self.__class__.__name__, self.database, self.schema, self.name))
 
     def __str__(self) -> str:
         return self.string
 
     @property
     def string(self) -> str:
-        return f'{self.database}.{self.schema_name}.{self.table_name}'
+        return f'{self.database}.{self.schema}.{self.name}'
 
     @classmethod
     def name_parts(cls, name: str) -> list[str]:
         parts = name.split('.')
-        assert len(parts) == 3, f'Expected string in format "database.schema_name.table_name": "{name}"'
+        assert len(parts) == 3, f'Expected string in format "database.schema.table_name": "{name}"'
         return parts
 
     @model_validator(mode='before')
     @classmethod
     def allow_string_init(cls, data: str | dict[str, str]) -> dict[str, str]:
         if isinstance(data, str):
-            database, schema_name, table_name = cls.name_parts(data)
+            database, schema, table_name = cls.name_parts(data)
 
             return {
                 'database': database,
-                'schema_name': schema_name,
+                'schema': schema,
                 'table_name': table_name,
             }
         else:
             return data
 
-    def with_table_name(self, table_name: Identifier) -> 'TableName':
-        return TableName(
-            database=self.database,
-            schema_name=self.schema_name,
-            table_name=table_name,
-        )
+    def with_name(self, name: Identifier) -> 'QualifiedName':
+        return self.model_copy(update={'name': name})
 
 
 class PrimaryKey(LitiModel):
@@ -207,7 +203,7 @@ class ForeignReference(LitiModel):
 
 class ForeignKey(LitiModel):
     name: str | None = None
-    foreign_table_name: TableName
+    foreign_table_name: QualifiedName
     references: list[ForeignReference] = Field(min_length=1)
     enforced: bool | None = None
 
@@ -305,9 +301,9 @@ class BigLake(LitiModel):
     table_format: Literal['ICEBERG'] = 'ICEBERG'
 
 
-class Table(LitiModel):
-    name: TableName
-    columns: list[Column]
+class Relation(LitiModel):
+    name: QualifiedName
+    columns: list[Column] | None = None
     primary_key: PrimaryKey | None = None
     foreign_keys: list[ForeignKey] | None = None
     partitioning: Partitioning | None = None
@@ -323,8 +319,6 @@ class Table(LitiModel):
     enable_fine_grained_mutations: bool | None = None
     kms_key_name: str | None = None
     big_lake: BigLake | None = None
-
-    DEFAULT_METHOD = 'table_defaults'
 
     @model_validator(mode='after')
     def validate_model(self) -> 'Table':
@@ -364,16 +358,13 @@ class Table(LitiModel):
         ]
 
 
-class View(LitiModel):
-    name: TableName
-    columns: list[Column] | None = None
+class Table(Relation):
+    DEFAULT_METHOD = 'table_defaults'
+
+
+class View(Relation):
     select_sql: str | None = None
     select_file: str | None = None
-    expiration_timestamp: datetime | None = None
-    friendly_name: str | None = None
-    description: str | None = None
-    labels: dict[str, str] | None = None
-    tags: dict[str, str] | None = None
     privacy_policy: dict[str, Any] | None = None
 
     DEFAULT_METHOD = 'view_defaults'
@@ -384,8 +375,3 @@ class View(LitiModel):
             return False
 
         return self.model_dump(exclude={'select_file'}) == other.model_dump(exclude={'select_file'})
-
-    @property
-    def column_map(self) -> dict[ColumnName, Column]:
-        # Recreate the map to ensure it is up-to-date
-        return {column.name: column for column in self.columns} if self.columns else {}

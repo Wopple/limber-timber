@@ -13,7 +13,7 @@ from liti.core.logger import NoOpLogger
 from liti.core.model.v1.manifest import Manifest, Template
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, TableName
+from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, QualifiedName
 
 log = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ class MigrateRunner:
 
 def sort_operations(operations: list[Operation]) -> list[Operation]:
     """ Sorts the operations into a valid application order """
-    create_tables: dict[TableName, CreateTable] = {}
+    create_tables: dict[QualifiedName, CreateTable] = {}
     others: list[Operation] = []
 
     for op in operations:
@@ -141,7 +141,7 @@ def sort_operations(operations: list[Operation]) -> list[Operation]:
     sorted_ops = {}
 
     while create_tables:
-        satisfied_ops: dict[TableName, CreateTable] = {}
+        satisfied_ops: dict[QualifiedName, CreateTable] = {}
 
         for op in create_tables.values():
             if all(fk.foreign_table_name in sorted_ops for fk in op.table.foreign_keys or []):
@@ -182,7 +182,7 @@ class ScanRunner:
         if table:
             table.liti_validate(self.db_backend)
 
-            table_name = TableName(database=database, schema_name=schema, table_name=table)
+            table_name = QualifiedName(database=database, schema=schema, table_name=table)
             create_table = self.db_backend.scan_table(table_name)
 
             if create_table is None:

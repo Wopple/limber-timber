@@ -6,7 +6,7 @@ from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
-    IntervalLiteral, PrimaryKey, RoundingMode, SchemaName, Table, TableName, View
+    IntervalLiteral, PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
 
 
 class DbBackend(ABC, Defaulter, Validator):
@@ -15,82 +15,82 @@ class DbBackend(ABC, Defaulter, Validator):
     def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
         raise NotImplementedError('not supported')
 
-    def scan_table(self, name: TableName) -> CreateTable | None:
+    def scan_table(self, name: QualifiedName) -> CreateTable | None:
         raise NotImplementedError('not supported')
 
-    def has_table(self, name: TableName) -> bool:
+    def has_table(self, name: QualifiedName) -> bool:
         raise NotImplementedError('not supported')
 
-    def get_table(self, name: TableName) -> Table | None:
+    def get_table(self, name: QualifiedName) -> Table | None:
         raise NotImplementedError('not supported')
 
     def create_table(self, table: Table):
         raise NotImplementedError('not supported')
 
-    def drop_table(self, name: TableName):
+    def drop_table(self, name: QualifiedName):
         raise NotImplementedError('not supported')
 
-    def rename_table(self, from_name: TableName, to_name: Identifier):
+    def rename_table(self, from_name: QualifiedName, to_name: Identifier):
         raise NotImplementedError('not supported')
 
-    def set_primary_key(self, table_name: TableName, primary_key: PrimaryKey | None):
+    def set_primary_key(self, table_name: QualifiedName, primary_key: PrimaryKey | None):
         raise NotImplementedError('not supported')
 
-    def add_foreign_key(self, table_name: TableName, foreign_key: ForeignKey):
+    def add_foreign_key(self, table_name: QualifiedName, foreign_key: ForeignKey):
         raise NotImplementedError('not supported')
 
-    def drop_constraint(self, table_name: TableName, constraint_name: Identifier):
+    def drop_constraint(self, table_name: QualifiedName, constraint_name: Identifier):
         raise NotImplementedError('not supported')
 
-    def set_partition_expiration(self, table_name: TableName, expiration_days: float | None):
+    def set_partition_expiration(self, table_name: QualifiedName, expiration_days: float | None):
         raise NotImplementedError('not supported')
 
-    def set_require_partition_filter(self, table_name: TableName, require_filter: bool):
+    def set_require_partition_filter(self, table_name: QualifiedName, require_filter: bool):
         raise NotImplementedError('not supported')
 
-    def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
+    def set_clustering(self, table_name: QualifiedName, column_names: list[ColumnName] | None):
         raise NotImplementedError('not supported')
 
-    def set_description(self, table_name: TableName, description: str | None):
+    def set_description(self, table_name: QualifiedName, description: str | None):
         raise NotImplementedError('not supported')
 
-    def set_labels(self, table_name: TableName, labels: dict[str, str] | None):
+    def set_labels(self, table_name: QualifiedName, labels: dict[str, str] | None):
         raise NotImplementedError('not supported')
 
-    def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
+    def set_tags(self, table_name: QualifiedName, tags: dict[str, str] | None):
         raise NotImplementedError('not supported')
 
-    def set_expiration_timestamp(self, table_name: TableName, expiration_timestamp: datetime | None):
+    def set_expiration_timestamp(self, table_name: QualifiedName, expiration_timestamp: datetime | None):
         raise NotImplementedError('not supported')
 
-    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode | None):
+    def set_default_rounding_mode(self, table_name: QualifiedName, rounding_mode: RoundingMode | None):
         raise NotImplementedError('not supported')
 
-    def set_max_staleness(self, table_name: TableName, max_staleness: IntervalLiteral | None):
+    def set_max_staleness(self, table_name: QualifiedName, max_staleness: IntervalLiteral | None):
         raise NotImplementedError('not supported')
 
-    def set_enable_change_history(self, table_name: TableName, enabled: bool):
+    def set_enable_change_history(self, table_name: QualifiedName, enabled: bool):
         raise NotImplementedError('not supported')
 
-    def set_enable_fine_grained_mutations(self, table_name: TableName, enabled: bool):
+    def set_enable_fine_grained_mutations(self, table_name: QualifiedName, enabled: bool):
         raise NotImplementedError('not supported')
 
-    def set_kms_key_name(self, table_name: TableName, key_name: str | None):
+    def set_kms_key_name(self, table_name: QualifiedName, key_name: str | None):
         raise NotImplementedError('not supported')
 
-    def add_column(self, table_name: TableName, column: Column):
+    def add_column(self, table_name: QualifiedName, column: Column):
         raise NotImplementedError('not supported')
 
-    def drop_column(self, table_name: TableName, column_name: ColumnName):
+    def drop_column(self, table_name: QualifiedName, column_name: ColumnName):
         raise NotImplementedError('not supported')
 
-    def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
+    def rename_column(self, table_name: QualifiedName, from_name: ColumnName, to_name: ColumnName):
         raise NotImplementedError('not supported')
 
-    def set_column_datatype(self, table_name: TableName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
+    def set_column_datatype(self, table_name: QualifiedName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
         raise NotImplementedError('not supported')
 
-    def add_column_field(self, table_name: TableName, field_path: FieldPath, datatype: Datatype) -> Table:
+    def add_column_field(self, table_name: QualifiedName, field_path: FieldPath, datatype: Datatype) -> Table:
         # circular imports
         from liti.core.function import extract_nested_datatype
 
@@ -110,7 +110,7 @@ class DbBackend(ABC, Defaulter, Validator):
         else:
             raise ValueError(f'Expected struct datatype for {struct}')
 
-    def drop_column_field(self, table_name: TableName, field_path: FieldPath) -> Table:
+    def drop_column_field(self, table_name: QualifiedName, field_path: FieldPath) -> Table:
         # circular imports
         from liti.core.function import extract_nested_datatype
 
@@ -130,30 +130,30 @@ class DbBackend(ABC, Defaulter, Validator):
         else:
             raise ValueError(f'Expected struct datatype for {struct}')
 
-    def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
+    def set_column_nullable(self, table_name: QualifiedName, column_name: ColumnName, nullable: bool):
         raise NotImplementedError('not supported')
 
-    def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
+    def set_column_description(self, table_name: QualifiedName, column_name: ColumnName, description: str | None):
         raise NotImplementedError('not supported')
 
     def set_column_rounding_mode(
         self,
-        table_name: TableName,
+        table_name: QualifiedName,
         column_name: ColumnName,
         rounding_mode: RoundingMode | None,
     ):
         raise NotImplementedError('not supported')
 
-    def has_view(self, name: TableName) -> bool:
+    def has_view(self, name: QualifiedName) -> bool:
         raise NotImplementedError('not supported')
 
-    def get_view(self, name: TableName) -> View | None:
+    def get_view(self, name: QualifiedName) -> View | None:
         raise NotImplementedError('not supported')
 
     def create_or_replace_view(self, view: View):
         raise NotImplementedError('not supported')
 
-    def drop_view(self, name: TableName):
+    def drop_view(self, name: QualifiedName):
         raise NotImplementedError('not supported')
 
     def execute_sql(self, sql: str):

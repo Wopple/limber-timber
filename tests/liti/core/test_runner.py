@@ -12,7 +12,7 @@ from liti.core.model.v1.manifest import Template
 from liti.core.model.v1.operation.data.column import AddColumn
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, IntervalLiteral, Partitioning, \
-    PrimaryKey, RoundingMode, Table, TableName
+    PrimaryKey, RoundingMode, Table, QualifiedName
 from liti.core.runner import apply_templates, MigrateRunner, sort_operations
 
 MakeRunner = Callable[[str], MigrateRunner]
@@ -38,7 +38,7 @@ def make_runner(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend) ->
 
 
 def test_all_datatypes(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.datatypes_table')
+    table_name = QualifiedName('my_project.my_dataset.datatypes_table')
 
     make_runner('target_all_datatypes').run(wet_run=True)
     datatypes_table = db_backend.get_table(table_name)
@@ -82,7 +82,7 @@ def test_all_datatypes(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
 
 
 def test_create_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.create_table')
+    table_name = QualifiedName('my_project.my_dataset.create_table')
 
     make_runner('target_create_table').run(wet_run=True)
     create_table = db_backend.get_table(table_name)
@@ -112,7 +112,7 @@ def test_create_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
 
 
 def test_drop_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_drop_table').run(wet_run=True)
 
@@ -133,15 +133,15 @@ def test_drop_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
 
 def test_all_max_staleness(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
     make_runner('target_all_max_staleness').run(wet_run=True)
-    all_pos_table = db_backend.get_table(TableName('my_project.my_dataset.all_pos_table'))
-    all_neg_table = db_backend.get_table(TableName('my_project.my_dataset.all_neg_table'))
-    only_year_table = db_backend.get_table(TableName('my_project.my_dataset.only_year_table'))
-    only_month_table = db_backend.get_table(TableName('my_project.my_dataset.only_month_table'))
-    only_day_table = db_backend.get_table(TableName('my_project.my_dataset.only_day_table'))
-    only_hour_table = db_backend.get_table(TableName('my_project.my_dataset.only_hour_table'))
-    only_minute_table = db_backend.get_table(TableName('my_project.my_dataset.only_minute_table'))
-    only_second_table = db_backend.get_table(TableName('my_project.my_dataset.only_second_table'))
-    only_microsecond_table = db_backend.get_table(TableName('my_project.my_dataset.only_microsecond_table'))
+    all_pos_table = db_backend.get_table(QualifiedName('my_project.my_dataset.all_pos_table'))
+    all_neg_table = db_backend.get_table(QualifiedName('my_project.my_dataset.all_neg_table'))
+    only_year_table = db_backend.get_table(QualifiedName('my_project.my_dataset.only_year_table'))
+    only_month_table = db_backend.get_table(QualifiedName('my_project.my_dataset.only_month_table'))
+    only_day_table = db_backend.get_table(QualifiedName('my_project.my_dataset.only_day_table'))
+    only_hour_table = db_backend.get_table(QualifiedName('my_project.my_dataset.only_hour_table'))
+    only_minute_table = db_backend.get_table(QualifiedName('my_project.my_dataset.only_minute_table'))
+    only_second_table = db_backend.get_table(QualifiedName('my_project.my_dataset.only_second_table'))
+    only_microsecond_table = db_backend.get_table(QualifiedName('my_project.my_dataset.only_microsecond_table'))
 
     assert len(db_backend.tables) == 10
     assert len(meta_backend.get_applied_operations()) == 10
@@ -180,25 +180,25 @@ def test_all_max_staleness(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.all_pos_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.all_neg_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.only_year_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.only_month_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.only_day_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.only_hour_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.only_minute_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.only_second_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.only_microsecond_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.all_pos_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.all_neg_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.only_year_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.only_month_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.only_day_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.only_hour_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.only_minute_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.only_second_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.only_microsecond_table')) is None
 
 
 def test_all_partitioning(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
     make_runner('target_all_partitioning').run(wet_run=True)
-    time_all_table = db_backend.get_table(TableName('my_project.my_dataset.time_all_table'))
-    year_ingest_table = db_backend.get_table(TableName('my_project.my_dataset.year_ingest_table'))
-    month_ingest_table = db_backend.get_table(TableName('my_project.my_dataset.month_ingest_table'))
-    day_ingest_table = db_backend.get_table(TableName('my_project.my_dataset.day_ingest_table'))
-    hour_ingest_table = db_backend.get_table(TableName('my_project.my_dataset.hour_ingest_table'))
-    int_all_table = db_backend.get_table(TableName('my_project.my_dataset.int_all_table'))
+    time_all_table = db_backend.get_table(QualifiedName('my_project.my_dataset.time_all_table'))
+    year_ingest_table = db_backend.get_table(QualifiedName('my_project.my_dataset.year_ingest_table'))
+    month_ingest_table = db_backend.get_table(QualifiedName('my_project.my_dataset.month_ingest_table'))
+    day_ingest_table = db_backend.get_table(QualifiedName('my_project.my_dataset.day_ingest_table'))
+    hour_ingest_table = db_backend.get_table(QualifiedName('my_project.my_dataset.hour_ingest_table'))
+    int_all_table = db_backend.get_table(QualifiedName('my_project.my_dataset.int_all_table'))
 
     assert len(db_backend.tables) == 7
     assert len(meta_backend.get_applied_operations()) == 7
@@ -244,18 +244,18 @@ def test_all_partitioning(db_backend: MemoryDbBackend, meta_backend: MemoryMetaB
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.time_all_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.year_ingest_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.month_ingest_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.day_ingest_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.hour_ingest_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.int_all_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.time_all_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.year_ingest_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.month_ingest_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.day_ingest_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.hour_ingest_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.int_all_table')) is None
 
 
 def test_all_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
     make_runner('target_all_rounding_mode').run(wet_run=True)
-    round_half_away_from_zero_table = db_backend.get_table(TableName('my_project.my_dataset.round_half_away_from_zero_table'))
-    round_half_even_table = db_backend.get_table(TableName('my_project.my_dataset.round_half_even_table'))
+    round_half_away_from_zero_table = db_backend.get_table(QualifiedName('my_project.my_dataset.round_half_away_from_zero_table'))
+    round_half_even_table = db_backend.get_table(QualifiedName('my_project.my_dataset.round_half_even_table'))
 
     assert len(db_backend.tables) == 3
     assert len(meta_backend.get_applied_operations()) == 3
@@ -266,8 +266,8 @@ def test_all_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.round_half_away_from_zero_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.round_half_even_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.round_half_away_from_zero_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.round_half_even_table')) is None
 
 
 def test_rename_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
@@ -275,19 +275,19 @@ def test_rename_table(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacke
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')) is None
-    assert db_backend.get_table(TableName('my_project.my_dataset.renamed_table')) is not None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.revert_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.renamed_table')) is not None
 
     make_runner('target_revert').run(wet_run=True, allow_down=True)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(TableName('my_project.my_dataset.revert_table')) is not None
-    assert db_backend.get_table(TableName('my_project.my_dataset.renamed_table')) is None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.revert_table')) is not None
+    assert db_backend.get_table(QualifiedName('my_project.my_dataset.renamed_table')) is None
 
 
 def test_set_primary_key(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_set_primary_key').run(wet_run=True)
 
@@ -313,7 +313,7 @@ def test_set_primary_key(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
 
 
 def test_set_partition_expiration(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.partitioning_table')
+    table_name = QualifiedName('my_project.my_dataset.partitioning_table')
 
     make_runner('target_set_partition_expiration').run(wet_run=True)
 
@@ -335,7 +335,7 @@ def test_set_partition_expiration(db_backend: MemoryDbBackend, meta_backend: Mem
 
 
 def test_set_require_partition_filter(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.partitioning_table')
+    table_name = QualifiedName('my_project.my_dataset.partitioning_table')
 
     make_runner('target_set_require_partition_filter').run(wet_run=True)
 
@@ -351,7 +351,7 @@ def test_set_require_partition_filter(db_backend: MemoryDbBackend, meta_backend:
 
 
 def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.clustering_table')
+    table_name = QualifiedName('my_project.my_dataset.clustering_table')
 
     make_runner('target_set_clustering').run(wet_run=True)
 
@@ -381,7 +381,7 @@ def test_set_clustering(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBac
 
 
 def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_set_description').run(wet_run=True)
 
@@ -403,7 +403,7 @@ def test_set_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBa
 
 
 def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_set_labels').run(wet_run=True)
 
@@ -433,7 +433,7 @@ def test_set_labels(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
 
 
 def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_set_tags').run(wet_run=True)
 
@@ -463,7 +463,7 @@ def test_set_tags(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, 
 
 
 def test_set_expiration_timestamp(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.expiration_table')
+    table_name = QualifiedName('my_project.my_dataset.expiration_table')
 
     make_runner('target_set_expiration_timestamp').run(wet_run=True)
 
@@ -485,7 +485,7 @@ def test_set_expiration_timestamp(db_backend: MemoryDbBackend, meta_backend: Mem
 
 
 def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_set_default_rounding_mode').run(wet_run=True)
     table = db_backend.get_table(table_name)
@@ -510,7 +510,7 @@ def test_set_default_rounding_mode(db_backend: MemoryDbBackend, meta_backend: Me
 
 
 def test_set_max_staleness(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.staleness_table')
+    table_name = QualifiedName('my_project.my_dataset.staleness_table')
 
     make_runner('target_set_max_staleness').run(wet_run=True)
 
@@ -532,7 +532,7 @@ def test_set_max_staleness(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
 
 
 def test_set_enable_change_history(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.change_history_table')
+    table_name = QualifiedName('my_project.my_dataset.change_history_table')
 
     make_runner('target_set_enable_change_history').run(wet_run=True)
 
@@ -548,7 +548,7 @@ def test_set_enable_change_history(db_backend: MemoryDbBackend, meta_backend: Me
 
 
 def test_set_enable_fine_grained_mutations(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.fine_grained_mutations_table')
+    table_name = QualifiedName('my_project.my_dataset.fine_grained_mutations_table')
 
     make_runner('target_set_enable_fine_grained_mutations').run(wet_run=True)
 
@@ -564,7 +564,7 @@ def test_set_enable_fine_grained_mutations(db_backend: MemoryDbBackend, meta_bac
 
 
 def test_set_kms_key_name(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.kms_key_name_table')
+    table_name = QualifiedName('my_project.my_dataset.kms_key_name_table')
 
     make_runner('target_set_kms_key_name').run(wet_run=True)
 
@@ -586,7 +586,7 @@ def test_set_kms_key_name(db_backend: MemoryDbBackend, meta_backend: MemoryMetaB
 
 
 def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_add_column').run(wet_run=True)
 
@@ -602,7 +602,7 @@ def test_add_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend
 
 
 def test_drop_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_drop_column').run(wet_run=True)
 
@@ -618,7 +618,7 @@ def test_drop_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
 
 
 def test_rename_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_rename_column').run(wet_run=True)
 
@@ -636,7 +636,7 @@ def test_rename_column(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
 
 
 def test_set_column_datatype(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.datatype_table')
+    table_name = QualifiedName('my_project.my_dataset.datatype_table')
 
     make_runner('target_set_column_datatype').run(wet_run=True)
     table = db_backend.get_table(table_name)
@@ -658,7 +658,7 @@ def test_set_column_datatype(db_backend: MemoryDbBackend, meta_backend: MemoryMe
 
 
 def test_add_column_field(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.column_field_table')
+    table_name = QualifiedName('my_project.my_dataset.column_field_table')
 
     make_runner('target_add_column_field').run(wet_run=True)
     table = db_backend.get_table(table_name)
@@ -680,7 +680,7 @@ def test_add_column_field(db_backend: MemoryDbBackend, meta_backend: MemoryMetaB
 
 
 def test_drop_column_field(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.column_field_table')
+    table_name = QualifiedName('my_project.my_dataset.column_field_table')
 
     make_runner('target_drop_column_field').run(wet_run=True)
     table = db_backend.get_table(table_name)
@@ -702,7 +702,7 @@ def test_drop_column_field(db_backend: MemoryDbBackend, meta_backend: MemoryMeta
 
 
 def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_set_column_nullable').run(wet_run=True)
     table = db_backend.get_table(table_name)
@@ -727,7 +727,7 @@ def test_set_column_nullable(db_backend: MemoryDbBackend, meta_backend: MemoryMe
 
 
 def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.revert_table')
+    table_name = QualifiedName('my_project.my_dataset.revert_table')
 
     make_runner('target_set_column_description').run(wet_run=True)
     table = db_backend.get_table(table_name)
@@ -752,7 +752,7 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
 
 
 def test_create_or_replace_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.view_table')
+    table_name = QualifiedName('my_project.my_dataset.view_table')
 
     make_runner('target_create_view').run(wet_run=True)
     view = db_backend.get_view(table_name)
@@ -795,7 +795,7 @@ def test_create_or_replace_view(db_backend: MemoryDbBackend, meta_backend: Memor
 
 
 def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('my_project.my_dataset.view_table')
+    table_name = QualifiedName('my_project.my_dataset.view_table')
 
     make_runner('target_drop_view').run(wet_run=True)
     view = db_backend.get_view(table_name)
@@ -829,7 +829,7 @@ def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend,
 
 
 def test_template_database_and_schema(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = TableName('new_project.new_dataset.template_table')
+    table_name = QualifiedName('new_project.new_dataset.template_table')
 
     make_runner('target_template_database_and_schema').run(wet_run=True)
     table = db_backend.get_table(table_name)
@@ -841,9 +841,9 @@ def test_template_database_and_schema(db_backend: MemoryDbBackend, meta_backend:
 
 
 def test_apply_templates():
-    table_name = TableName('test_project.test_dataset.test_table')
-    foreign_table_name = TableName('test_project.test_dataset.test_foreign_table')
-    add_table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
+    foreign_table_name = QualifiedName('test_project.test_dataset.test_foreign_table')
+    add_table_name = QualifiedName('test_project.test_dataset.test_table')
 
     operations = [
         CreateTable(table=Table(
@@ -865,13 +865,13 @@ def test_apply_templates():
 
     templates = [
         Template(
-            root_type=TableName,
+            root_type=QualifiedName,
             path=['database'],
             value='new_project',
         ),
         Template(
-            root_type=TableName,
-            path=['schema_name'],
+            root_type=QualifiedName,
+            path=['schema'],
             value='new_dataset',
         ),
     ]
@@ -879,11 +879,11 @@ def test_apply_templates():
     apply_templates(operations, templates)
 
     assert table_name.database.string == 'new_project'
-    assert table_name.schema_name.string == 'new_dataset'
+    assert table_name.schema.string == 'new_dataset'
     assert foreign_table_name.database.string == 'new_project'
-    assert foreign_table_name.schema_name.string == 'new_dataset'
+    assert foreign_table_name.schema.string == 'new_dataset'
     assert add_table_name.database.string == 'new_project'
-    assert add_table_name.schema_name.string == 'new_dataset'
+    assert add_table_name.schema.string == 'new_dataset'
 
 
 @mark.parametrize(
@@ -928,8 +928,8 @@ def test_apply_templates():
     ],
 )
 def test_sort_operations(graph, expected):
-    def to_table_name(name: str) -> TableName:
-        return TableName(f'my_project.my_dataset.{name}')
+    def to_table_name(name: str) -> QualifiedName:
+        return QualifiedName(f'my_project.my_dataset.{name}')
 
     def to_table(local_table: str, foreign_tables: list[str]) -> Table:
         return Table(

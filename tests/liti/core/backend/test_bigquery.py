@@ -12,7 +12,7 @@ from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, ForeignReference, \
-    Identifier, IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, TableName, View
+    Identifier, IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
 from tests.liti.util import NoRaise
 
 
@@ -40,7 +40,7 @@ def test_to_dataset_ref():
     'name, expected',
     [
         [
-            TableName('test_project.test_dataset.test_table'),
+            QualifiedName('test_project.test_dataset.test_table'),
             bq.DatasetReference('test_project', 'test_dataset'),
         ],
         [
@@ -64,7 +64,7 @@ def test_extract_dataset_ref(name, expected):
     'name, expected',
     [
         [
-            TableName('test_project.test_dataset.test_table'),
+            QualifiedName('test_project.test_dataset.test_table'),
             bq.TableReference(bq.DatasetReference('test_project', 'test_dataset'), 'test_table'),
         ],
         [
@@ -397,12 +397,12 @@ def test_to_schema_field(column, expected):
 
 def test_to_bq_table():
     table = Table(
-        name=TableName('test_project.test_dataset.test_table'),
+        name=QualifiedName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
             name='fk_test',
-            foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
+            foreign_table_name=QualifiedName('test_project.test_dataset.fk_test_table'),
             references=[ForeignReference(
                 local_column_name=ColumnName('col_date'),
                 foreign_column_name=ColumnName('fk_col_date'),
@@ -1184,12 +1184,12 @@ def test_to_liti_table():
     table.expires = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 
     expected = Table(
-        name=TableName('test_project.test_dataset.test_table'),
+        name=QualifiedName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
             name='fk_test',
-            foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
+            foreign_table_name=QualifiedName('test_project.test_dataset.fk_test_table'),
             references=[ForeignReference(
                 local_column_name=ColumnName('col_date'),
                 foreign_column_name=ColumnName('fk_col_date'),
@@ -1267,7 +1267,7 @@ def test_can_coerce(from_dt, to_dt, expected):
 
 def test_create_table_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
     table = Table(
-        name=TableName('test_project.test_dataset.test_table'),
+        name=QualifiedName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
     )
 
@@ -1282,12 +1282,12 @@ def test_create_table_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
 
 def test_create_table_full(db_backend: BigQueryDbBackend, bq_client: Mock):
     table = Table(
-        name=TableName('test_project.test_dataset.test_table'),
+        name=QualifiedName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
             name='fk_test',
-            foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
+            foreign_table_name=QualifiedName('test_project.test_dataset.fk_test_table'),
             references=[ForeignReference(
                 local_column_name=ColumnName('col_date'),
                 foreign_column_name=ColumnName('fk_col_date'),
@@ -1364,7 +1364,7 @@ def test_create_table_full(db_backend: BigQueryDbBackend, bq_client: Mock):
     ],
 )
 def test_set_primary_key(db_backend: BigQueryDbBackend, bq_client: Mock, column_names, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
 
     if column_names:
         primary_key = PrimaryKey(column_names=[ColumnName('col_date'), ColumnName('col_int')])
@@ -1376,10 +1376,10 @@ def test_set_primary_key(db_backend: BigQueryDbBackend, bq_client: Mock, column_
 
 
 def test_add_foreign_key(db_backend: BigQueryDbBackend, bq_client: Mock):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
 
     foreign_key = ForeignKey(
-        foreign_table_name=TableName('test_project.test_dataset.fk_test_table'),
+        foreign_table_name=QualifiedName('test_project.test_dataset.fk_test_table'),
         references=[
             ForeignReference(
                 local_column_name=ColumnName('col_date'),
@@ -1404,7 +1404,7 @@ def test_add_foreign_key(db_backend: BigQueryDbBackend, bq_client: Mock):
 
 
 def test_drop_constraint(db_backend: BigQueryDbBackend, bq_client: Mock):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     constraint_name = Identifier('fk__test')
     db_backend.drop_constraint(table_name, constraint_name)
 
@@ -1430,7 +1430,7 @@ def test_drop_constraint(db_backend: BigQueryDbBackend, bq_client: Mock):
     ],
 )
 def test_set_partition_expiration(db_backend: BigQueryDbBackend, bq_client: Mock, expiration_days, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_partition_expiration(table_name, expiration_days)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1451,7 +1451,7 @@ def test_set_partition_expiration(db_backend: BigQueryDbBackend, bq_client: Mock
     ],
 )
 def test_set_require_partition_filter(db_backend: BigQueryDbBackend, bq_client: Mock, require_filter, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_require_partition_filter(table_name, require_filter)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1472,7 +1472,7 @@ def test_set_require_partition_filter(db_backend: BigQueryDbBackend, bq_client: 
     ],
 )
 def test_set_description(db_backend: BigQueryDbBackend, bq_client: Mock, description, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_description(table_name, description)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1493,7 +1493,7 @@ def test_set_description(db_backend: BigQueryDbBackend, bq_client: Mock, descrip
     ],
 )
 def test_set_labels(db_backend: BigQueryDbBackend, bq_client: Mock, labels, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_labels(table_name, labels)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1514,7 +1514,7 @@ def test_set_labels(db_backend: BigQueryDbBackend, bq_client: Mock, labels, expe
     ],
 )
 def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_tags(table_name, tags)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1540,7 +1540,7 @@ def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags, expected
     ],
 )
 def test_set_expiration_timestamp(db_backend: BigQueryDbBackend, bq_client: Mock, expiration_timestamp, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_expiration_timestamp(table_name, expiration_timestamp)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1566,7 +1566,7 @@ def test_set_expiration_timestamp(db_backend: BigQueryDbBackend, bq_client: Mock
     ],
 )
 def test_set_default_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock, default_rounding_mode, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_default_rounding_mode(table_name, default_rounding_mode)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1587,7 +1587,7 @@ def test_set_default_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Moc
     ],
 )
 def test_set_max_staleness(db_backend: BigQueryDbBackend, bq_client: Mock, max_staleness, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_max_staleness(table_name, max_staleness)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1608,7 +1608,7 @@ def test_set_max_staleness(db_backend: BigQueryDbBackend, bq_client: Mock, max_s
     ],
 )
 def test_set_enable_change_history(db_backend: BigQueryDbBackend, bq_client: Mock, enabled, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_enable_change_history(table_name, enabled)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1629,7 +1629,7 @@ def test_set_enable_change_history(db_backend: BigQueryDbBackend, bq_client: Moc
     ],
 )
 def test_set_enable_fine_grained_mutations(db_backend: BigQueryDbBackend, bq_client: Mock, enabled, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_enable_fine_grained_mutations(table_name, enabled)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1650,13 +1650,13 @@ def test_set_enable_fine_grained_mutations(db_backend: BigQueryDbBackend, bq_cli
     ],
 )
 def test_set_kms_key_name(db_backend: BigQueryDbBackend, bq_client: Mock, key_name, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     db_backend.set_kms_key_name(table_name, key_name)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
 def test_add_column(db_backend: BigQueryDbBackend, bq_client: Mock):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     column = Column('col_date', DATE)
     db_backend.add_column(table_name, column)
 
@@ -1667,7 +1667,7 @@ def test_add_column(db_backend: BigQueryDbBackend, bq_client: Mock):
 
 
 def test_rename_column(db_backend: BigQueryDbBackend, bq_client: Mock):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     column_name = ColumnName('col_date')
     column_rename = ColumnName('col_date_renamed')
     db_backend.rename_column(table_name, column_name, column_rename)
@@ -1679,7 +1679,7 @@ def test_rename_column(db_backend: BigQueryDbBackend, bq_client: Mock):
 
 
 def test_set_column_datatype(db_backend: BigQueryDbBackend, bq_client: Mock):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     column_name = ColumnName('col_num')
     from_dt = INT64
     to_dt = FLOAT64
@@ -1693,7 +1693,7 @@ def test_set_column_datatype(db_backend: BigQueryDbBackend, bq_client: Mock):
 
 
 def test_set_column_nullable(db_backend: BigQueryDbBackend, bq_client: Mock):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     column_name = ColumnName('col_num')
     nullable = True
     db_backend.set_column_nullable(table_name, column_name, nullable)
@@ -1723,7 +1723,7 @@ def test_set_column_nullable(db_backend: BigQueryDbBackend, bq_client: Mock):
     ],
 )
 def test_set_column_description(db_backend: BigQueryDbBackend, bq_client: Mock, description, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     column_name = ColumnName('col_num')
     db_backend.set_column_description(table_name, column_name, description)
     bq_client.query_and_wait.assert_called_once_with(expected)
@@ -1747,7 +1747,7 @@ def test_set_column_description(db_backend: BigQueryDbBackend, bq_client: Mock, 
     ],
 )
 def test_set_column_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock, rounding_mode, expected):
-    table_name = TableName('test_project.test_dataset.test_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
     column_name = ColumnName('col_num')
     db_backend.set_column_rounding_mode(table_name, column_name, rounding_mode)
     bq_client.query_and_wait.assert_called_once_with(expected)
@@ -1755,7 +1755,7 @@ def test_set_column_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock
 
 def test_create_view_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
     view = View(
-        name=TableName('test_project.test_dataset.test_view'),
+        name=QualifiedName('test_project.test_dataset.test_view'),
         select_sql='SELECT DATE \'2025-01-01\' AS col_date;',
         select_file='some/path.sql',
     )
@@ -1771,7 +1771,7 @@ def test_create_view_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
 
 def test_create_view_full(db_backend: BigQueryDbBackend, bq_client: Mock):
     view = View(
-        name=TableName('test_project.test_dataset.test_view'),
+        name=QualifiedName('test_project.test_dataset.test_view'),
         columns=[Column('col_date', description='Test column description')],
         select_sql='SELECT DATE \'2025-01-01\' AS col_date;',
         select_file='some/path.sql',

@@ -5,8 +5,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: revert_table
+        schema: my_dataset
+        name: revert_table
       columns:
       - name: col_bool
         datatype: BOOL
@@ -14,8 +14,8 @@ operations:
   data:
     table_name:
       database: my_project
-      schema_name: my_dataset
-      table_name: revert_table
+      schema: my_dataset
+      name: revert_table
     labels:
       l1: v1
       l2: v2
@@ -23,8 +23,8 @@ operations:
   data:
     table_name:
       database: my_project
-      schema_name: my_dataset
-      table_name: revert_table
+      schema: my_dataset
+      name: revert_table
     labels:
       l2: v2
       l3: v3

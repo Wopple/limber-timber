@@ -55,12 +55,12 @@ class RenameTableOps(OperationOps):
 
     def down(self) -> RenameTable:
         return RenameTable(
-            from_name=self.op.from_name.with_table_name(self.op.to_name),
-            to_name=self.op.from_name.table_name,
+            from_name=self.op.from_name.with_name(self.op.to_name),
+            to_name=self.op.from_name.name,
         )
 
     def is_up(self) -> bool:
-        return self.context.db_backend.has_table(self.op.from_name.with_table_name(self.op.to_name))
+        return self.context.db_backend.has_table(self.op.from_name.with_name(self.op.to_name))
 
 
 class SetPrimaryKeyOps(OperationOps):

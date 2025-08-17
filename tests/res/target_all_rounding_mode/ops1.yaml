@@ -5,8 +5,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: revert_table
+        schema: my_dataset
+        name: revert_table
       columns:
       - name: col_bool
         datatype: BOOL
@@ -15,8 +15,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: round_half_away_from_zero_table
+        schema: my_dataset
+        name: round_half_away_from_zero_table
       columns:
       - name: col_bool
         datatype: BOOL
@@ -26,8 +26,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: round_half_even_table
+        schema: my_dataset
+        name: round_half_even_table
       columns:
       - name: col_bool
         datatype: BOOL

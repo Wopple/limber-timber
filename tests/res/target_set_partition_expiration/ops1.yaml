@@ -5,8 +5,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: partitioning_table
+        schema: my_dataset
+        name: partitioning_table
       columns:
       - name: col_date
         datatype: DATE
@@ -19,6 +19,6 @@ operations:
   data:
     table_name:
       database: my_project
-      schema_name: my_dataset
-      table_name: partitioning_table
+      schema: my_dataset
+      name: partitioning_table
     expiration_days: 30

@@ -1,11 +1,11 @@
 from liti.core.backend.memory import MemoryMetaBackend
 from liti.core.model.v1.datatype import INT64
 from liti.core.model.v1.operation.data.table import CreateTable, DropTable
-from liti.core.model.v1.schema import Column, Table, TableName
+from liti.core.model.v1.schema import Column, Table, QualifiedName
 
 
-def table_name(num: int) -> TableName:
-    return TableName(name=f'my_project.my_dataset.my_table_{num}')
+def table_name(num: int) -> QualifiedName:
+    return QualifiedName(f'my_project.my_dataset.my_table_{num}')
 
 
 def column(num: int) -> Column:

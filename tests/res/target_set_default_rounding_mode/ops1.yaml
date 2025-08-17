@@ -5,8 +5,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: revert_table
+        schema: my_dataset
+        name: revert_table
       columns:
       - name: col_bool
         datatype: BOOL
@@ -14,13 +14,13 @@ operations:
   data:
     table_name:
       database: my_project
-      schema_name: my_dataset
-      table_name: revert_table
+      schema: my_dataset
+      name: revert_table
     rounding_mode: ROUND_HALF_AWAY_FROM_ZERO
 - kind: set_default_rounding_mode
   data:
     table_name:
       database: my_project
-      schema_name: my_dataset
-      table_name: revert_table
+      schema: my_dataset
+      name: revert_table
     rounding_mode: ROUND_HALF_EVEN

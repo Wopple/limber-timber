@@ -5,8 +5,8 @@ operations:
     view:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: view_table
+        schema: my_dataset
+        name: view_table
       select_file: ../sql/create_view.sql
       columns:
       - name: foo
@@ -27,5 +27,5 @@ operations:
   data:
     view_name:
       database: my_project
-      schema_name: my_dataset
-      table_name: view_table
+      schema: my_dataset
+      name: view_table

@@ -1,6 +1,6 @@
 from pytest import mark
 
-from liti.core.model.v1.schema import ColumnName, ForeignKey, ForeignReference, TableName
+from liti.core.model.v1.schema import ColumnName, ForeignKey, ForeignReference, QualifiedName
 
 
 @mark.parametrize(
@@ -15,7 +15,7 @@ from liti.core.model.v1.schema import ColumnName, ForeignKey, ForeignReference, 
 def test_foreign_key_validation(input_name, expected):
     foreign_key = ForeignKey(
         name=input_name,
-        foreign_table_name=TableName('test_database.test_schema.test_table'),
+        foreign_table_name=QualifiedName('test_database.test_schema.test_table'),
         references=[
             ForeignReference(
                 local_column_name=ColumnName('local_1'),

@@ -15,7 +15,7 @@ from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, \
     ForeignReference, Identifier, \
-    IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, TableName, View
+    IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
 
 log = logging.getLogger(__name__)
 
@@ -30,18 +30,18 @@ def to_dataset_ref(project: DatabaseName, dataset: SchemaName) -> bq.DatasetRefe
     return bq.DatasetReference(project.string, dataset.string)
 
 
-def extract_dataset_ref(name: TableName | bq.TableListItem) -> bq.DatasetReference:
-    if isinstance(name, TableName):
-        return to_dataset_ref(name.database, name.schema_name)
+def extract_dataset_ref(name: QualifiedName | bq.TableListItem) -> bq.DatasetReference:
+    if isinstance(name, QualifiedName):
+        return to_dataset_ref(name.database, name.schema)
     elif isinstance(name, bq.TableListItem):
         return bq.DatasetReference(name.project, name.dataset_id)
     else:
         raise ValueError(f'Invalid dataset ref type: {type(name)}')
 
 
-def to_table_ref(name: TableName | bq.TableListItem) -> bq.TableReference:
-    if isinstance(name, TableName):
-        return bq.TableReference(extract_dataset_ref(name), name.table_name.string)
+def to_table_ref(name: QualifiedName | bq.TableListItem) -> bq.TableReference:
+    if isinstance(name, QualifiedName):
+        return bq.TableReference(extract_dataset_ref(name), name.name.string)
     elif isinstance(name, bq.TableListItem):
         return bq.TableReference(extract_dataset_ref(name), name.table_id)
     else:
@@ -343,15 +343,15 @@ def option_dict_to_sql(option: dict[str, str]) -> str:
     return f'[{join_sql}]'
 
 
-def to_table_name(table: bq.Table | bq.TableReference | bq.TableListItem) -> TableName:
+def to_table_name(table: bq.Table | bq.TableReference | bq.TableListItem) -> QualifiedName:
     if isinstance(table, bq.Table | bq.TableReference):
-        return TableName(
+        return QualifiedName(
             database=DatabaseName(table.project),
-            schema_name=SchemaName(table.dataset_id),
-            table_name=Identifier(table.table_id),
+            schema=SchemaName(table.dataset_id),
+            name=Identifier(table.table_id),
         )
     elif isinstance(table, bq.TableListItem):
-        return TableName(table.full_table_id.replace(':', '.'))
+        return QualifiedName(table.full_table_id.replace(':', '.'))
     else:
         raise ValueError(f'Invalid table type: {type(table)}')
 
@@ -564,16 +564,16 @@ class BigQueryDbBackend(DbBackend):
         tables = [self.get_table(to_table_name(item)) for item in table_items]
         return [CreateTable(table=t) for t in tables]
 
-    def scan_table(self, name: TableName) -> CreateTable | None:
+    def scan_table(self, name: QualifiedName) -> CreateTable | None:
         if self.has_table(name):
             return CreateTable(table=self.get_table(name))
         else:
             return None
 
-    def has_table(self, name: TableName) -> bool:
+    def has_table(self, name: QualifiedName) -> bool:
         return self.client.has_table(to_table_ref(name))
 
-    def get_table(self, name: TableName) -> Table | None:
+    def get_table(self, name: QualifiedName) -> Table | None:
         bq_table = self.client.get_table(to_table_ref(name))
         return bq_table and to_liti_table(bq_table)
 
@@ -713,13 +713,13 @@ class BigQueryDbBackend(DbBackend):
             f'{options_sql}'
         )
 
-    def drop_table(self, name: TableName):
+    def drop_table(self, name: QualifiedName):
         self.client.delete_table(to_table_ref(name))
 
-    def rename_table(self, from_name: TableName, to_name: Identifier):
+    def rename_table(self, from_name: QualifiedName, to_name: Identifier):
         self.client.query_and_wait(f'ALTER TABLE `{from_name}` RENAME TO `{to_name}`')
 
-    def set_primary_key(self, table_name: TableName, primary_key: PrimaryKey | None):
+    def set_primary_key(self, table_name: QualifiedName, primary_key: PrimaryKey | None):
         if primary_key:
             if primary_key.enforced:
                 self.handle_unsupported(
@@ -739,7 +739,7 @@ class BigQueryDbBackend(DbBackend):
                 f'DROP PRIMARY KEY\n'
             )
 
-    def add_foreign_key(self, table_name: TableName, foreign_key: ForeignKey):
+    def add_foreign_key(self, table_name: QualifiedName, foreign_key: ForeignKey):
         local_column_sql = ', '.join(f'`{ref.local_column_name}`' for ref in foreign_key.references)
         foreign_column_sql = ', '.join(f'`{ref.foreign_column_name}`' for ref in foreign_key.references)
 
@@ -751,37 +751,37 @@ class BigQueryDbBackend(DbBackend):
             f' NOT ENFORCED\n'
         )
 
-    def drop_constraint(self, table_name: TableName, constraint_name: Identifier):
+    def drop_constraint(self, table_name: QualifiedName, constraint_name: Identifier):
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'DROP CONSTRAINT `{constraint_name}`\n'
         )
 
-    def set_partition_expiration(self, table_name: TableName, expiration_days: float | None):
+    def set_partition_expiration(self, table_name: QualifiedName, expiration_days: float | None):
         self.set_option(
             table_name,
             'partition_expiration_days',
             str(expiration_days) if expiration_days is not None else 'NULL',
         )
 
-    def set_require_partition_filter(self, table_name: TableName, require_filter: bool):
+    def set_require_partition_filter(self, table_name: QualifiedName, require_filter: bool):
         self.set_option(table_name, 'require_partition_filter', 'TRUE' if require_filter else 'FALSE')
 
-    def set_clustering(self, table_name: TableName, column_names: list[ColumnName] | None):
+    def set_clustering(self, table_name: QualifiedName, column_names: list[ColumnName] | None):
         bq_table = self.client.get_table(to_table_ref(table_name))
         bq_table.clustering_fields = [col.string for col in column_names] if column_names else None
         self.client.update_table(bq_table, ['clustering_fields'])
 
-    def set_description(self, table_name: TableName, description: str | None):
+    def set_description(self, table_name: QualifiedName, description: str | None):
         self.set_option(table_name, 'description', f'\'{description}\'' if description else 'NULL')
 
-    def set_labels(self, table_name: TableName, labels: dict[str, str] | None):
+    def set_labels(self, table_name: QualifiedName, labels: dict[str, str] | None):
         self.set_option(table_name, 'labels', option_dict_to_sql(labels) if labels else 'NULL')
 
-    def set_tags(self, table_name: TableName, tags: dict[str, str] | None):
+    def set_tags(self, table_name: QualifiedName, tags: dict[str, str] | None):
         self.set_option(table_name, 'tags', option_dict_to_sql(tags) if tags else 'NULL')
 
-    def set_expiration_timestamp(self, table_name: TableName, expiration_timestamp: datetime | None):
+    def set_expiration_timestamp(self, table_name: QualifiedName, expiration_timestamp: datetime | None):
         if expiration_timestamp:
             utc_ts = expiration_timestamp.astimezone(timezone.utc)
             formatted = f'TIMESTAMP \'{utc_ts.strftime("%Y-%m-%d %H:%M:%S UTC")}\''
@@ -790,44 +790,44 @@ class BigQueryDbBackend(DbBackend):
 
         self.set_option(table_name, 'expiration_timestamp', formatted)
 
-    def set_default_rounding_mode(self, table_name: TableName, rounding_mode: RoundingMode | None):
+    def set_default_rounding_mode(self, table_name: QualifiedName, rounding_mode: RoundingMode | None):
         self.set_option(table_name, 'default_rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL')
 
-    def set_max_staleness(self, table_name: TableName, max_staleness: IntervalLiteral | None):
+    def set_max_staleness(self, table_name: QualifiedName, max_staleness: IntervalLiteral | None):
         self.set_option(
             table_name,
             'max_staleness',
             interval_literal_to_sql(max_staleness) if max_staleness else 'NULL',
         )
 
-    def set_enable_change_history(self, table_name: TableName, enabled: bool):
+    def set_enable_change_history(self, table_name: QualifiedName, enabled: bool):
         self.set_option(table_name, 'enable_change_history', 'TRUE' if enabled else 'FALSE')
 
-    def set_enable_fine_grained_mutations(self, table_name: TableName, enabled: bool):
+    def set_enable_fine_grained_mutations(self, table_name: QualifiedName, enabled: bool):
         self.set_option(table_name, 'enable_fine_grained_mutations', 'TRUE' if enabled else 'FALSE')
 
-    def set_kms_key_name(self, table_name: TableName, key_name: str | None):
+    def set_kms_key_name(self, table_name: QualifiedName, key_name: str | None):
         self.set_option(table_name, 'kms_key_name', f'\'{key_name}\'' if key_name else 'NULL')
 
-    def add_column(self, table_name: TableName, column: Column):
+    def add_column(self, table_name: QualifiedName, column: Column):
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'ADD COLUMN {column_to_sql(column)}\n'
         )
 
-    def drop_column(self, table_name: TableName, column_name: ColumnName):
+    def drop_column(self, table_name: QualifiedName, column_name: ColumnName):
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'DROP COLUMN `{column_name}`\n'
         )
 
-    def rename_column(self, table_name: TableName, from_name: ColumnName, to_name: ColumnName):
+    def rename_column(self, table_name: QualifiedName, from_name: ColumnName, to_name: ColumnName):
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'RENAME COLUMN `{from_name}` TO `{to_name}`\n'
         )
 
-    def set_column_datatype(self, table_name: TableName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
+    def set_column_datatype(self, table_name: QualifiedName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
         # TODO: work around some of these limitations by:
         #     1. create a new table with the new datatype
         #     2. copy data from the old table to the new table truncating values
@@ -845,17 +845,17 @@ class BigQueryDbBackend(DbBackend):
             f'SET DATA TYPE {datatype_to_sql(to_datatype)}\n'
         )
 
-    def add_column_field(self, table_name: TableName, field_path: FieldPath, datatype: Datatype):
+    def add_column_field(self, table_name: QualifiedName, field_path: FieldPath, datatype: Datatype):
         table = super().add_column_field(table_name, field_path, datatype)
         self.client.update_table(to_bq_table(table), ['schema'])
 
-    def drop_column_field(self, table_name: TableName, field_path: FieldPath):
+    def drop_column_field(self, table_name: QualifiedName, field_path: FieldPath):
         self.handle_unsupported(
             Unsupported.DROP_COLUMN_FIELD,
             f'Not dropping field at {field_path} since Big Query does not support it',
         )
 
-    def set_column_nullable(self, table_name: TableName, column_name: ColumnName, nullable: bool):
+    def set_column_nullable(self, table_name: QualifiedName, column_name: ColumnName, nullable: bool):
         if nullable:
             self.client.query_and_wait(
                 f'ALTER TABLE `{table_name}`\n'
@@ -868,12 +868,12 @@ class BigQueryDbBackend(DbBackend):
                 f'Not adding column {column_name} as non-nullable since Big Query does not support it',
             )
 
-    def set_column_description(self, table_name: TableName, column_name: ColumnName, description: str | None):
+    def set_column_description(self, table_name: QualifiedName, column_name: ColumnName, description: str | None):
         self.set_column_option(table_name, column_name, 'description', f'\'{description}\'' if description else 'NULL')
 
     def set_column_rounding_mode(
         self,
-        table_name: TableName,
+        table_name: QualifiedName,
         column_name: ColumnName,
         rounding_mode: RoundingMode | None,
     ):
@@ -883,7 +883,7 @@ class BigQueryDbBackend(DbBackend):
             'rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL',
         )
 
-    def has_view(self, name: TableName) -> bool:
+    def has_view(self, name: QualifiedName) -> bool:
         return self.has_table(name)
 
     def create_or_replace_view(self, view: View):
@@ -936,7 +936,7 @@ class BigQueryDbBackend(DbBackend):
             f'{view.select_sql}\n'
         )
 
-    def drop_view(self, name: TableName):
+    def drop_view(self, name: QualifiedName):
         self.drop_table(name)
 
     def execute_sql(self, sql: str):
@@ -1065,13 +1065,13 @@ class BigQueryDbBackend(DbBackend):
         else:
             log.warning(message)
 
-    def set_option(self, table_name: TableName, key: str, value: str):
+    def set_option(self, table_name: QualifiedName, key: str, value: str):
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'SET OPTIONS({key} = {value})\n'
         )
 
-    def set_column_option(self, table_name: TableName, column_name: ColumnName, key: str, value: str):
+    def set_column_option(self, table_name: QualifiedName, column_name: ColumnName, key: str, value: str):
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'ALTER COLUMN `{column_name}`\n'
@@ -1080,13 +1080,13 @@ class BigQueryDbBackend(DbBackend):
 
 
 class BigQueryMetaBackend(MetaBackend):
-    def __init__(self, client: BqClient, table_name: TableName):
+    def __init__(self, client: BqClient, table_name: QualifiedName):
         self.client = client
         self.table_name = table_name
 
     def initialize(self):
         self.client.query_and_wait(
-            f'CREATE SCHEMA IF NOT EXISTS `{self.table_name.database}.{self.table_name.schema_name}`;\n'
+            f'CREATE SCHEMA IF NOT EXISTS `{self.table_name.database}.{self.table_name.schema}`;\n'
             f'\n'
             f'CREATE TABLE IF NOT EXISTS `{self.table_name}` (\n'
             f'    idx INT64 NOT NULL,\n'

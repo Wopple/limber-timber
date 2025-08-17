@@ -5,8 +5,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: revert_table
+        schema: my_dataset
+        name: revert_table
       columns:
       - name: col_bool
         datatype: BOOL
@@ -15,8 +15,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: time_all_table
+        schema: my_dataset
+        name: time_all_table
       columns:
       - name: col_date
         datatype: DATE
@@ -31,8 +31,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: year_ingest_table
+        schema: my_dataset
+        name: year_ingest_table
       columns:
       - name: col_date
         datatype: DATE
@@ -44,8 +44,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: month_ingest_table
+        schema: my_dataset
+        name: month_ingest_table
       columns:
       - name: col_date
         datatype: DATE
@@ -57,8 +57,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: day_ingest_table
+        schema: my_dataset
+        name: day_ingest_table
       columns:
       - name: col_date
         datatype: DATE
@@ -70,8 +70,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: hour_ingest_table
+        schema: my_dataset
+        name: hour_ingest_table
       columns:
       - name: col_date
         datatype: DATE
@@ -83,8 +83,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: int_all_table
+        schema: my_dataset
+        name: int_all_table
       columns:
       - name: col_int
         datatype: INT64

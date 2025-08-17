@@ -10,7 +10,7 @@ from liti.core.backend.bigquery import BigQueryDbBackend, BigQueryMetaBackend
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.context import Context
-from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, TableName
+from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, QualifiedName
 from liti.core.runner import MigrateRunner, ScanRunner
 
 
@@ -106,7 +106,7 @@ def build_meta_backend(args: Namespace, clients: Clients) -> MetaBackend:
     if args.db == 'memory':
         return MemoryMetaBackend()
     elif args.db == 'bigquery':
-        return BigQueryMetaBackend(clients.big_query, TableName(args.meta_table_name))
+        return BigQueryMetaBackend(clients.big_query, QualifiedName(args.meta_table_name))
     else:
         raise ValueError(f'Invalid metadata backend: {args.db}')
 

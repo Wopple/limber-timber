@@ -5,8 +5,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: change_history_table
+        schema: my_dataset
+        name: change_history_table
       columns:
       - name: col_date
         datatype: DATE

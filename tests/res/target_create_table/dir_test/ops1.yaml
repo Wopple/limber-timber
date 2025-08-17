@@ -5,8 +5,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: revert_table
+        schema: my_dataset
+        name: revert_table
       columns:
       - name: col_bool
         datatype: BOOL
@@ -15,8 +15,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: create_table
+        schema: my_dataset
+        name: create_table
       columns:
       - name: col1
         datatype: BOOL

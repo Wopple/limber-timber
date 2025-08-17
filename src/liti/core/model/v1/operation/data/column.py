@@ -4,25 +4,25 @@ from pydantic import field_validator
 
 from liti.core.model.v1.datatype import Datatype, parse_datatype
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import Column, ColumnName, FieldPath, RoundingMode, TableName
+from liti.core.model.v1.schema import Column, ColumnName, FieldPath, RoundingMode, QualifiedName
 
 
 class AddColumn(Operation):
-    table_name: TableName
+    table_name: QualifiedName
     column: Column
 
     KIND: ClassVar[str] = 'add_column'
 
 
 class DropColumn(Operation):
-    table_name: TableName
+    table_name: QualifiedName
     column_name: ColumnName
 
     KIND: ClassVar[str] = 'drop_column'
 
 
 class RenameColumn(Operation):
-    table_name: TableName
+    table_name: QualifiedName
     from_name: ColumnName
     to_name: ColumnName
 
@@ -30,7 +30,7 @@ class RenameColumn(Operation):
 
 
 class SetColumnDatatype(Operation):
-    table_name: TableName
+    table_name: QualifiedName
     column_name: ColumnName
     datatype: Datatype
 
@@ -43,7 +43,7 @@ class SetColumnDatatype(Operation):
 
 
 class AddColumnField(Operation):
-    table_name: TableName
+    table_name: QualifiedName
     field_path: FieldPath
     datatype: Datatype
 
@@ -56,14 +56,14 @@ class AddColumnField(Operation):
 
 
 class DropColumnField(Operation):
-    table_name: TableName
+    table_name: QualifiedName
     field_path: FieldPath
 
     KIND: ClassVar[str] = 'drop_column_field'
 
 
 class SetColumnNullable(Operation):
-    table_name: TableName
+    table_name: QualifiedName
     column_name: ColumnName
     nullable: bool
 
@@ -71,7 +71,7 @@ class SetColumnNullable(Operation):
 
 
 class SetColumnDescription(Operation):
-    table_name: TableName
+    table_name: QualifiedName
     column_name: ColumnName
     description: str | None = None
 
@@ -79,7 +79,7 @@ class SetColumnDescription(Operation):
 
 
 class SetColumnRoundingMode(Operation):
-    table_name: TableName
+    table_name: QualifiedName
     column_name: ColumnName
     rounding_mode: RoundingMode | None = None
 

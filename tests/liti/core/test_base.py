@@ -5,7 +5,7 @@ from pytest import mark, raises
 
 from liti.core.base import LitiModel, STAR
 from liti.core.model.v1.datatype import BOOL
-from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, Table, TableName
+from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, Table, QualifiedName
 
 
 class ListNestedModel(LitiModel):
@@ -33,8 +33,8 @@ class Model(LitiModel):
 
 
 def test_get_roots():
-    table_name = TableName('test_project.test_dataset.test_table')
-    foreign_table_name = TableName('test_project.test_dataset.test_foreign_table')
+    table_name = QualifiedName('test_project.test_dataset.test_table')
+    foreign_table_name = QualifiedName('test_project.test_dataset.test_foreign_table')
 
     table = Table(
         name=table_name,
@@ -48,7 +48,7 @@ def test_get_roots():
         )],
     )
 
-    roots = table.get_roots(TableName, STAR)
+    roots = table.get_roots(QualifiedName, STAR)
     actual_table_name_1, actual_match_1 = next(roots)
     actual_table_name_2, actual_match_2 = next(roots)
 

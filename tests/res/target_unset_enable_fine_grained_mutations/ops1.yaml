@@ -5,8 +5,8 @@ operations:
     table:
       name:
         database: my_project
-        schema_name: my_dataset
-        table_name: fine_grained_mutations_table
+        schema: my_dataset
+        name: fine_grained_mutations_table
       columns:
       - name: col_date
         datatype: DATE

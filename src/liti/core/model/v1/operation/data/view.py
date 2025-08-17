@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.schema import TableName, View
+from liti.core.model.v1.schema import QualifiedName, View
 
 
 class CreateOrReplaceView(Operation):
@@ -15,6 +15,6 @@ class CreateOrReplaceView(Operation):
 class DropView(Operation):
     """ Semantics: DROP """
 
-    view_name: TableName
+    view_name: QualifiedName
 
     KIND: ClassVar[str] = 'drop_view'
