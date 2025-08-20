@@ -763,8 +763,8 @@ def test_create_or_replace_view(db_backend: MemoryDbBackend, meta_backend: Memor
     assert view.columns == [Column('foo', INT64)]
     assert view.friendly_name == 'my_friendly_name'
     assert view.description == 'My description'
-    assert view.labels == {"key_1": "value_1", "key_2": "value_2"}
-    assert view.tags == {"key_3": "value_3", "key_4": "value_4"}
+    assert view.labels == {'key_1': 'value_1', 'key_2': 'value_2'}
+    assert view.tags == {'key_3': 'value_3', 'key_4': 'value_4'}
 
     assert view.expiration_timestamp == datetime(
         year=2000,
@@ -775,7 +775,7 @@ def test_create_or_replace_view(db_backend: MemoryDbBackend, meta_backend: Memor
         second=5,
     )
 
-    assert view.privacy_policy == {"p1": 123, "p2": "baz"}
+    assert view.privacy_policy == {'p1': 123, 'p2': 'baz'}
 
     make_runner('target_replace_view').run(wet_run=True)
     view = db_backend.get_view(table_name)
@@ -813,8 +813,8 @@ def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend,
     assert view.columns == [Column('foo', INT64)]
     assert view.friendly_name == 'my_friendly_name'
     assert view.description == 'My description'
-    assert view.labels == {"key_1": "value_1", "key_2": "value_2"}
-    assert view.tags == {"key_3": "value_3", "key_4": "value_4"}
+    assert view.labels == {'key_1': 'value_1', 'key_2': 'value_2'}
+    assert view.tags == {'key_3': 'value_3', 'key_4': 'value_4'}
 
     assert view.expiration_timestamp == datetime(
         year=2000,
@@ -825,7 +825,7 @@ def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend,
         second=5,
     )
 
-    assert view.privacy_policy == {"p1": 123, "p2": "baz"}
+    assert view.privacy_policy == {'p1': 123, 'p2': 'baz'}
 
 
 def test_template_database_and_schema(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):

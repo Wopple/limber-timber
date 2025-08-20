@@ -159,8 +159,12 @@ def sort_operations(operations: list[Operation]) -> list[Operation]:
 
 
 class ScanRunner:
-    def __init__(self, db_backend: DbBackend):
-        self.db_backend = db_backend
+    def __init__(self, context: Context):
+        self.context = context
+
+    @property
+    def db_backend(self) -> DbBackend:
+        return self.context.db_backend
 
     def run(
         self,
@@ -176,14 +180,14 @@ class ScanRunner:
         :param format: ['yaml'] the format to use when printing the operations
         """
 
-        database.liti_validate(self.db_backend)
-        schema.liti_validate(self.db_backend)
+        database.liti_validate(self.db_backend, self.context)
+        schema.liti_validate(self.db_backend, self.context)
 
         if table:
-            table.liti_validate(self.db_backend)
+            table.liti_validate(self.db_backend, self.context)
 
             table_name = QualifiedName(database=database, schema=schema, table_name=table)
-            create_table = self.db_backend.scan_table(table_name)
+            create_table = self.db_backend.scan_relation(table_name)
 
             if create_table is None:
                 raise RuntimeError(f'Table not found: {table_name}')

@@ -1,28 +1,48 @@
 from datetime import datetime
 
-from liti.core.backend.base import DbBackend, MetaBackend
+from liti.core.backend.base import CreateRelation, DbBackend, MetaBackend
 from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.operation.data.view import CreateOrReplaceMaterializedView, CreateOrReplaceView
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, IntervalLiteral, \
-    PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
+    MaterializedView, PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
 
 
 class MemoryDbBackend(DbBackend):
     def __init__(self):
         self.tables: dict[QualifiedName, Table] = {}
         self.views: dict[QualifiedName, View] = {}
+        self.materialized_views: dict[QualifiedName, MaterializedView] = {}
 
     def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
-        return [
+        tables = [
             CreateTable(table=table)
             for name, table in self.tables.items()
             if name.database == database and name.schema == schema
         ]
 
-    def scan_table(self, name: QualifiedName) -> CreateTable | None:
+        views = [
+            CreateOrReplaceView(view=view)
+            for name, view in self.views.items()
+            if name.database == database and name.schema == schema
+        ]
+
+        materialized_views = [
+            CreateOrReplaceMaterializedView(materialized_view=materialized_view)
+            for name, materialized_view in self.materialized_views.items()
+            if name.database == database and name.schema == schema
+        ]
+
+        return tables + materialized_views + views
+
+    def scan_relation(self, name: QualifiedName) -> CreateRelation | None:
         if name in self.tables:
             return CreateTable(table=self.tables[name])
+        if name in self.views:
+            return CreateOrReplaceView(view=self.views[name])
+        if name in self.materialized_views:
+            return CreateOrReplaceMaterializedView(materialized_view=self.materialized_views[name])
         else:
             return None
 
@@ -142,6 +162,21 @@ class MemoryDbBackend(DbBackend):
             raise ValueError(f'View {name} does not exist')
 
         del self.views[name]
+
+    def has_materialized_view(self, name: QualifiedName) -> bool:
+        return name in self.materialized_views
+
+    def get_materialized_view(self, name: QualifiedName) -> MaterializedView | None:
+        return self.materialized_views.get(name)
+
+    def create_or_replace_materialized_view(self, materialized_view: MaterializedView):
+        self.materialized_views[materialized_view.name] = materialized_view.model_copy(deep=True)
+
+    def drop_materialized_view(self, name: QualifiedName):
+        if name not in self.materialized_views:
+            raise ValueError(f'MaterializedView {name} does not exist')
+
+        del self.materialized_views[name]
 
 
 class MemoryMetaBackend(MetaBackend):

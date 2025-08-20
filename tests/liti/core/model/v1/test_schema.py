@@ -12,7 +12,7 @@ from liti.core.model.v1.schema import ColumnName, ForeignKey, ForeignReference, 
         ['fk_valid_name', 'fk_valid_name'],
     ],
 )
-def test_foreign_key_validation(input_name, expected):
+def test_foreign_key_validation(input_name: str | None, expected: str):
     foreign_key = ForeignKey(
         name=input_name,
         foreign_table_name=QualifiedName('test_database.test_schema.test_table'),

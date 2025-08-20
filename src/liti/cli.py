@@ -141,7 +141,10 @@ def scan():
     args = parse_scan_arguments()
     clients = build_clients(args)
     db_backend = build_db_backend(args, clients)
-    runner = ScanRunner(db_backend)
+
+    runner = ScanRunner(context=Context(
+        db_backend=db_backend,
+    ))
 
     runner.run(
         database=DatabaseName(args.scan_database),

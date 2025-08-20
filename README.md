@@ -63,11 +63,11 @@ These are listed in rough priority order.
     - To validate and auto complete migration files in IDEs
 - ➡️ Unit Tests
   - ➡️ Templating
+  - ➡️ Big Query Backend
 - ➡️ Documentation
 - ✅ In-memory Database
 - ✅ In-memory Metadata
 - ➡️ Big Query Database
-  - ➡️ Create Materialized View
   - ➡️ Create Snapshot Table
   - ➡️ Create Table Clone
 - ✅ Big Query Metadata

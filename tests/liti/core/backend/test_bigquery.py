@@ -7,7 +7,7 @@ from pytest import fixture, mark, raises
 from liti import bigquery as bq
 from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_sql, datatype_to_sql, \
     extract_dataset_ref, interval_literal_to_sql, NULLABLE, REPEATED, REQUIRED, to_bq_table, to_column, \
-    to_dataset_ref, to_datatype, to_datatype_array, to_field_type, to_fields, to_liti_table, to_max_length, to_mode, \
+    to_dataset_ref, to_datatype, to_datatype_array, to_field_type, to_fields, to_liti_relation, to_max_length, to_mode, \
     to_precision, to_range_element_type, to_scale, to_schema_field, to_table_ref
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
@@ -1160,8 +1160,9 @@ def test_to_column(schema_field, expected):
     assert actual == expected
 
 
-def test_to_liti_table():
+def test_to_liti_relation():
     table = bq.Table('test_project.test_dataset.test_table', [bq.SchemaField('col_date', 'DATE', mode=REQUIRED)])
+    table._properties['type'] = 'TABLE'
     table.table_constraints = bq.TableConstraints(
         primary_key=bq.PrimaryKey(['col_date']),
         foreign_keys=[
@@ -1209,7 +1210,7 @@ def test_to_liti_table():
         expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
     )
 
-    actual = to_liti_table(table)
+    actual = to_liti_relation(table)
     assert actual == expected
 
 
@@ -1780,7 +1781,7 @@ def test_create_view_full(db_backend: BigQueryDbBackend, bq_client: Mock):
         labels={'l1': 'v1', 'l2': 'v2'},
         tags={'t1': 'v1', 't2': 'v2'},
         expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
-        privacy_policy={"p1": 123, "p2": "baz"},
+        privacy_policy={'p1': 123, 'p2': 'baz'},
     )
 
     db_backend.create_or_replace_view(view)

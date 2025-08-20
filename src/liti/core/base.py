@@ -9,7 +9,7 @@ from liti.core.context import Context
 # which need to use types from this file
 if TYPE_CHECKING:
     from liti.core.model.v1.datatype import Array, BigNumeric, Float, Int, Numeric
-    from liti.core.model.v1.schema import Partitioning, Table, View
+    from liti.core.model.v1.schema import MaterializedView, Partitioning, Table, View
 
 
 class Defaulter:
@@ -40,6 +40,11 @@ class Defaulter:
         pass
 
     def view_defaults(self, node: 'View', context: Context):
+        if node.select_sql is None and node.select_file is not None:
+            with open(context.target_dir / node.select_file) as f:
+                node.select_sql = f.read()
+
+    def materialized_view_defaults(self, node: 'MaterializedView', context: Context):
         if node.select_sql is None and node.select_file is not None:
             with open(context.target_dir / node.select_file) as f:
                 node.select_sql = f.read()
@@ -89,6 +94,10 @@ class Validator:
     def validate_view(self, node: 'View', context: Context):
         if not node.select_sql:
             raise ValueError(f'View {node.name} has no select SQL')
+
+    def validate_materialized_view(self, node: 'MaterializedView', context: Context):
+        if not node.select_sql:
+            raise ValueError(f'Materialized view {node.name} has no select SQL')
 
 
 class Validatable:

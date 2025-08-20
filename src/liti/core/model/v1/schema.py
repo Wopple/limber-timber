@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from string import ascii_letters, digits
 from typing import Any, ClassVar, Iterator, Literal
 
@@ -224,8 +224,10 @@ class ForeignKey(LitiModel):
 
         If one of these values is provided, it will be replaced with a valid liti generated value.
         """
+
+        # Returning None will cause the model validation logic to generate a name
         if isinstance(value, str) and any(c not in IDENTIFIER_CHARS for c in value):
-            return None  # will cause the model validation logic to generate a name
+            return None
         else:
             return value
 
@@ -278,6 +280,7 @@ class Column(LitiModel):
 class Partitioning(LitiModel):
     kind: Literal['TIME', 'INT']
     column: ColumnName | None = None
+    column_datatype: Datatype | None = None
     time_unit: Literal['YEAR', 'MONTH', 'DAY', 'HOUR'] | None = None
     int_start: int | None = None
     int_end: int | None = None
@@ -319,9 +322,26 @@ class Relation(LitiModel):
     enable_fine_grained_mutations: bool | None = None
     kms_key_name: str | None = None
     big_lake: BigLake | None = None
+    select_sql: str | None = None
+    select_file: str | None = None
+    privacy_policy: dict[str, Any] | None = None
+    allow_non_incremental_definition: bool | None = None
+    enable_refresh: bool | None = None
+    refresh_interval: timedelta | None = None
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+
+        exclude = {
+            'privacy_policy',
+            'select_file',
+        }
+
+        return self.model_dump(exclude=exclude) == other.model_dump(exclude=exclude)
 
     @model_validator(mode='after')
-    def validate_model(self) -> 'Table':
+    def validate_model(self) -> 'Relation':
         if self.foreign_keys:
             if len(self.foreign_keys) != len(set(fk.name for fk in self.foreign_keys)):
                 raise ValueError('Foreign keys must have unique names')
@@ -363,15 +383,10 @@ class Table(Relation):
 
 
 class View(Relation):
-    select_sql: str | None = None
-    select_file: str | None = None
-    privacy_policy: dict[str, Any] | None = None
-
     DEFAULT_METHOD = 'view_defaults'
     VALIDATE_METHOD = 'validate_view'
 
-    def __eq__(self, other):
-        if not isinstance(other, View):
-            return False
 
-        return self.model_dump(exclude={'select_file'}) == other.model_dump(exclude={'select_file'})
+class MaterializedView(Relation):
+    DEFAULT_METHOD = 'view_defaults'
+    VALIDATE_METHOD = 'validate_view'
