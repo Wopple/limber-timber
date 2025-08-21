@@ -12,7 +12,8 @@ from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, ForeignReference, \
-    Identifier, IntervalLiteral, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
+    Identifier, IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, \
+    QualifiedName, View
 from tests.liti.util import NoRaise
 
 
@@ -1757,16 +1758,16 @@ def test_set_column_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock
 def test_create_view_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
     view = View(
         name=QualifiedName('test_project.test_dataset.test_view'),
-        select_sql='SELECT DATE \'2025-01-01\' AS col_date;',
+        select_sql='SELECT DATE \'2025-01-01\' AS col_date',
         select_file='some/path.sql',
     )
 
-    db_backend.create_or_replace_view(view)
+    db_backend.create_view(view)
 
     bq_client.query_and_wait.assert_called_once_with(
         f'CREATE OR REPLACE VIEW `test_project.test_dataset.test_view`\n'
         f'AS\n'
-        f'SELECT DATE \'2025-01-01\' AS col_date;\n'
+        f'SELECT DATE \'2025-01-01\' AS col_date\n'
     )
 
 
@@ -1774,7 +1775,7 @@ def test_create_view_full(db_backend: BigQueryDbBackend, bq_client: Mock):
     view = View(
         name=QualifiedName('test_project.test_dataset.test_view'),
         columns=[Column('col_date', description='Test column description')],
-        select_sql='SELECT DATE \'2025-01-01\' AS col_date;',
+        select_sql='SELECT DATE \'2025-01-01\' AS col_date',
         select_file='some/path.sql',
         friendly_name='test_friendly',
         description='Test description',
@@ -1784,7 +1785,7 @@ def test_create_view_full(db_backend: BigQueryDbBackend, bq_client: Mock):
         privacy_policy={'p1': 123, 'p2': 'baz'},
     )
 
-    db_backend.create_or_replace_view(view)
+    db_backend.create_view(view)
 
     bq_client.query_and_wait.assert_called_once_with(
         f'CREATE OR REPLACE VIEW `test_project.test_dataset.test_view` (\n'
@@ -1799,7 +1800,68 @@ def test_create_view_full(db_backend: BigQueryDbBackend, bq_client: Mock):
         f'    privacy_policy = \'{{"p1": 123, "p2": "baz"}}\'\n'
         f')\n'
         f'AS\n'
-        f'SELECT DATE \'2025-01-01\' AS col_date;\n'
+        f'SELECT DATE \'2025-01-01\' AS col_date\n'
+    )
+
+
+def test_create_materialized_view_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
+    materialized_view = MaterializedView(
+        name=QualifiedName('test_project.test_dataset.test_materialized_view'),
+        select_sql='SELECT col_date FROM test_project.test_dataset.test_table',
+        select_file='some/path.sql',
+    )
+
+    db_backend.create_materialized_view(materialized_view)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'CREATE OR REPLACE MATERIALIZED VIEW `test_project.test_dataset.test_materialized_view`\n'
+        f'AS\n'
+        f'SELECT col_date FROM test_project.test_dataset.test_table\n'
+    )
+
+
+def test_create_materialized_view_full(db_backend: BigQueryDbBackend, bq_client: Mock):
+    materialized_view = MaterializedView(
+        name=QualifiedName('test_project.test_dataset.test_materialized_view'),
+        select_sql='SELECT col_date FROM test_project.test_dataset.test_table',
+        select_file='some/path.sql',
+        partitioning=Partitioning(
+            kind='TIME',
+            column=ColumnName('col_date'),
+            column_datatype=DATE,
+            time_unit='DAY',
+            expiration_days=1.5,
+            require_filter=True,
+        ),
+        clustering=[ColumnName('col_date')],
+        friendly_name='test_friendly',
+        description='Test description',
+        labels={'l1': 'v1', 'l2': 'v2'},
+        tags={'t1': 'v1', 't2': 'v2'},
+        expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+        allow_non_incremental_definition=True,
+        enable_refresh=True,
+        refresh_interval=timedelta(hours=1)
+    )
+
+    db_backend.create_materialized_view(materialized_view)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'CREATE OR REPLACE MATERIALIZED VIEW `test_project.test_dataset.test_materialized_view`\n'
+        f'PARTITION BY `col_date`\n'
+        f'CLUSTER BY `col_date`\n'
+        f'OPTIONS(\n'
+        f'    friendly_name = \'test_friendly\',\n'
+        f'    description = \'Test description\',\n'
+        f'    labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')],\n'
+        f'    tags = [(\'t1\', \'v1\'), (\'t2\', \'v2\')],\n'
+        f'    expiration_timestamp = TIMESTAMP \'2025-01-01 00:00:00 UTC\',\n'
+        f'    allow_non_incremental_definition = TRUE,\n'
+        f'    enable_refresh = TRUE,\n'
+        f'    refresh_interval_minutes = 60.0\n'
+        f')\n'
+        f'AS\n'
+        f'SELECT col_date FROM test_project.test_dataset.test_table\n'
     )
 
 

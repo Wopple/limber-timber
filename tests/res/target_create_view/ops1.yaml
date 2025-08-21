@@ -1,6 +1,6 @@
 version: 1
 operations:
-- kind: create_or_replace_view
+- kind: create_view
   data:
     view:
       name:

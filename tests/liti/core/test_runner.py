@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -751,7 +751,7 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
     assert table.column_map[ColumnName('col_bool')].description is None
 
 
-def test_create_or_replace_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
+def test_create_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
     table_name = QualifiedName('my_project.my_dataset.view_table')
 
     make_runner('target_create_view').run(wet_run=True)
@@ -759,7 +759,7 @@ def test_create_or_replace_view(db_backend: MemoryDbBackend, meta_backend: Memor
 
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert view.select_sql == 'SELECT 1 AS foo;\n'
+    assert view.select_sql == 'SELECT 1 AS foo\n'
     assert view.columns == [Column('foo', INT64)]
     assert view.friendly_name == 'my_friendly_name'
     assert view.description == 'My description'
@@ -782,7 +782,7 @@ def test_create_or_replace_view(db_backend: MemoryDbBackend, meta_backend: Memor
 
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 2
-    assert view.select_sql == 'SELECT 2 AS bar;\n'
+    assert view.select_sql == 'SELECT 2 AS bar\n'
     assert view.columns == [Column('bar', INT64)]
 
     make_runner('target_create_view').run(wet_run=True, allow_down=True)
@@ -790,7 +790,7 @@ def test_create_or_replace_view(db_backend: MemoryDbBackend, meta_backend: Memor
 
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert view.select_sql == 'SELECT 1 AS foo;\n'
+    assert view.select_sql == 'SELECT 1 AS foo\n'
     assert view.columns == [Column('foo', INT64)]
 
 
@@ -809,7 +809,7 @@ def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend,
 
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert view.select_sql == 'SELECT 1 AS foo;\n'
+    assert view.select_sql == 'SELECT 1 AS foo\n'
     assert view.columns == [Column('foo', INT64)]
     assert view.friendly_name == 'my_friendly_name'
     assert view.description == 'My description'
@@ -826,6 +826,134 @@ def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend,
     )
 
     assert view.privacy_policy == {'p1': 123, 'p2': 'baz'}
+
+
+def test_create_materialized_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
+    table_name = QualifiedName('my_project.my_dataset.materialized_view_table')
+
+    make_runner('target_create_materialized_view').run(wet_run=True)
+    materialized_view = db_backend.get_materialized_view(table_name)
+
+    assert len(db_backend.materialized_views) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+    assert materialized_view.select_sql == 'SELECT NOT col_bool AS not_col_bool, col_date FROM my_project.my_dataset.source_table\n'
+
+    assert materialized_view.partitioning == Partitioning(
+        kind='TIME',
+        column=ColumnName('col_date'),
+        column_datatype=DATE,
+    )
+
+    assert materialized_view.clustering == [ColumnName('not_col_bool')]
+    assert materialized_view.friendly_name == 'my_friendly_name'
+    assert materialized_view.description == 'My description'
+    assert materialized_view.labels == {'key_1': 'value_1', 'key_2': 'value_2'}
+    assert materialized_view.tags == {'key_3': 'value_3', 'key_4': 'value_4'}
+
+    assert materialized_view.expiration_timestamp == datetime(
+        year=2000,
+        month=1,
+        day=2,
+        hour=3,
+        minute=4,
+        second=5,
+    )
+
+    assert materialized_view.allow_non_incremental_definition == True
+    assert materialized_view.enable_refresh == True
+    assert materialized_view.refresh_interval == timedelta(hours=1)
+
+    make_runner('target_replace_materialized_view').run(wet_run=True)
+    materialized_view = db_backend.get_materialized_view(table_name)
+
+    assert len(db_backend.materialized_views) == 1
+    assert len(meta_backend.get_applied_operations()) == 3
+    assert materialized_view.select_sql == 'SELECT col_bool, col_date FROM my_project.my_dataset.source_table\n'
+    assert materialized_view.partitioning is None
+    assert materialized_view.clustering is None
+    assert materialized_view.friendly_name is None
+    assert materialized_view.description is None
+    assert materialized_view.labels is None
+    assert materialized_view.tags is None
+    assert materialized_view.expiration_timestamp is None
+    assert materialized_view.allow_non_incremental_definition == False
+    assert materialized_view.enable_refresh == False
+    assert materialized_view.refresh_interval == timedelta(hours=2)
+
+    make_runner('target_create_materialized_view').run(wet_run=True, allow_down=True)
+    materialized_view = db_backend.get_materialized_view(table_name)
+
+    assert len(db_backend.materialized_views) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+    assert materialized_view.select_sql == 'SELECT NOT col_bool AS not_col_bool, col_date FROM my_project.my_dataset.source_table\n'
+
+    assert materialized_view.partitioning == Partitioning(
+        kind='TIME',
+        column=ColumnName('col_date'),
+        column_datatype=DATE,
+    )
+
+    assert materialized_view.clustering == [ColumnName('not_col_bool')]
+    assert materialized_view.friendly_name == 'my_friendly_name'
+    assert materialized_view.description == 'My description'
+    assert materialized_view.labels == {'key_1': 'value_1', 'key_2': 'value_2'}
+    assert materialized_view.tags == {'key_3': 'value_3', 'key_4': 'value_4'}
+
+    assert materialized_view.expiration_timestamp == datetime(
+        year=2000,
+        month=1,
+        day=2,
+        hour=3,
+        minute=4,
+        second=5,
+    )
+
+    assert materialized_view.allow_non_incremental_definition == True
+    assert materialized_view.enable_refresh == True
+    assert materialized_view.refresh_interval == timedelta(hours=1)
+
+
+def test_drop_materialized_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
+    table_name = QualifiedName('my_project.my_dataset.materialized_view_table')
+
+    make_runner('target_drop_materialized_view').run(wet_run=True)
+    materialized_view = db_backend.get_materialized_view(table_name)
+
+    assert len(db_backend.materialized_views) == 0
+    assert len(meta_backend.get_applied_operations()) == 3
+    assert materialized_view is None
+
+    make_runner('target_create_materialized_view').run(wet_run=True, allow_down=True)
+    materialized_view = db_backend.get_materialized_view(table_name)
+
+    assert len(db_backend.materialized_views) == 1
+    assert len(meta_backend.get_applied_operations()) == 2
+    assert materialized_view.select_sql == 'SELECT NOT col_bool AS not_col_bool, col_date FROM my_project.my_dataset.source_table\n'
+
+    assert materialized_view.partitioning == Partitioning(
+        kind='TIME',
+        column=ColumnName('col_date'),
+        column_datatype=DATE,
+    )
+
+    assert materialized_view.clustering == [ColumnName('not_col_bool')]
+    assert materialized_view.friendly_name == 'my_friendly_name'
+    assert materialized_view.description == 'My description'
+    assert materialized_view.labels == {'key_1': 'value_1', 'key_2': 'value_2'}
+    assert materialized_view.tags == {'key_3': 'value_3', 'key_4': 'value_4'}
+
+    assert materialized_view.expiration_timestamp == datetime(
+        year=2000,
+        month=1,
+        day=2,
+        hour=3,
+        minute=4,
+        second=5,
+    )
+
+    assert materialized_view.allow_non_incremental_definition == True
+    assert materialized_view.enable_refresh == True
+    assert materialized_view.refresh_interval == timedelta(hours=1)
 
 
 def test_template_database_and_schema(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):

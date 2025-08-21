@@ -13,7 +13,7 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE,
     FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, String, Struct, TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.operation.data.view import CreateOrReplaceMaterializedView, CreateOrReplaceView
+from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, \
     ForeignReference, Identifier, \
     IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, Relation, RoundingMode, SchemaName, Table, \
@@ -645,13 +645,13 @@ class BigQueryDbBackend(DbBackend):
         ]
 
         views = [
-            CreateOrReplaceView(view=v)
+            CreateView(view=v)
             for v in relations
             if isinstance(v, View)
         ]
 
         materialized_views = [
-            CreateOrReplaceMaterializedView(materialized_view=m)
+            CreateMaterializedView(materialized_view=m)
             for m in relations
             if isinstance(m, MaterializedView)
         ]
@@ -665,9 +665,9 @@ class BigQueryDbBackend(DbBackend):
             if isinstance(relation, Table):
                 return CreateTable(table=relation)
             elif isinstance(relation, View):
-                return CreateOrReplaceView(view=relation)
+                return CreateView(view=relation)
             elif isinstance(relation, MaterializedView):
-                return CreateOrReplaceMaterializedView(materialized_view=relation)
+                return CreateMaterializedView(materialized_view=relation)
             else:
                 raise ValueError(f'Unrecognized relation type: {relation}')
         else:
@@ -974,7 +974,7 @@ class BigQueryDbBackend(DbBackend):
         else:
             raise ValueError(f'Relation is not a view: {view}')
 
-    def create_or_replace_view(self, view: View):
+    def create_view(self, view: View):
         column_sqls = [view_column_to_sql(column) for column in view.columns or []]
         options = []
 
@@ -1038,7 +1038,7 @@ class BigQueryDbBackend(DbBackend):
         else:
             raise ValueError(f'Relation is not a materialized view: {materialized_view}')
 
-    def create_or_replace_materialized_view(self, materialized_view: MaterializedView):
+    def create_materialized_view(self, materialized_view: MaterializedView):
         options = []
         partition_sql = partition_to_sql(materialized_view)
         cluster_sql = cluster_to_sql(materialized_view)

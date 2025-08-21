@@ -1,6 +1,6 @@
 version: 1
 operations:
-- kind: create_or_replace_view
+- kind: create_view
   data:
     view:
       name:
@@ -23,7 +23,7 @@ operations:
       privacy_policy:
         p1: 123
         p2: "baz"
-- kind: create_or_replace_view
+- kind: create_view
   data:
     view:
       name:

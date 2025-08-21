@@ -1,0 +1,56 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name:
+        database: my_project
+        schema: my_dataset
+        name: source_table
+      columns:
+      - name: col_bool
+        datatype: BOOL
+      - name: col_date
+        datatype: DATE
+      partitioning:
+        kind: TIME
+        column: col_date
+      clustering:
+      - col_bool
+- kind: create_materialized_view
+  data:
+    materialized_view:
+      name:
+        database: my_project
+        schema: my_dataset
+        name: materialized_view_table
+      select_file: ../sql/create_materialized_view.sql
+      partitioning:
+        kind: TIME
+        column: col_date
+        column_datatype: DATE
+      clustering:
+      - not_col_bool
+      friendly_name: my_friendly_name
+      description: "My description"
+      labels:
+        key_1: value_1
+        key_2: value_2
+      tags:
+        key_3: value_3
+        key_4: value_4
+      expiration_timestamp: "2000-01-02 03:04:05"
+      allow_non_incremental_definition: true
+      enable_refresh: true
+      refresh_interval: 3600
+- kind: create_materialized_view
+  data:
+    materialized_view:
+      name:
+        database: my_project
+        schema: my_dataset
+        name: materialized_view_table
+      select_file: ../sql/replace_materialized_view.sql
+      allow_non_incremental_definition: false
+      enable_refresh: false
+      refresh_interval: 7200.0

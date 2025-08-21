@@ -1,1 +1,1 @@
-SELECT 2 AS bar;
+SELECT 2 AS bar

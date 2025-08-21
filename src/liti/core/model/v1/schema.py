@@ -296,6 +296,17 @@ class Partitioning(LitiModel):
     def validate_upper(cls, value: str | None) -> str | None:
         return value and value.upper()
 
+    @field_validator('column_datatype', mode='before')
+    @classmethod
+    def validate_column_datatype(cls, value: Datatype | str | dict[str, Any] | None) -> Datatype | None:
+        return value and parse_datatype(value)
+
+    @field_serializer('column_datatype')
+    @classmethod
+    def serialize_column_datatype(cls, value: Datatype | None, info: FieldSerializationInfo) -> str | dict[str, Any] | None:
+        # necessary to call the subclass serializer, otherwise pydantic uses Datatype
+        return value and value.model_dump(exclude_none=info.exclude_none)
+
 
 class BigLake(LitiModel):
     connection_id: str
@@ -358,7 +369,7 @@ class Relation(LitiModel):
     @property
     def column_map(self) -> dict[ColumnName, Column]:
         # Recreate the map to ensure it is up-to-date
-        return {column.name: column for column in self.columns}
+        return {column.name: column for column in self.columns or []}
 
     @property
     def foreign_key_map(self) -> dict[Identifier, ForeignKey]:

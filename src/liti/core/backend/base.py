@@ -5,11 +5,11 @@ from liti.core.base import Defaulter, Validator
 from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.operation.data.view import CreateOrReplaceMaterializedView, CreateOrReplaceView
+from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
     IntervalLiteral, MaterializedView, PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
 
-CreateRelation = CreateTable | CreateOrReplaceView | CreateOrReplaceMaterializedView
+CreateRelation = CreateTable | CreateView | CreateMaterializedView
 
 
 class DbBackend(ABC, Defaulter, Validator):
@@ -153,7 +153,7 @@ class DbBackend(ABC, Defaulter, Validator):
     def get_view(self, name: QualifiedName) -> View | None:
         raise NotImplementedError('not supported')
 
-    def create_or_replace_view(self, view: View):
+    def create_view(self, view: View):
         raise NotImplementedError('not supported')
 
     def drop_view(self, name: QualifiedName):
@@ -165,7 +165,7 @@ class DbBackend(ABC, Defaulter, Validator):
     def get_materialized_view(self, name: QualifiedName) -> MaterializedView | None:
         raise NotImplementedError('not supported')
 
-    def create_or_replace_materialized_view(self, materialized_view: MaterializedView):
+    def create_materialized_view(self, materialized_view: MaterializedView):
         raise NotImplementedError('not supported')
 
     def drop_materialized_view(self, name: QualifiedName):

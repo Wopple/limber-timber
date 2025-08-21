@@ -4,7 +4,7 @@ from liti.core.backend.base import CreateRelation, DbBackend, MetaBackend
 from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.operation.data.view import CreateOrReplaceMaterializedView, CreateOrReplaceView
+from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, IntervalLiteral, \
     MaterializedView, PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
 
@@ -23,13 +23,13 @@ class MemoryDbBackend(DbBackend):
         ]
 
         views = [
-            CreateOrReplaceView(view=view)
+            CreateView(view=view)
             for name, view in self.views.items()
             if name.database == database and name.schema == schema
         ]
 
         materialized_views = [
-            CreateOrReplaceMaterializedView(materialized_view=materialized_view)
+            CreateMaterializedView(materialized_view=materialized_view)
             for name, materialized_view in self.materialized_views.items()
             if name.database == database and name.schema == schema
         ]
@@ -40,9 +40,9 @@ class MemoryDbBackend(DbBackend):
         if name in self.tables:
             return CreateTable(table=self.tables[name])
         if name in self.views:
-            return CreateOrReplaceView(view=self.views[name])
+            return CreateView(view=self.views[name])
         if name in self.materialized_views:
-            return CreateOrReplaceMaterializedView(materialized_view=self.materialized_views[name])
+            return CreateMaterializedView(materialized_view=self.materialized_views[name])
         else:
             return None
 
@@ -154,7 +154,7 @@ class MemoryDbBackend(DbBackend):
     def get_view(self, name: QualifiedName) -> View | None:
         return self.views.get(name)
 
-    def create_or_replace_view(self, view: View):
+    def create_view(self, view: View):
         self.views[view.name] = view.model_copy(deep=True)
 
     def drop_view(self, name: QualifiedName):
@@ -169,7 +169,7 @@ class MemoryDbBackend(DbBackend):
     def get_materialized_view(self, name: QualifiedName) -> MaterializedView | None:
         return self.materialized_views.get(name)
 
-    def create_or_replace_materialized_view(self, materialized_view: MaterializedView):
+    def create_materialized_view(self, materialized_view: MaterializedView):
         self.materialized_views[materialized_view.name] = materialized_view.model_copy(deep=True)
 
     def drop_materialized_view(self, name: QualifiedName):
