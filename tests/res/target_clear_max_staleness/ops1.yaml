@@ -14,7 +14,7 @@ operations:
         minute: 30
 - kind: set_max_staleness
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: staleness_table
@@ -22,7 +22,7 @@ operations:
       minute: 10
 - kind: set_max_staleness
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: staleness_table

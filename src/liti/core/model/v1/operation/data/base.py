@@ -2,6 +2,8 @@ from typing import Any, ClassVar, Literal
 
 from liti.core.base import LitiModel
 
+EntityKind = Literal['SCHEMA', 'TABLE', 'VIEW', 'MATERIALIZED_VIEW']
+
 
 class Operation(LitiModel):
     KIND: ClassVar[str]
@@ -27,3 +29,7 @@ class Operation(LitiModel):
             'kind': self.KIND,
             'data': data,
         }
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return set()

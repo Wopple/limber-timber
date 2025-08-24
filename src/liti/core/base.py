@@ -1,5 +1,6 @@
 from math import isclose
-from typing import Any, Callable, ClassVar, Generator, TYPE_CHECKING
+from types import UnionType
+from typing import Any, Callable, ClassVar, Generator, get_origin, get_args, TYPE_CHECKING
 
 from pydantic import BaseModel
 
@@ -9,7 +10,7 @@ from liti.core.context import Context
 # which need to use types from this file
 if TYPE_CHECKING:
     from liti.core.model.v1.datatype import Array, BigNumeric, Float, Int, Numeric
-    from liti.core.model.v1.schema import MaterializedView, Partitioning, Table, View
+    from liti.core.model.v1.schema import MaterializedView, Partitioning, Schema, Table, View
 
 
 class Defaulter:
@@ -71,6 +72,9 @@ class Validator:
     """
 
     def noop_validate(self, node: Any, context: Context):
+        pass
+
+    def validate_schema(self, node: 'Schema', context: Context):
         pass
 
     def validate_int(self, node: 'Int', context: Context):
@@ -254,9 +258,24 @@ class LitiModel(BaseModel, Defaultable, Validatable):
         # yield the leaf field if it matches
         elif all(is_match(fm, field) for fm in field_matches):
             field_type = self.__pydantic_fields__[field_name].annotation
+            subclass = extract_subclass(field_type, ValidatedString)
 
-            if issubclass(field_type, ValidatedString):
-                # avoids having to specify '.string' in templates
-                yield lambda value: setattr(self, field_name, field_type(value))
+            if subclass is not None:
+                # avoids having to specify '.string' in templates when the field is a ValidatedString
+                yield lambda value: setattr(self, field_name, subclass(value))
             else:
                 yield lambda value: setattr(self, field_name, value)
+
+
+def extract_subclass(ty: type, parent: type) -> type | None:
+    """ Returns the first subclass of parent if any exist, supports direct subclasses and union types """
+
+    if issubclass(ty, parent):
+        return ty
+
+    if get_origin(ty) is UnionType:
+        for t in get_args(ty):
+            if issubclass(t, parent):
+                return t
+
+    return None

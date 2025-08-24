@@ -14,11 +14,11 @@ operations:
         kind: TIME
         column: col_date
         time_unit: MONTH
-        expiration_days: 90
+        expiration: P90D
 - kind: set_partition_expiration
   data:
     table_name:
       database: my_project
       schema: my_dataset
       name: partitioning_table
-    expiration_days: 30
+    expiration: P30D

@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from liti.core.model.v1.operation.data.base import Operation
+from liti.core.model.v1.operation.data.base import EntityKind, Operation
 from liti.core.model.v1.schema import MaterializedView, QualifiedName, View
 
 
@@ -11,6 +11,10 @@ class CreateView(Operation):
 
     KIND: ClassVar[str] = 'create_view'
 
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'VIEW'}
+
 
 class DropView(Operation):
     """ Semantics: DROP """
@@ -18,6 +22,10 @@ class DropView(Operation):
     view_name: QualifiedName
 
     KIND: ClassVar[str] = 'drop_view'
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'VIEW'}
 
 
 class CreateMaterializedView(Operation):
@@ -27,6 +35,10 @@ class CreateMaterializedView(Operation):
 
     KIND: ClassVar[str] = 'create_materialized_view'
 
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'MATERIALIZED_VIEW'}
+
 
 class DropMaterializedView(Operation):
     """ Semantics: DROP """
@@ -34,3 +46,7 @@ class DropMaterializedView(Operation):
     materialized_view_name: QualifiedName
 
     KIND: ClassVar[str] = 'drop_materialized_view'
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'MATERIALIZED_VIEW'}

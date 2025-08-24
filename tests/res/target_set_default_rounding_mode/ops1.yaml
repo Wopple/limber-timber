@@ -12,14 +12,14 @@ operations:
         datatype: BOOL
 - kind: set_default_rounding_mode
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: revert_table
     rounding_mode: ROUND_HALF_AWAY_FROM_ZERO
 - kind: set_default_rounding_mode
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: revert_table

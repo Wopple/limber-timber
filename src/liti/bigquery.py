@@ -5,6 +5,7 @@
 from google.cloud.bigquery import (
     Client,
     ConnectionProperty,
+    Dataset,
     DatasetReference,
     PartitionRange,
     QueryJob,

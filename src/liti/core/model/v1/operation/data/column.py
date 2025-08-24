@@ -3,7 +3,7 @@ from typing import Any, ClassVar
 from pydantic import field_validator
 
 from liti.core.model.v1.datatype import Datatype, parse_datatype
-from liti.core.model.v1.operation.data.base import Operation
+from liti.core.model.v1.operation.data.base import EntityKind, Operation
 from liti.core.model.v1.schema import Column, ColumnName, FieldPath, RoundingMode, QualifiedName
 
 
@@ -13,12 +13,20 @@ class AddColumn(Operation):
 
     KIND: ClassVar[str] = 'add_column'
 
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
+
 
 class DropColumn(Operation):
     table_name: QualifiedName
     column_name: ColumnName
 
     KIND: ClassVar[str] = 'drop_column'
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
 
 
 class RenameColumn(Operation):
@@ -28,6 +36,10 @@ class RenameColumn(Operation):
 
     KIND: ClassVar[str] = 'rename_column'
 
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
+
 
 class SetColumnDatatype(Operation):
     table_name: QualifiedName
@@ -35,6 +47,10 @@ class SetColumnDatatype(Operation):
     datatype: Datatype
 
     KIND: ClassVar[str] = 'set_column_datatype'
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
 
     @field_validator('datatype', mode='before')
     @classmethod
@@ -49,6 +65,10 @@ class AddColumnField(Operation):
 
     KIND: ClassVar[str] = 'add_column_field'
 
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
+
     @field_validator('datatype', mode='before')
     @classmethod
     def validate_datatype(cls, value: Datatype | str | dict[str, Any]) -> Datatype:
@@ -61,6 +81,10 @@ class DropColumnField(Operation):
 
     KIND: ClassVar[str] = 'drop_column_field'
 
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
+
 
 class SetColumnNullable(Operation):
     table_name: QualifiedName
@@ -68,6 +92,10 @@ class SetColumnNullable(Operation):
     nullable: bool
 
     KIND: ClassVar[str] = 'set_column_nullable'
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
 
 
 class SetColumnDescription(Operation):
@@ -77,6 +105,10 @@ class SetColumnDescription(Operation):
 
     KIND: ClassVar[str] = 'set_column_description'
 
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
+
 
 class SetColumnRoundingMode(Operation):
     table_name: QualifiedName
@@ -84,3 +116,7 @@ class SetColumnRoundingMode(Operation):
     rounding_mode: RoundingMode | None = None
 
     KIND: ClassVar[str] = 'set_column_rounding_mode'
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}

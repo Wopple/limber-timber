@@ -4,6 +4,7 @@ from pathlib import Path
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.context import Context
 from liti.core.model.v1.operation.data.base import Operation
+from liti.core.model.v1.schema import MaterializedView, QualifiedName, Schema, Table, View
 
 
 class OperationOps(ABC):
@@ -69,3 +70,31 @@ class OperationOps(ABC):
         Useful for recovering from failures that left the migrations in an inconsistent state.
         """
         pass
+
+    def get_entity(
+        self,
+        name: QualifiedName,
+        db_backend: DbBackend | None = None,
+    ) -> Schema | Table | View | MaterializedView | None:
+        """ Return the named entity among the supported entity kinds or None if it does not exist """
+
+        db_backend = db_backend or self.db_backend
+
+        if 'SCHEMA' in self.op.supported_entity_kinds:
+            schema = db_backend.get_schema(name)
+
+            if schema is not None:
+                return schema
+
+        if any(k in self.op.supported_entity_kinds for k in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')):
+            relation = db_backend.get_relation(name)
+
+            for entity_kind in self.op.supported_entity_kinds:
+                if entity_kind == 'TABLE' and isinstance(relation, Table):
+                    return relation
+                elif entity_kind == 'VIEW' and isinstance(relation, View):
+                    return relation
+                elif entity_kind == 'MATERIALIZED_VIEW' and isinstance(relation, MaterializedView):
+                    return relation
+
+        return None

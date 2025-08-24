@@ -14,4 +14,4 @@ operations:
         kind: TIME
         column: col_date
         time_unit: MONTH
-        expiration_days: 90
+        expiration: P90D

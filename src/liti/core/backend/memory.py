@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from liti.core.backend.base import CreateRelation, DbBackend, MetaBackend
 from liti.core.model.v1.datatype import Datatype
@@ -6,11 +6,12 @@ from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, IntervalLiteral, \
-    MaterializedView, PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
+    MaterializedView, PrimaryKey, RoundingMode, Schema, SchemaName, Table, QualifiedName, View
 
 
 class MemoryDbBackend(DbBackend):
     def __init__(self):
+        self.schemas: dict[QualifiedName, Schema] = {}
         self.tables: dict[QualifiedName, Table] = {}
         self.views: dict[QualifiedName, View] = {}
         self.materialized_views: dict[QualifiedName, MaterializedView] = {}
@@ -46,8 +47,20 @@ class MemoryDbBackend(DbBackend):
         else:
             return None
 
-    def has_table(self, name: QualifiedName) -> bool:
-        return name in self.tables
+    def get_schema(self, name: QualifiedName) -> Schema | None:
+        return self.schemas.get(name)
+
+    def create_schema(self, schema: Schema):
+        if schema.name in self.schemas:
+            raise ValueError(f'Schema {schema.name} already exists')
+
+        self.schemas[schema.name] = schema.model_copy(deep=True)
+
+    def drop_schema(self, name: QualifiedName):
+        if name not in self.schemas:
+            raise ValueError(f'Schema {name} does not exist')
+
+        del self.schemas[name]
 
     def get_table(self, name: QualifiedName) -> Table | None:
         return self.tables.get(name)
@@ -76,8 +89,8 @@ class MemoryDbBackend(DbBackend):
     def drop_constraint(self, table_name: QualifiedName, constraint_name: Identifier):
         self.tables[table_name].drop_constraint(constraint_name)
 
-    def set_partition_expiration(self, table_name: QualifiedName, expiration_days: float | None):
-        self.tables[table_name].partitioning.expiration_days = expiration_days
+    def set_partition_expiration(self, table_name: QualifiedName, expiration: timedelta | None):
+        self.tables[table_name].partitioning.expiration = expiration
 
     def set_require_partition_filter(self, table_name: QualifiedName, require_filter: bool):
         self.tables[table_name].partitioning.require_filter = require_filter
@@ -85,23 +98,26 @@ class MemoryDbBackend(DbBackend):
     def set_clustering(self, table_name: QualifiedName, column_names: list[ColumnName] | None):
         self.tables[table_name].clustering = column_names
 
-    def set_description(self, table_name: QualifiedName, description: str | None):
-        self.tables[table_name].description = description
+    def set_friendly_name(self, entity_name: QualifiedName, friendly_name: str | None):
+        self.get_entity(entity_name).friendly_name = friendly_name
 
-    def set_labels(self, table_name: QualifiedName, labels: dict[str, str] | None):
-        self.tables[table_name].labels = labels
+    def set_description(self, entity_name: QualifiedName, description: str | None):
+        self.get_entity(entity_name).description = description
 
-    def set_tags(self, table_name: QualifiedName, tags: dict[str, str] | None):
-        self.tables[table_name].tags = tags
+    def set_labels(self, entity_name: QualifiedName, labels: dict[str, str] | None):
+        self.get_entity(entity_name).labels = labels
 
-    def set_expiration_timestamp(self, table_name: QualifiedName, expiration_timestamp: datetime | None):
-        self.tables[table_name].expiration_timestamp = expiration_timestamp
+    def set_tags(self, entity_name: QualifiedName, tags: dict[str, str] | None):
+        self.get_entity(entity_name).tags = tags
 
-    def set_default_rounding_mode(self, table_name: QualifiedName, rounding_mode: RoundingMode | None):
-        self.tables[table_name].default_rounding_mode = rounding_mode
+    def set_expiration_timestamp(self, entity_name: QualifiedName, expiration_timestamp: datetime | None):
+        self.get_entity(entity_name).expiration_timestamp = expiration_timestamp
 
-    def set_max_staleness(self, table_name: QualifiedName, max_staleness: IntervalLiteral | None):
-        self.tables[table_name].max_staleness = max_staleness
+    def set_default_rounding_mode(self, entity_name: QualifiedName, rounding_mode: RoundingMode | None):
+        self.get_entity(entity_name).default_rounding_mode = rounding_mode
+
+    def set_max_staleness(self, entity_name: QualifiedName, max_staleness: IntervalLiteral | None):
+        self.get_entity(entity_name).max_staleness = max_staleness
 
     def set_enable_change_history(self, table_name: QualifiedName, enabled: bool):
         self.tables[table_name].enable_change_history = enabled
@@ -148,9 +164,6 @@ class MemoryDbBackend(DbBackend):
         column = table.column_map[column_name]
         column.rounding_mode = rounding_mode
 
-    def has_view(self, name: QualifiedName) -> bool:
-        return name in self.views
-
     def get_view(self, name: QualifiedName) -> View | None:
         return self.views.get(name)
 
@@ -162,9 +175,6 @@ class MemoryDbBackend(DbBackend):
             raise ValueError(f'View {name} does not exist')
 
         del self.views[name]
-
-    def has_materialized_view(self, name: QualifiedName) -> bool:
-        return name in self.materialized_views
 
     def get_materialized_view(self, name: QualifiedName) -> MaterializedView | None:
         return self.materialized_views.get(name)

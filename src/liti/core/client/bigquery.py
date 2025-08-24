@@ -49,6 +49,12 @@ class BqClient:
         job_config = self.setup_config(job_config)
         return self.client.query_and_wait(sql, job_config=job_config)
 
+    def get_dataset(self, dataset_ref: bq.DatasetReference) -> bq.Dataset | None:
+        return self.client.get_dataset(dataset_ref)
+
+    def delete_dataset(self, dataset_ref: bq.DatasetReference):
+        self.client.delete_dataset(dataset_ref)
+
     def has_table(self, table_ref: bq.TableReference) -> bool:
         for table_item in self.client.list_tables(f'{table_ref.project}.{table_ref.dataset_id}'):
             if table_item.table_id == table_ref.table_id:

@@ -12,7 +12,7 @@ operations:
         datatype: BOOL
 - kind: set_labels
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: revert_table
@@ -21,7 +21,7 @@ operations:
       l2: v2
 - kind: set_labels
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: revert_table

@@ -207,7 +207,7 @@ def test_all_partitioning(db_backend: MemoryDbBackend, meta_backend: MemoryMetaB
         kind='TIME',
         column=ColumnName('col_date'),
         time_unit='YEAR',
-        expiration_days=1,
+        expiration=timedelta(days=1),
         require_filter=True,
     )
 
@@ -319,19 +319,19 @@ def test_set_partition_expiration(db_backend: MemoryDbBackend, meta_backend: Mem
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 2
-    assert db_backend.get_table(table_name).partitioning.expiration_days == 30.0
+    assert db_backend.get_table(table_name).partitioning.expiration == timedelta(days=30)
 
     make_runner('target_clear_partition_expiration').run(wet_run=True)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 3
-    assert db_backend.get_table(table_name).partitioning.expiration_days is None
+    assert db_backend.get_table(table_name).partitioning.expiration is None
 
     make_runner('target_unset_partition_expiration').run(wet_run=True, allow_down=True)
 
     assert len(db_backend.tables) == 1
     assert len(meta_backend.get_applied_operations()) == 1
-    assert db_backend.get_table(table_name).partitioning.expiration_days == 90.0
+    assert db_backend.get_table(table_name).partitioning.expiration == timedelta(days=90)
 
 
 def test_set_require_partition_filter(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
@@ -956,7 +956,11 @@ def test_drop_materialized_view(db_backend: MemoryDbBackend, meta_backend: Memor
     assert materialized_view.refresh_interval == timedelta(hours=1)
 
 
-def test_template_database_and_schema(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
+def test_template_database_and_schema(
+    db_backend: MemoryDbBackend,
+    meta_backend: MemoryMetaBackend,
+    make_runner: MakeRunner,
+):
     table_name = QualifiedName('new_project.new_dataset.template_table')
 
     make_runner('target_template_database_and_schema').run(wet_run=True)

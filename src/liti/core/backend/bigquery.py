@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from liti import bigquery as bq
@@ -16,7 +16,7 @@ from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, \
     ForeignReference, Identifier, \
-    IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, Relation, RoundingMode, SchemaName, Table, \
+    IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, Relation, RoundingMode, Schema, SchemaName, Table, \
     QualifiedName, View
 
 log = logging.getLogger(__name__)
@@ -25,7 +25,9 @@ REQUIRED = 'REQUIRED'
 NULLABLE = 'NULLABLE'
 REPEATED = 'REPEATED'
 
-ONE_DAY_IN_MILLIS = 1000 * 60 * 60 * 24
+ONE_HOUR_IN_SECONDS = 60 * 60
+ONE_DAY_IN_SECONDS = 24 * ONE_HOUR_IN_SECONDS
+ONE_DAY_IN_MILLIS = 1000 * ONE_DAY_IN_SECONDS
 
 
 def to_dataset_ref(project: DatabaseName, dataset: SchemaName) -> bq.DatasetReference:
@@ -174,22 +176,22 @@ def to_bq_foreign_key(foreign_key: ForeignKey) -> bq.ForeignKey:
     )
 
 
-def to_bq_table(table: Table) -> bq.Table:
+def to_bq_table(relation: Relation) -> bq.Table:
     bq_table = bq.Table(
-        table_ref=to_table_ref(table.name),
-        schema=[to_schema_field(column) for column in table.columns],
+        table_ref=to_table_ref(relation.name),
+        schema=[to_schema_field(column) for column in relation.columns],
     )
 
     table_constraints = None
 
-    if table.primary_key or table.foreign_keys:
-        if table.primary_key:
-            primary_key = bq.PrimaryKey([col.string for col in table.primary_key.column_names])
+    if relation.primary_key or relation.foreign_keys:
+        if relation.primary_key:
+            primary_key = bq.PrimaryKey([col.string for col in relation.primary_key.column_names])
         else:
             primary_key = None
 
-        if table.foreign_keys:
-            foreign_keys = [to_bq_foreign_key(fk) for fk in table.foreign_keys]
+        if relation.foreign_keys:
+            foreign_keys = [to_bq_foreign_key(fk) for fk in relation.foreign_keys]
         else:
             foreign_keys = None
 
@@ -198,56 +200,56 @@ def to_bq_table(table: Table) -> bq.Table:
             foreign_keys=foreign_keys,
         )
 
-    if table.partitioning:
-        bq_table.require_partition_filter = table.partitioning.require_filter
+    if relation.partitioning:
+        bq_table.require_partition_filter = relation.partitioning.require_filter
 
-        if table.partitioning.kind == 'TIME':
-            if table.partitioning.expiration_days is not None:
-                expiration_ms = int(table.partitioning.expiration_days * ONE_DAY_IN_MILLIS)
+        if relation.partitioning.kind == 'TIME':
+            if relation.partitioning.expiration is not None:
+                expiration_ms = int(relation.partitioning.expiration * ONE_DAY_IN_MILLIS)
             else:
                 expiration_ms = None
 
             bq_table.time_partitioning = bq.TimePartitioning(
-                type_=table.partitioning.time_unit,
-                field=table.partitioning.column.string if table.partitioning.column else None,
+                type_=relation.partitioning.time_unit,
+                field=relation.partitioning.column.string if relation.partitioning.column else None,
                 expiration_ms=expiration_ms,
             )
-        elif table.partitioning.kind == 'INT':
+        elif relation.partitioning.kind == 'INT':
             bq_table.range_partitioning = bq.RangePartitioning(
-                field=table.partitioning.column.string,
+                field=relation.partitioning.column.string,
                 range_=bq.PartitionRange(
-                    start=table.partitioning.int_start,
-                    end=table.partitioning.int_end,
-                    interval=table.partitioning.int_step,
+                    start=relation.partitioning.int_start,
+                    end=relation.partitioning.int_end,
+                    interval=relation.partitioning.int_step,
                 ),
             )
         else:
-            raise ValueError(f'Unrecognized partitioning kind: {table.partitioning}')
+            raise ValueError(f'Unrecognized partitioning kind: {relation.partitioning}')
 
-    if table.big_lake:
+    if relation.big_lake:
         bq_table.biglake_configuration = bq.BigLakeConfiguration(
-            connection_id=table.connection_id,
-            storage_uri=table.storage_uri,
-            file_format=table.file_format,
-            table_format=table.table_format,
+            connection_id=relation.connection_id,
+            storage_uri=relation.storage_uri,
+            file_format=relation.file_format,
+            table_format=relation.table_format,
         )
 
     bq_table.table_constraints = table_constraints
-    bq_table.clustering_fields = [field.string for field in table.clustering] if table.clustering else None
-    bq_table.friendly_name = table.friendly_name
-    bq_table.description = table.description
-    bq_table.labels = table.labels
-    bq_table.resource_tags = table.tags
-    bq_table.expires = table.expiration_timestamp
-    bq_table.max_staleness = table.max_staleness and interval_literal_to_str(table.max_staleness)
+    bq_table.clustering_fields = [field.string for field in relation.clustering] if relation.clustering else None
+    bq_table.friendly_name = relation.friendly_name
+    bq_table.description = relation.description
+    bq_table.labels = relation.labels
+    bq_table.resource_tags = relation.tags
+    bq_table.expires = relation.expiration_timestamp
+    bq_table.max_staleness = relation.max_staleness and interval_literal_to_str(relation.max_staleness)
 
-    if isinstance(table, View):
-        bq_table.view_query = table.select_sql
-    elif isinstance(table, MaterializedView):
-        bq_table.mview_query = table.select_sql
-        bq_table.mview_allow_non_incremental_definition = table.allow_non_incremental_definition
-        bq_table.mview_enable_refresh = table.enable_refresh
-        bq_table.mview_refresh_interval = table.refresh_interval
+    if isinstance(relation, View):
+        bq_table.view_query = relation.select_sql
+    elif isinstance(relation, MaterializedView):
+        bq_table.mview_query = relation.select_sql
+        bq_table.mview_allow_non_incremental_definition = relation.allow_non_incremental_definition
+        bq_table.mview_enable_refresh = relation.enable_refresh
+        bq_table.mview_refresh_interval = relation.refresh_interval
 
     # TODO: figure out what to do about bq.Table missing fields
     return bq_table
@@ -498,6 +500,48 @@ def to_liti_foreign_key(foreign_key: bq.ForeignKey) -> ForeignKey:
     )
 
 
+def to_liti_schema(dataset: bq.Dataset) -> Schema:
+    if dataset.default_table_expiration_ms is not None:
+        default_table_expiration = timedelta(milliseconds=dataset.default_table_expiration_ms)
+    else:
+        default_table_expiration = None
+
+    if dataset.default_partition_expiration_ms is not None:
+        default_partition_expiration = timedelta(milliseconds=dataset.default_partition_expiration_ms)
+    else:
+        default_partition_expiration = None
+
+    if dataset.default_encryption_configuration is not None:
+        default_kms_key_name = dataset.default_encryption_configuration.kms_key_name
+    else:
+        default_kms_key_name = None
+
+    if dataset.max_time_travel_hours is not None:
+        max_time_travel = timedelta(hours=dataset.max_time_travel_hours)
+    else:
+        max_time_travel = None
+
+    return Schema(
+        name=QualifiedName(database=dataset.project, schema=dataset.dataset_id),
+        friendly_name=dataset.friendly_name,
+        description=dataset.description,
+        labels=dataset.labels or None,
+        tags=dataset.resource_tags or None,
+        location=dataset.location,
+        default_table_expiration=default_table_expiration,
+        default_partition_expiration=default_partition_expiration,
+        default_rounding_mode=to_liti_rounding_mode(dataset.default_rounding_mode),
+        default_kms_key_name=default_kms_key_name,
+        is_case_sensitive=not dataset.is_case_insensitive,
+        max_time_travel=max_time_travel,
+        storage_billing=dataset.storage_billing_model,
+        # TODO: figure out what to do about bq.Dataset missing fields
+        # - failover_reservation
+        # - is_primary_replica
+        # - primary_replica
+    )
+
+
 def to_liti_relation(table: bq.Table) -> Relation:
     primary_key = None
     foreign_keys = None
@@ -519,15 +563,15 @@ def to_liti_relation(table: bq.Table) -> Relation:
         time_partition = table.time_partitioning
 
         if time_partition.expiration_ms is not None:
-            expiration_days = time_partition.expiration_ms / ONE_DAY_IN_MILLIS
+            expiration = time_partition.expiration_ms / ONE_DAY_IN_MILLIS
         else:
-            expiration_days = None
+            expiration = None
 
         partitioning = Partitioning(
             kind='TIME',
             column=ColumnName(time_partition.field),
             time_unit=time_partition.type_,
-            expiration_days=expiration_days,
+            expiration=expiration,
             require_filter=table.require_partition_filter or False,
         )
     elif table.range_partitioning is not None:
@@ -673,21 +717,101 @@ class BigQueryDbBackend(DbBackend):
         else:
             return None
 
-    def has_table(self, name: QualifiedName) -> bool:
-        return self.client.has_table(to_table_ref(name))
+    def get_schema(self, name: QualifiedName) -> Schema | None:
+        bq_dataset = self.client.get_dataset(extract_dataset_ref(name))
+        return bq_dataset and to_liti_schema(bq_dataset)
+
+    def create_schema(self, schema: Schema):
+        options = []
+
+        if schema.collate:
+            collate_sql = f'DEFAULT COLLATE \'{schema.collate}\'\n'
+        else:
+            collate_sql = ''
+
+        if schema.friendly_name:
+            options.append(f'friendly_name = \'{schema.friendly_name}\'')
+
+        if schema.description:
+            options.append(f'description = \'{schema.description}\'')
+
+        if schema.labels:
+            options.append(f'labels = {option_dict_to_sql(schema.labels)}')
+
+        if schema.tags:
+            options.append(f'tags = {option_dict_to_sql(schema.tags)}')
+
+        if schema.default_table_expiration:
+            table_expiration_days = schema.default_table_expiration.total_seconds() / ONE_DAY_IN_SECONDS
+            options.append(f'default_table_expiration_days = {table_expiration_days}')
+
+        if schema.default_partition_expiration:
+            partition_expiration_days = schema.default_partition_expiration.total_seconds() / ONE_DAY_IN_SECONDS
+            options.append(f'default_partition_expiration_days = {partition_expiration_days}')
+
+        if schema.default_rounding_mode:
+            options.append(f'default_rounding_mode = \'{schema.default_rounding_mode}\'')
+
+        if schema.default_kms_key_name:
+            options.append(f'default_kms_key_name = \'{schema.default_kms_key_name}\'')
+
+        if schema.failover_reservation:
+            options.append(f'failover_reservation = \'{schema.failover_reservation}\'')
+
+        if not schema.is_case_sensitive:
+            options.append(f'is_case_insensitive = TRUE')
+
+        if schema.is_primary_replica is not None:
+            options.append(f'is_primary = {"TRUE" if schema.is_primary_replica else "FALSE"}')
+
+        if schema.primary_replica:
+            options.append(f'primary_replica = \'{schema.primary_replica}\'')
+
+        if schema.max_time_travel:
+            time_travel_hours = schema.max_time_travel.total_seconds() / ONE_HOUR_IN_SECONDS
+            options.append(f'max_time_travel_hours = {int(time_travel_hours)}')
+
+        if schema.storage_billing:
+            options.append(f'storage_billing_model = \'{schema.storage_billing}\'')
+
+        if options:
+            joined_options = ',\n    '.join(options)
+
+            options_sql = (
+                f'OPTIONS(\n'
+                f'    {joined_options}\n'
+                f')\n'
+            )
+        else:
+            options_sql = ''
+
+        self.client.query_and_wait(
+            f'CREATE SCHEMA `{schema.name}`\n'
+            f'{collate_sql}'
+            f'{options_sql}'
+        )
+
+    def drop_schema(self, name: QualifiedName):
+        self.client.delete_dataset(extract_dataset_ref(name))
 
     def get_table(self, name: QualifiedName) -> Table | None:
-        table = self.get_relation(name)
+        bq_table = self.client.get_table(to_table_ref(name))
+        liti_relation = bq_table and to_liti_relation(bq_table)
 
-        if table is None or isinstance(table, Table):
-            return table
+        if isinstance(liti_relation, Table):
+            return liti_relation
         else:
-            raise ValueError(f'Relation is not a table: {table}')
+            return None
 
     def create_table(self, table: Table):
         column_sqls = [column_to_sql(column) for column in table.columns]
         constraint_sqls = []
         options = []
+
+        if table.collate:
+            collate_sql = f'DEFAULT COLLATE \'{table.collate}\'\n'
+        else:
+            collate_sql = ''
 
         if table.primary_key:
             # TODO? update this if Big Query ever supports enforcement
@@ -723,8 +847,8 @@ class BigQueryDbBackend(DbBackend):
         if table.partitioning:
             partitioning = table.partitioning
 
-            if partitioning.kind == 'TIME' and partitioning.expiration_days is not None:
-                options.append(f'partition_expiration_days = {partitioning.expiration_days}')
+            if partitioning.kind == 'TIME' and partitioning.expiration is not None:
+                options.append(f'partition_expiration_days = {partitioning.expiration.total_seconds() / ONE_DAY_IN_SECONDS}')
 
             if partitioning.require_filter:
                 options.append(f'require_partition_filter = TRUE')
@@ -787,6 +911,7 @@ class BigQueryDbBackend(DbBackend):
             f'CREATE TABLE `{table.name}` (\n'
             f'    {columns_and_constraints}\n'
             f')\n'
+            f'{collate_sql}'
             f'{partition_sql}'
             f'{cluster_sql}'
             f'{connection_sql}'
@@ -837,57 +962,60 @@ class BigQueryDbBackend(DbBackend):
             f'DROP CONSTRAINT `{constraint_name}`\n'
         )
 
-    def set_partition_expiration(self, table_name: QualifiedName, expiration_days: float | None):
-        self.set_option(
+    def set_partition_expiration(self, table_name: QualifiedName, expiration: timedelta | None):
+        self.set_table_option(
             table_name,
             'partition_expiration_days',
-            str(expiration_days) if expiration_days is not None else 'NULL',
+            str(expiration.total_seconds() / ONE_DAY_IN_SECONDS) if expiration is not None else 'NULL',
         )
 
     def set_require_partition_filter(self, table_name: QualifiedName, require_filter: bool):
-        self.set_option(table_name, 'require_partition_filter', 'TRUE' if require_filter else 'FALSE')
+        self.set_table_option(table_name, 'require_partition_filter', 'TRUE' if require_filter else 'FALSE')
 
     def set_clustering(self, table_name: QualifiedName, column_names: list[ColumnName] | None):
         bq_table = self.client.get_table(to_table_ref(table_name))
         bq_table.clustering_fields = [col.string for col in column_names] if column_names else None
         self.client.update_table(bq_table, ['clustering_fields'])
 
-    def set_description(self, table_name: QualifiedName, description: str | None):
-        self.set_option(table_name, 'description', f'\'{description}\'' if description else 'NULL')
+    def set_friendly_name(self, entity_name: QualifiedName, friendly_name: str | None):
+        self.set_entity_option(entity_name, 'friendly_name', f'\'{friendly_name}\'' if friendly_name else 'NULL')
 
-    def set_labels(self, table_name: QualifiedName, labels: dict[str, str] | None):
-        self.set_option(table_name, 'labels', option_dict_to_sql(labels) if labels else 'NULL')
+    def set_description(self, entity_name: QualifiedName, description: str | None):
+        self.set_entity_option(entity_name, 'description', f'\'{description}\'' if description else 'NULL')
 
-    def set_tags(self, table_name: QualifiedName, tags: dict[str, str] | None):
-        self.set_option(table_name, 'tags', option_dict_to_sql(tags) if tags else 'NULL')
+    def set_labels(self, entity_name: QualifiedName, labels: dict[str, str] | None):
+        self.set_entity_option(entity_name, 'labels', option_dict_to_sql(labels) if labels else 'NULL')
 
-    def set_expiration_timestamp(self, table_name: QualifiedName, expiration_timestamp: datetime | None):
+    def set_tags(self, entity_name: QualifiedName, tags: dict[str, str] | None):
+        self.set_entity_option(entity_name, 'tags', option_dict_to_sql(tags) if tags else 'NULL')
+
+    def set_expiration_timestamp(self, entity_name: QualifiedName, expiration_timestamp: datetime | None):
         if expiration_timestamp:
             utc_ts = expiration_timestamp.astimezone(timezone.utc)
             formatted = f'TIMESTAMP \'{utc_ts.strftime("%Y-%m-%d %H:%M:%S UTC")}\''
         else:
             formatted = 'NULL'
 
-        self.set_option(table_name, 'expiration_timestamp', formatted)
+        self.set_entity_option(entity_name, 'expiration_timestamp', formatted)
 
-    def set_default_rounding_mode(self, table_name: QualifiedName, rounding_mode: RoundingMode | None):
-        self.set_option(table_name, 'default_rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL')
+    def set_default_rounding_mode(self, entity_name: QualifiedName, rounding_mode: RoundingMode | None):
+        self.set_entity_option(entity_name, 'default_rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL')
 
-    def set_max_staleness(self, table_name: QualifiedName, max_staleness: IntervalLiteral | None):
-        self.set_option(
-            table_name,
+    def set_max_staleness(self, entity_name: QualifiedName, max_staleness: IntervalLiteral | None):
+        self.set_entity_option(
+            entity_name,
             'max_staleness',
             interval_literal_to_sql(max_staleness) if max_staleness else 'NULL',
         )
 
     def set_enable_change_history(self, table_name: QualifiedName, enabled: bool):
-        self.set_option(table_name, 'enable_change_history', 'TRUE' if enabled else 'FALSE')
+        self.set_table_option(table_name, 'enable_change_history', 'TRUE' if enabled else 'FALSE')
 
     def set_enable_fine_grained_mutations(self, table_name: QualifiedName, enabled: bool):
-        self.set_option(table_name, 'enable_fine_grained_mutations', 'TRUE' if enabled else 'FALSE')
+        self.set_table_option(table_name, 'enable_fine_grained_mutations', 'TRUE' if enabled else 'FALSE')
 
     def set_kms_key_name(self, table_name: QualifiedName, key_name: str | None):
-        self.set_option(table_name, 'kms_key_name', f'\'{key_name}\'' if key_name else 'NULL')
+        self.set_table_option(table_name, 'kms_key_name', f'\'{key_name}\'' if key_name else 'NULL')
 
     def add_column(self, table_name: QualifiedName, column: Column):
         self.client.query_and_wait(
@@ -963,16 +1091,14 @@ class BigQueryDbBackend(DbBackend):
             'rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL',
         )
 
-    def has_view(self, name: QualifiedName) -> bool:
-        return self.has_table(name)
-
     def get_view(self, name: QualifiedName) -> View | None:
-        view = self.get_relation(name)
+        bq_table = self.client.get_table(to_table_ref(name))
+        liti_relation = bq_table and to_liti_relation(bq_table)
 
-        if view is None or isinstance(view, View):
-            return view
+        if isinstance(liti_relation, View):
+            return liti_relation
         else:
-            raise ValueError(f'Relation is not a view: {view}')
+            return None
 
     def create_view(self, view: View):
         column_sqls = [view_column_to_sql(column) for column in view.columns or []]
@@ -1027,16 +1153,14 @@ class BigQueryDbBackend(DbBackend):
     def drop_view(self, name: QualifiedName):
         self.drop_table(name)
 
-    def has_materialized_view(self, name: QualifiedName) -> bool:
-        return self.has_table(name)
-
     def get_materialized_view(self, name: QualifiedName) -> MaterializedView | None:
-        materialized_view = self.get_relation(name)
+        bq_table = self.client.get_table(to_table_ref(name))
+        liti_relation = bq_table and to_liti_relation(bq_table)
 
-        if materialized_view is None or isinstance(materialized_view, MaterializedView):
-            return materialized_view
+        if isinstance(liti_relation, MaterializedView):
+            return liti_relation
         else:
-            raise ValueError(f'Relation is not a materialized view: {materialized_view}')
+            return None
 
     def create_materialized_view(self, materialized_view: MaterializedView):
         options = []
@@ -1167,6 +1291,28 @@ class BigQueryDbBackend(DbBackend):
 
     # validation methods
 
+    def validate_schema(self, node: Schema, context: Context):
+        VALID_HOURS = {48, 72, 96, 120, 144, 168}
+
+        if node.name is None:
+            raise ValueError('Schema requires a name')
+
+        if node.name.database is None or len(node.name.database.string) == 0:
+            raise ValueError('Schema requires a database')
+
+        if node.name.schema is None or len(node.name.schema.string) == 0:
+            raise ValueError('Schema requires a schema')
+
+        if node.name.name is not None:
+            raise ValueError('Schema must not have a name, only database and schema')
+
+        if node.max_time_travel is not None:
+            float_hours = node.max_time_travel.total_seconds() / ONE_HOUR_IN_SECONDS
+            int_hours = int(float_hours)
+
+            if float_hours != int_hours or int_hours not in VALID_HOURS:
+                raise ValueError(f'max_time_travel must be one of {VALID_HOURS} hours: {node.max_time_travel}')
+
     def validate_int(self, node: Int, context: Context):
         if node.bits != 64:
             raise ValueError(f'Int.bits must be 64: {node.bits}')
@@ -1197,7 +1343,7 @@ class BigQueryDbBackend(DbBackend):
     def validate_partitioning(self, node: Partitioning, context: Context):
         if node.kind == 'TIME':
             required = ['kind', 'time_unit', 'require_filter']
-            allowed = required + ['column', 'expiration_days']
+            allowed = required + ['column', 'expiration']
         elif node.kind == 'INT':
             required = ['kind', 'column', 'int_start', 'int_end', 'int_step', 'require_filter']
             allowed = required
@@ -1226,17 +1372,33 @@ class BigQueryDbBackend(DbBackend):
 
     # class methods
 
-    def get_relation(self, name: QualifiedName) -> Relation | None:
-        bq_table = self.client.get_table(to_table_ref(name))
-        return bq_table and to_liti_relation(bq_table)
-
     def handle_unsupported(self, unsupported: Unsupported, message: str):
         if unsupported in self.raise_unsupported:
             raise UnsupportedError(message)
         else:
             log.warning(message)
 
-    def set_option(self, table_name: QualifiedName, key: str, value: str):
+    def set_entity_option(self, entity_name: QualifiedName, key: str, value: str):
+        entity = self.get_entity(entity_name)
+
+        if isinstance(entity, Schema):
+            self.set_schema_option(entity_name, key, value)
+        elif isinstance(entity, Table):
+            self.set_table_option(entity_name, key, value)
+        elif isinstance(entity, View):
+            self.set_view_option(entity_name, key, value)
+        elif isinstance(entity, MaterializedView):
+            self.set_materialized_view_option(entity_name, key, value)
+        else:
+            raise ValueError(f'Unrecognized entity type: {entity}')
+
+    def set_schema_option(self, schema_name: QualifiedName, key: str, value: str):
+        self.client.query_and_wait(
+            f'ALTER SCHEMA `{schema_name}`\n'
+            f'SET OPTIONS({key} = {value})\n'
+        )
+
+    def set_table_option(self, table_name: QualifiedName, key: str, value: str):
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'SET OPTIONS({key} = {value})\n'
@@ -1246,6 +1408,18 @@ class BigQueryDbBackend(DbBackend):
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'ALTER COLUMN `{column_name}`\n'
+            f'SET OPTIONS({key} = {value})\n'
+        )
+
+    def set_view_option(self, view_name: QualifiedName, key: str, value: str):
+        self.client.query_and_wait(
+            f'ALTER VIEW `{view_name}`\n'
+            f'SET OPTIONS({key} = {value})\n'
+        )
+
+    def set_materialized_view_option(self, materialized_view_name: QualifiedName, key: str, value: str):
+        self.client.query_and_wait(
+            f'ALTER MATERIALIZED VIEW `{materialized_view_name}`\n'
             f'SET OPTIONS({key} = {value})\n'
         )
 

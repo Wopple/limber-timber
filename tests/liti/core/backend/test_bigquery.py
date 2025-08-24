@@ -19,7 +19,12 @@ from tests.liti.util import NoRaise
 
 @fixture
 def bq_client() -> Mock:
-    return Mock()
+    client = Mock()
+    client.get_dataset.return_value = None
+    client.get_table.return_value = None
+    client.get_view.return_value = None
+    client.get_materialized_view.return_value = None
+    return client
 
 
 @fixture
@@ -30,6 +35,24 @@ def db_backend(bq_client) -> BigQueryDbBackend:
 @fixture
 def context() -> Mock:
     return Mock()
+
+
+def make_table(name: QualifiedName) -> bq.Table:
+    bq_table = bq.Table(name.string)
+    bq_table._properties['type'] = 'TABLE'
+    return bq_table
+
+
+def make_view(name: QualifiedName) -> bq.Table:
+    bq_table = bq.Table(name.string)
+    bq_table._properties['type'] = 'VIEW'
+    return bq_table
+
+
+def make_materialized_view(name: QualifiedName) -> bq.Table:
+    bq_table = bq.Table(name.string)
+    bq_table._properties['type'] = 'MATERIALIZED_VIEW'
+    return bq_table
 
 
 def test_to_dataset_ref():
@@ -1299,7 +1322,7 @@ def test_create_table_full(db_backend: BigQueryDbBackend, bq_client: Mock):
             kind='TIME',
             column=ColumnName('col_date'),
             time_unit='DAY',
-            expiration_days=1.5,
+            expiration=timedelta(days=1.5),
             require_filter=True,
         ),
         clustering=[ColumnName('col_date')],
@@ -1417,7 +1440,7 @@ def test_drop_constraint(db_backend: BigQueryDbBackend, bq_client: Mock):
 
 
 @mark.parametrize(
-    'expiration_days, expected',
+    'expiration, expected',
     [
         [
             None,
@@ -1425,15 +1448,15 @@ def test_drop_constraint(db_backend: BigQueryDbBackend, bq_client: Mock):
             f'SET OPTIONS(partition_expiration_days = NULL)\n',
         ],
         [
-            1.5,
+            timedelta(days=1.5),
             f'ALTER TABLE `test_project.test_dataset.test_table`\n'
             f'SET OPTIONS(partition_expiration_days = 1.5)\n',
         ],
     ],
 )
-def test_set_partition_expiration(db_backend: BigQueryDbBackend, bq_client: Mock, expiration_days, expected):
+def test_set_partition_expiration(db_backend: BigQueryDbBackend, bq_client: Mock, expiration, expected):
     table_name = QualifiedName('test_project.test_dataset.test_table')
-    db_backend.set_partition_expiration(table_name, expiration_days)
+    db_backend.set_partition_expiration(table_name, expiration)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
@@ -1473,9 +1496,13 @@ def test_set_require_partition_filter(db_backend: BigQueryDbBackend, bq_client: 
         ],
     ],
 )
-def test_set_description(db_backend: BigQueryDbBackend, bq_client: Mock, description, expected):
+def test_set_description(db_backend: BigQueryDbBackend, bq_client: Mock, description: str | None, expected: str):
     table_name = QualifiedName('test_project.test_dataset.test_table')
+    bq_table = make_table(table_name)
+    bq_client.get_table.return_value = bq_table
+
     db_backend.set_description(table_name, description)
+
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
@@ -1494,9 +1521,13 @@ def test_set_description(db_backend: BigQueryDbBackend, bq_client: Mock, descrip
         ],
     ],
 )
-def test_set_labels(db_backend: BigQueryDbBackend, bq_client: Mock, labels, expected):
+def test_set_labels(db_backend: BigQueryDbBackend, bq_client: Mock, labels: dict[str, str] | None, expected: str):
     table_name = QualifiedName('test_project.test_dataset.test_table')
+    bq_table = make_table(table_name)
+    bq_client.get_table.return_value = bq_table
+
     db_backend.set_labels(table_name, labels)
+
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
@@ -1515,9 +1546,13 @@ def test_set_labels(db_backend: BigQueryDbBackend, bq_client: Mock, labels, expe
         ],
     ],
 )
-def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags, expected):
+def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags: dict[str, str] | None, expected: str):
     table_name = QualifiedName('test_project.test_dataset.test_table')
+    bq_table = make_table(table_name)
+    bq_client.get_table.return_value = bq_table
+
     db_backend.set_tags(table_name, tags)
+
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
@@ -1541,9 +1576,18 @@ def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags, expected
         ],
     ],
 )
-def test_set_expiration_timestamp(db_backend: BigQueryDbBackend, bq_client: Mock, expiration_timestamp, expected):
+def test_set_expiration_timestamp(
+    db_backend: BigQueryDbBackend,
+    bq_client: Mock,
+    expiration_timestamp: datetime | None,
+    expected: str,
+):
     table_name = QualifiedName('test_project.test_dataset.test_table')
+    bq_table = make_table(table_name)
+    bq_client.get_table.return_value = bq_table
+
     db_backend.set_expiration_timestamp(table_name, expiration_timestamp)
+
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
@@ -1567,9 +1611,18 @@ def test_set_expiration_timestamp(db_backend: BigQueryDbBackend, bq_client: Mock
         ],
     ],
 )
-def test_set_default_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock, default_rounding_mode, expected):
+def test_set_default_rounding_mode(
+    db_backend: BigQueryDbBackend,
+    bq_client: Mock,
+    default_rounding_mode: RoundingMode | None,
+    expected: str,
+):
     table_name = QualifiedName('test_project.test_dataset.test_table')
+    bq_table = make_table(table_name)
+    bq_client.get_table.return_value = bq_table
+
     db_backend.set_default_rounding_mode(table_name, default_rounding_mode)
+
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
@@ -1588,9 +1641,18 @@ def test_set_default_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Moc
         ],
     ],
 )
-def test_set_max_staleness(db_backend: BigQueryDbBackend, bq_client: Mock, max_staleness, expected):
+def test_set_max_staleness(
+    db_backend: BigQueryDbBackend,
+    bq_client: Mock,
+    max_staleness: IntervalLiteral | None,
+    expected: str,
+):
     table_name = QualifiedName('test_project.test_dataset.test_table')
+    bq_table = make_table(table_name)
+    bq_client.get_table.return_value = bq_table
+
     db_backend.set_max_staleness(table_name, max_staleness)
+
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
@@ -1830,7 +1892,7 @@ def test_create_materialized_view_full(db_backend: BigQueryDbBackend, bq_client:
             column=ColumnName('col_date'),
             column_datatype=DATE,
             time_unit='DAY',
-            expiration_days=1.5,
+            expiration=timedelta(days=1.5),
             require_filter=True,
         ),
         clustering=[ColumnName('col_date')],

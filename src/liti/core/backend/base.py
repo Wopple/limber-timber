@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from liti.core.base import Defaulter, Validator
 from liti.core.model.v1.datatype import Array, Datatype, Struct
@@ -7,7 +7,8 @@ from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
-    IntervalLiteral, MaterializedView, PrimaryKey, RoundingMode, SchemaName, Table, QualifiedName, View
+    IntervalLiteral, MaterializedView, PrimaryKey, Relation, RoundingMode, Schema, SchemaName, StorageBilling, Table, \
+    QualifiedName, View
 
 CreateRelation = CreateTable | CreateView | CreateMaterializedView
 
@@ -21,8 +22,53 @@ class DbBackend(ABC, Defaulter, Validator):
     def scan_relation(self, name: QualifiedName) -> CreateRelation | None:
         raise NotImplementedError('not supported')
 
-    def has_table(self, name: QualifiedName) -> bool:
+    def get_entity(self, name: QualifiedName) -> Schema | Relation | None:
+        return self.get_schema(name) or self.get_relation(name)
+
+    def get_relation(self, name: QualifiedName) -> Relation | None:
+        return self.get_table(name) or self.get_view(name) or self.get_materialized_view(name)
+
+    def has_schema(self, name: QualifiedName) -> bool:
+        return self.get_schema(name) is not None
+
+    def get_schema(self, name: QualifiedName) -> Schema | None:
         raise NotImplementedError('not supported')
+
+    def create_schema(self, schema: Schema):
+        raise NotImplementedError('not supported')
+
+    def drop_schema(self, name: QualifiedName):
+        raise NotImplementedError('not supported')
+
+    def set_default_table_expiration(self, schema_name: QualifiedName, expiration: timedelta | None):
+        raise NotImplementedError('not supported')
+
+    def set_default_partition_expiration(self, schema_name: QualifiedName, expiration: timedelta | None):
+        raise NotImplementedError('not supported')
+
+    def set_default_kms_key_name(self, schema_name: QualifiedName, key_name: str | None):
+        raise NotImplementedError('not supported')
+
+    def set_failover_reservation(self, schema_name: QualifiedName, reservation: str | None):
+        raise NotImplementedError('not supported')
+
+    def set_case_sensitive(self, schema_name: QualifiedName, case_sensitive: bool):
+        raise NotImplementedError('not supported')
+
+    def set_is_primary_replica(self, schema_name: QualifiedName, is_primary: bool):
+        raise NotImplementedError('not supported')
+
+    def set_primary_replica(self, schema_name: QualifiedName, replica: str | None):
+        raise NotImplementedError('not supported')
+
+    def set_max_time_travel(self, schema_name: QualifiedName, duration: timedelta | None):
+        raise NotImplementedError('not supported')
+
+    def set_storage_billing(self, schema_name: QualifiedName, storage_billing: StorageBilling | None):
+        raise NotImplementedError('not supported')
+
+    def has_table(self, name: QualifiedName) -> bool:
+        return self.get_table(name) is not None
 
     def get_table(self, name: QualifiedName) -> Table | None:
         raise NotImplementedError('not supported')
@@ -45,7 +91,7 @@ class DbBackend(ABC, Defaulter, Validator):
     def drop_constraint(self, table_name: QualifiedName, constraint_name: Identifier):
         raise NotImplementedError('not supported')
 
-    def set_partition_expiration(self, table_name: QualifiedName, expiration_days: float | None):
+    def set_partition_expiration(self, table_name: QualifiedName, expiration: timedelta | None):
         raise NotImplementedError('not supported')
 
     def set_require_partition_filter(self, table_name: QualifiedName, require_filter: bool):
@@ -54,22 +100,25 @@ class DbBackend(ABC, Defaulter, Validator):
     def set_clustering(self, table_name: QualifiedName, column_names: list[ColumnName] | None):
         raise NotImplementedError('not supported')
 
-    def set_description(self, table_name: QualifiedName, description: str | None):
+    def set_friendly_name(self, entity_name: QualifiedName, friendly_name: str | None):
         raise NotImplementedError('not supported')
 
-    def set_labels(self, table_name: QualifiedName, labels: dict[str, str] | None):
+    def set_description(self, entity_name: QualifiedName, description: str | None):
         raise NotImplementedError('not supported')
 
-    def set_tags(self, table_name: QualifiedName, tags: dict[str, str] | None):
+    def set_labels(self, entity_name: QualifiedName, labels: dict[str, str] | None):
         raise NotImplementedError('not supported')
 
-    def set_expiration_timestamp(self, table_name: QualifiedName, expiration_timestamp: datetime | None):
+    def set_tags(self, entity_name: QualifiedName, tags: dict[str, str] | None):
         raise NotImplementedError('not supported')
 
-    def set_default_rounding_mode(self, table_name: QualifiedName, rounding_mode: RoundingMode | None):
+    def set_expiration_timestamp(self, entity_name: QualifiedName, expiration_timestamp: datetime | None):
         raise NotImplementedError('not supported')
 
-    def set_max_staleness(self, table_name: QualifiedName, max_staleness: IntervalLiteral | None):
+    def set_default_rounding_mode(self, entity_name: QualifiedName, rounding_mode: RoundingMode | None):
+        raise NotImplementedError('not supported')
+
+    def set_max_staleness(self, entity_name: QualifiedName, max_staleness: IntervalLiteral | None):
         raise NotImplementedError('not supported')
 
     def set_enable_change_history(self, table_name: QualifiedName, enabled: bool):
@@ -148,7 +197,7 @@ class DbBackend(ABC, Defaulter, Validator):
         raise NotImplementedError('not supported')
 
     def has_view(self, name: QualifiedName) -> bool:
-        raise NotImplementedError('not supported')
+        return self.get_view(name) is not None
 
     def get_view(self, name: QualifiedName) -> View | None:
         raise NotImplementedError('not supported')
@@ -160,7 +209,7 @@ class DbBackend(ABC, Defaulter, Validator):
         raise NotImplementedError('not supported')
 
     def has_materialized_view(self, name: QualifiedName) -> bool:
-        raise NotImplementedError('not supported')
+        return self.get_materialized_view(name) is not None
 
     def get_materialized_view(self, name: QualifiedName) -> MaterializedView | None:
         raise NotImplementedError('not supported')

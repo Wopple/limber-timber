@@ -24,7 +24,7 @@ operations:
         kind: TIME
         column: col_date
         time_unit: YEAR
-        expiration_days: 1
+        expiration: P1D
         require_filter: true
 - kind: create_table
   data:

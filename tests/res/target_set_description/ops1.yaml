@@ -12,14 +12,14 @@ operations:
         datatype: BOOL
 - kind: set_description
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: revert_table
     description: foo
 - kind: set_description
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: revert_table

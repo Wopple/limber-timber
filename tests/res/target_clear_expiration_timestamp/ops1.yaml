@@ -13,14 +13,14 @@ operations:
       expiration_timestamp: 2026-01-01T00:00:00Z
 - kind: set_expiration_timestamp
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: expiration_table
     expiration_timestamp: 2027-01-01T00:00:00Z
 - kind: set_expiration_timestamp
   data:
-    table_name:
+    entity_name:
       database: my_project
       schema: my_dataset
       name: expiration_table

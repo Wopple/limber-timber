@@ -17,6 +17,11 @@ RoundingModeLiteral = Literal[
     'ROUND_HALF_EVEN',
 ]
 
+StorageBilling = Literal[
+    'LOGICAL',
+    'PHYSICAL',
+]
+
 
 class IntervalLiteral(LitiModel):
     year: int = 0
@@ -139,9 +144,9 @@ class ColumnName(Identifier):
 
 
 class QualifiedName(LitiModel):
-    database: DatabaseName
-    schema: SchemaName
-    name: Identifier
+    database: DatabaseName | None = None
+    schema: SchemaName | None = None
+    name: Identifier | None = None
 
     def __init__(self, name: str | None = None, /, **kwargs):
         """ Allows QualifiedName('database.schema.table_name') """
@@ -149,12 +154,22 @@ class QualifiedName(LitiModel):
         if name is None:
             super().__init__(**kwargs)
         else:
-            database, schema, name = self.name_parts(name)
+            database_part = None 
+            schema_part = None 
+            name_part = None 
+            parts = self.name_parts(name)
+
+            if len(parts) == 3:
+                database_part, schema_part, name_part = parts
+            elif len(parts) == 2:
+                schema_part, name_part = parts
+            elif len(parts) == 1:
+                name_part = parts[0]
 
             super().__init__(
-                database=database,
-                schema=schema,
-                name=name,
+                database=database_part and DatabaseName(database_part),
+                schema=schema_part and SchemaName(schema_part),
+                name=name_part and Identifier(name_part),
             )
 
     def __hash__(self) -> int:
@@ -165,24 +180,43 @@ class QualifiedName(LitiModel):
 
     @property
     def string(self) -> str:
-        return f'{self.database}.{self.schema}.{self.name}'
+        parts = []
+
+        if self.database:
+            parts.append(self.database.string)
+
+        if self.schema:
+            parts.append(self.schema.string)
+
+        if self.name:
+            parts.append(self.name.string)
+
+        return '.'.join(parts)
 
     @classmethod
     def name_parts(cls, name: str) -> list[str]:
-        parts = name.split('.')
-        assert len(parts) == 3, f'Expected string in format "database.schema.table_name": "{name}"'
-        return parts
+        return name.split('.')
 
     @model_validator(mode='before')
     @classmethod
-    def allow_string_init(cls, data: str | dict[str, str]) -> dict[str, str]:
+    def allow_string_init(cls, data: str | dict[str, Any]) -> dict[str, Any]:
         if isinstance(data, str):
-            database, schema, table_name = cls.name_parts(data)
+            database_part = None
+            schema_part = None
+            name_part = None
+            parts = cls.name_parts(data)
+
+            if len(parts) == 3:
+                database_part, schema_part, name_part = parts
+            elif len(parts) == 2:
+                schema_part, name_part = parts
+            elif len(parts) == 1:
+                name_part = parts[0]
 
             return {
-                'database': database,
-                'schema': schema,
-                'table_name': table_name,
+                'database': database_part and DatabaseName(database_part),
+                'schema': schema_part and SchemaName(schema_part),
+                'name': name_part and Identifier(name_part),
             }
         else:
             return data
@@ -219,8 +253,9 @@ class ForeignKey(LitiModel):
         return self
 
     @field_validator('name', mode='before')
+    @classmethod
     def validate_name(cls, value: str | None) -> str | None:
-        """ Custom validation to handle backend generated foriegn key values like 'fk$1'
+        """ Custom validation to handle backend generated foreign key values like 'fk$1'
 
         If one of these values is provided, it will be replaced with a valid liti generated value.
         """
@@ -285,7 +320,7 @@ class Partitioning(LitiModel):
     int_start: int | None = None
     int_end: int | None = None
     int_step: int | None = None
-    expiration_days: float | None = None
+    expiration: timedelta | None = None
     require_filter: bool = False
 
     DEFAULT_METHOD = 'partitioning_defaults'
@@ -315,41 +350,50 @@ class BigLake(LitiModel):
     table_format: Literal['ICEBERG'] = 'ICEBERG'
 
 
-class Relation(LitiModel):
+class Entity(LitiModel):
     name: QualifiedName
-    columns: list[Column] | None = None
-    primary_key: PrimaryKey | None = None
-    foreign_keys: list[ForeignKey] | None = None
-    partitioning: Partitioning | None = None
-    clustering: list[ColumnName] | None = None
     friendly_name: str | None = None
     description: str | None = None
     labels: dict[str, str] | None = None
     tags: dict[str, str] | None = None
+
+
+class Schema(Entity):
+    location: str | None = None
+    collate: str | None = None
+    default_table_expiration: timedelta | None = None
+    default_partition_expiration: timedelta | None = None
+    default_rounding_mode: RoundingMode | None = None
+    default_kms_key_name: str | None = None
+    failover_reservation: str | None = None
+    is_case_sensitive: bool | None = None
+    is_primary_replica: bool | None = None
+    primary_replica: str | None = None
+    max_time_travel: timedelta | None = None
+    storage_billing: StorageBilling | None = None
+
+    VALIDATE_METHOD = 'validate_schema'
+
+
+class Relation(Entity):
     expiration_timestamp: datetime | None = None
+
+
+class Table(Relation):
+    columns: list[Column] | None = None
+    collate: str | None = None
+    primary_key: PrimaryKey | None = None
+    foreign_keys: list[ForeignKey] | None = None
+    partitioning: Partitioning | None = None
+    clustering: list[ColumnName] | None = None
     default_rounding_mode: RoundingMode | None = None
     max_staleness: IntervalLiteral | None = None
     enable_change_history: bool | None = None
     enable_fine_grained_mutations: bool | None = None
     kms_key_name: str | None = None
     big_lake: BigLake | None = None
-    select_sql: str | None = None
-    select_file: str | None = None
-    privacy_policy: dict[str, Any] | None = None
-    allow_non_incremental_definition: bool | None = None
-    enable_refresh: bool | None = None
-    refresh_interval: timedelta | None = None
 
-    def __eq__(self, other):
-        if not isinstance(other, type(self)):
-            return False
-
-        exclude = {
-            'privacy_policy',
-            'select_file',
-        }
-
-        return self.model_dump(exclude=exclude) == other.model_dump(exclude=exclude)
+    DEFAULT_METHOD = 'table_defaults'
 
     @model_validator(mode='after')
     def validate_model(self) -> 'Relation':
@@ -389,15 +433,50 @@ class Relation(LitiModel):
         ]
 
 
-class Table(Relation):
-    DEFAULT_METHOD = 'table_defaults'
-
-
 class View(Relation):
+    columns: list[Column] | None = None
+    select_sql: str | None = None
+    select_file: str | None = None
+    privacy_policy: dict[str, Any] | None = None
+
     DEFAULT_METHOD = 'view_defaults'
     VALIDATE_METHOD = 'validate_view'
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+
+        exclude = {
+            'privacy_policy',
+            'select_file',
+        }
+
+        return self.model_dump(exclude=exclude) == other.model_dump(exclude=exclude)
+
+    @property
+    def column_map(self) -> dict[ColumnName, Column]:
+        # Recreate the map to ensure it is up-to-date
+        return {column.name: column for column in self.columns or []}
 
 
 class MaterializedView(Relation):
-    DEFAULT_METHOD = 'view_defaults'
-    VALIDATE_METHOD = 'validate_view'
+    select_sql: str | None = None
+    select_file: str | None = None
+    partitioning: Partitioning | None = None
+    clustering: list[ColumnName] | None = None
+    allow_non_incremental_definition: bool | None = None
+    enable_refresh: bool | None = None
+    refresh_interval: timedelta | None = None
+
+    DEFAULT_METHOD = 'materialized_view_defaults'
+    VALIDATE_METHOD = 'validate_materialized_view'
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+
+        exclude = {
+            'select_file',
+        }
+
+        return self.model_dump(exclude=exclude) == other.model_dump(exclude=exclude)
