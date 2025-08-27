@@ -176,30 +176,7 @@ def to_bq_foreign_key(foreign_key: ForeignKey) -> bq.ForeignKey:
     )
 
 
-def to_bq_table(relation: Relation) -> bq.Table:
-    bq_table = bq.Table(
-        table_ref=to_table_ref(relation.name),
-        schema=[to_schema_field(column) for column in relation.columns],
-    )
-
-    table_constraints = None
-
-    if relation.primary_key or relation.foreign_keys:
-        if relation.primary_key:
-            primary_key = bq.PrimaryKey([col.string for col in relation.primary_key.column_names])
-        else:
-            primary_key = None
-
-        if relation.foreign_keys:
-            foreign_keys = [to_bq_foreign_key(fk) for fk in relation.foreign_keys]
-        else:
-            foreign_keys = None
-
-        table_constraints = bq.TableConstraints(
-            primary_key=primary_key,
-            foreign_keys=foreign_keys,
-        )
-
+def set_bq_partitioning(relation: Relation, bq_table: bq.Table):
     if relation.partitioning:
         bq_table.require_partition_filter = relation.partitioning.require_filter
 
@@ -226,33 +203,90 @@ def to_bq_table(relation: Relation) -> bq.Table:
         else:
             raise ValueError(f'Unrecognized partitioning kind: {relation.partitioning}')
 
-    if relation.big_lake:
+def table_to_bq_table(table: Table) -> bq.Table:
+    bq_table = bq.Table(
+        table_ref=to_table_ref(table.name),
+        schema=[to_schema_field(column) for column in table.columns],
+    )
+
+    table_constraints = None
+
+    if table.primary_key or table.foreign_keys:
+        if table.primary_key:
+            primary_key = bq.PrimaryKey([col.string for col in table.primary_key.column_names])
+        else:
+            primary_key = None
+
+        if table.foreign_keys:
+            foreign_keys = [to_bq_foreign_key(fk) for fk in table.foreign_keys]
+        else:
+            foreign_keys = None
+
+        table_constraints = bq.TableConstraints(
+            primary_key=primary_key,
+            foreign_keys=foreign_keys,
+        )
+
+    if table.big_lake:
         bq_table.biglake_configuration = bq.BigLakeConfiguration(
-            connection_id=relation.connection_id,
-            storage_uri=relation.storage_uri,
-            file_format=relation.file_format,
-            table_format=relation.table_format,
+            connection_id=table.connection_id,
+            storage_uri=table.storage_uri,
+            file_format=table.file_format,
+            table_format=table.table_format,
         )
 
     bq_table.table_constraints = table_constraints
-    bq_table.clustering_fields = [field.string for field in relation.clustering] if relation.clustering else None
+    set_bq_partitioning(table, bq_table)
+    bq_table.clustering_fields = [field.string for field in table.clustering] if table.clustering else None
+    bq_table.friendly_name = table.friendly_name
+    bq_table.description = table.description
+    bq_table.labels = table.labels
+    bq_table.resource_tags = table.tags
+    bq_table.expires = table.expiration_timestamp
+    bq_table.max_staleness = table.max_staleness and interval_literal_to_str(table.max_staleness)
+    return bq_table
+
+
+def view_to_bq_table(relation: Relation) -> bq.Table:
+    bq_table = bq.Table(to_table_ref(relation.name))
     bq_table.friendly_name = relation.friendly_name
     bq_table.description = relation.description
     bq_table.labels = relation.labels
     bq_table.resource_tags = relation.tags
     bq_table.expires = relation.expiration_timestamp
-    bq_table.max_staleness = relation.max_staleness and interval_literal_to_str(relation.max_staleness)
-
-    if isinstance(relation, View):
-        bq_table.view_query = relation.select_sql
-    elif isinstance(relation, MaterializedView):
-        bq_table.mview_query = relation.select_sql
-        bq_table.mview_allow_non_incremental_definition = relation.allow_non_incremental_definition
-        bq_table.mview_enable_refresh = relation.enable_refresh
-        bq_table.mview_refresh_interval = relation.refresh_interval
+    bq_table.view_query = relation.select_sql
 
     # TODO: figure out what to do about bq.Table missing fields
     return bq_table
+
+
+def materialized_view_to_bq_table(materialized_view: MaterializedView) -> bq.Table:
+    bq_table = bq.Table(to_table_ref(materialized_view.name))
+    set_bq_partitioning(materialized_view, bq_table)
+    bq_table.clustering_fields = [field.string for field in materialized_view.clustering] if materialized_view.clustering else None
+    bq_table.friendly_name = materialized_view.friendly_name
+    bq_table.description = materialized_view.description
+    bq_table.labels = materialized_view.labels
+    bq_table.resource_tags = materialized_view.tags
+    bq_table.expires = materialized_view.expiration_timestamp
+    bq_table.mview_query = materialized_view.select_sql
+    bq_table.mview_allow_non_incremental_definition = materialized_view.allow_non_incremental_definition
+    bq_table.mview_enable_refresh = materialized_view.enable_refresh
+    bq_table.mview_refresh_interval = materialized_view.refresh_interval
+
+    # TODO: figure out what to do about bq.Table missing fields
+    return bq_table
+
+
+def to_bq_table(relation: Relation) -> bq.Table:
+    if isinstance(relation, Table):
+        return table_to_bq_table(relation)
+    elif isinstance(relation, View):
+        return view_to_bq_table(relation)
+    elif isinstance(relation, MaterializedView):
+        return materialized_view_to_bq_table(relation)
+    else:
+        raise ValueError(f'Unrecognized relation type: {relation}')
 
 
 def datatype_to_sql(datatype: Datatype) -> str:
@@ -542,15 +576,40 @@ def to_liti_schema(dataset: bq.Dataset) -> Schema:
     )
 
 
-def to_liti_relation(table: bq.Table) -> Relation:
+def to_liti_partitioning(table: bq.Table) -> Partitioning | None:
+    if table.time_partitioning is not None:
+        time_partition = table.time_partitioning
+
+        if time_partition.expiration_ms is not None:
+            expiration = time_partition.expiration_ms / ONE_DAY_IN_MILLIS
+        else:
+            expiration = None
+
+        return Partitioning(
+            kind='TIME',
+            column=ColumnName(time_partition.field),
+            time_unit=time_partition.type_,
+            expiration=expiration,
+            require_filter=table.require_partition_filter or False,
+        )
+    elif table.range_partitioning is not None:
+        range_: bq.PartitionRange = table.range_partitioning.range_
+
+        return Partitioning(
+            kind='INT',
+            column=ColumnName(table.range_partitioning.field),
+            int_start=range_.start,
+            int_end=range_.end,
+            int_step=range_.interval,
+            require_filter=table.require_partition_filter or False,
+        )
+    else:
+        return None
+
+def to_liti_table(table: bq.Table) -> Table:
     primary_key = None
     foreign_keys = None
-    partitioning = None
     big_lake = None
-    select_sql = None
-    allow_non_incremental_definition = None
-    enable_refresh = None
-    refresh_interval = None
 
     if table.table_constraints is not None:
         if table.table_constraints.primary_key:
@@ -558,6 +617,46 @@ def to_liti_relation(table: bq.Table) -> Relation:
 
         if table.table_constraints.foreign_keys:
             foreign_keys = [to_liti_foreign_key(fk) for fk in table.table_constraints.foreign_keys]
+
+    if table.biglake_configuration is not None:
+        big_lake = BigLake(
+            connection_id=table.biglake_configuration.connection_id,
+            storage_uri=table.biglake_configuration.storage_uri,
+        )
+
+    return Table(
+        name=to_table_name(table),
+        columns=[to_column(f) for f in table.schema],
+        primary_key=primary_key,
+        foreign_keys=foreign_keys,
+        partitioning=to_liti_partitioning(table),
+        clustering=[ColumnName(field) for field in table.clustering_fields] if table.clustering_fields else None,
+        friendly_name=table.friendly_name,
+        description=table.description,
+        labels=table.labels or None,
+        tags=table.resource_tags or None,
+        expiration_timestamp=table.expires,
+        big_lake=big_lake,
+    )
+
+
+def to_liti_view(table: bq.Table) -> View:
+    select_sql = table.view_query
+
+    return View(
+        name=to_table_name(table),
+        columns=[to_column(f) for f in table.schema],
+        friendly_name=table.friendly_name,
+        description=table.description,
+        labels=table.labels or None,
+        tags=table.resource_tags or None,
+        expiration_timestamp=table.expires,
+        select_sql=select_sql or None,
+    )
+
+
+def to_liti_materialized_view(table: bq.Table) -> MaterializedView:
+    partitioning = None
 
     if table.time_partitioning is not None:
         time_partition = table.time_partitioning
@@ -586,43 +685,24 @@ def to_liti_relation(table: bq.Table) -> Relation:
             require_filter=table.require_partition_filter or False,
         )
 
-    if table.biglake_configuration is not None:
-        big_lake = BigLake(
-            connection_id=table.biglake_configuration.connection_id,
-            storage_uri=table.biglake_configuration.storage_uri,
-        )
+    select_sql = table.mview_query
+    allow_non_incremental_definition = table.mview_allow_non_incremental_definition
+    enable_refresh = table.mview_enable_refresh
+    refresh_interval = table.mview_refresh_interval
 
-    if table.table_type == 'TABLE':
-        relation_type = Table
-    elif table.table_type == 'VIEW':
-        relation_type = View
-        select_sql = table.view_query
-    elif table.table_type == 'MATERIALIZED_VIEW':
-        relation_type = MaterializedView
-        select_sql = table.mview_query
-        allow_non_incremental_definition = table.mview_allow_non_incremental_definition
-        enable_refresh = table.mview_enable_refresh
-        refresh_interval = table.mview_refresh_interval
-    else:
-        raise ValueError(f'Unrecognized table type: {table.table_type}')
-
-    return relation_type(
+    return MaterializedView(
         name=to_table_name(table),
-        columns=[to_column(f) for f in table.schema],
-        primary_key=primary_key,
-        foreign_keys=foreign_keys,
+        select_sql=select_sql or None,
         partitioning=partitioning,
         clustering=[ColumnName(field) for field in table.clustering_fields] if table.clustering_fields else None,
+        allow_non_incremental_definition=allow_non_incremental_definition,
+        enable_refresh=enable_refresh,
+        refresh_interval=refresh_interval,
         friendly_name=table.friendly_name,
         description=table.description,
         labels=table.labels or None,
         tags=table.resource_tags or None,
         expiration_timestamp=table.expires,
-        big_lake=big_lake,
-        select_sql=select_sql or None,
-        allow_non_incremental_definition=allow_non_incremental_definition,
-        enable_refresh=enable_refresh,
-        refresh_interval=refresh_interval,
     )
 
 
@@ -724,8 +804,8 @@ class BigQueryDbBackend(DbBackend):
     def create_schema(self, schema: Schema):
         options = []
 
-        if schema.collate:
-            collate_sql = f'DEFAULT COLLATE \'{schema.collate}\'\n'
+        if schema.default_collate:
+            collate_sql = f'DEFAULT COLLATE \'{schema.default_collate}\'\n'
         else:
             collate_sql = ''
 
@@ -740,6 +820,9 @@ class BigQueryDbBackend(DbBackend):
 
         if schema.tags:
             options.append(f'tags = {option_dict_to_sql(schema.tags)}')
+
+        if schema.location:
+            options.append(f'location = \'{schema.location}\'')
 
         if schema.default_table_expiration:
             table_expiration_days = schema.default_table_expiration.total_seconds() / ONE_DAY_IN_SECONDS
@@ -758,7 +841,7 @@ class BigQueryDbBackend(DbBackend):
         if schema.failover_reservation:
             options.append(f'failover_reservation = \'{schema.failover_reservation}\'')
 
-        if not schema.is_case_sensitive:
+        if schema.is_case_sensitive is False:
             options.append(f'is_case_insensitive = TRUE')
 
         if schema.is_primary_replica is not None:
@@ -795,11 +878,10 @@ class BigQueryDbBackend(DbBackend):
         self.client.delete_dataset(extract_dataset_ref(name))
 
     def get_table(self, name: QualifiedName) -> Table | None:
-        bq_table = self.client.get_table(to_table_ref(name))
-        liti_relation = bq_table and to_liti_relation(bq_table)
+        table_ref = to_table_ref(name)
 
-        if isinstance(liti_relation, Table):
-            return liti_relation
+        if self.client.has_table(table_ref):
+            return to_liti_table(self.client.get_table(table_ref))
         else:
             return None
 
@@ -808,8 +890,8 @@ class BigQueryDbBackend(DbBackend):
         constraint_sqls = []
         options = []
 
-        if table.collate:
-            collate_sql = f'DEFAULT COLLATE \'{table.collate}\'\n'
+        if table.default_collate:
+            collate_sql = f'DEFAULT COLLATE \'{table.default_collate}\'\n'
         else:
             collate_sql = ''
 
@@ -1092,11 +1174,10 @@ class BigQueryDbBackend(DbBackend):
         )
 
     def get_view(self, name: QualifiedName) -> View | None:
-        bq_table = self.client.get_table(to_table_ref(name))
-        liti_relation = bq_table and to_liti_relation(bq_table)
+        table_ref = to_table_ref(name)
 
-        if isinstance(liti_relation, View):
-            return liti_relation
+        if self.client.has_view(table_ref):
+            return to_liti_view(self.client.get_table(table_ref))
         else:
             return None
 
@@ -1154,11 +1235,10 @@ class BigQueryDbBackend(DbBackend):
         self.drop_table(name)
 
     def get_materialized_view(self, name: QualifiedName) -> MaterializedView | None:
-        bq_table = self.client.get_table(to_table_ref(name))
-        liti_relation = bq_table and to_liti_relation(bq_table)
+        table_ref = to_table_ref(name)
 
-        if isinstance(liti_relation, MaterializedView):
-            return liti_relation
+        if self.client.has_materialized_view(table_ref):
+            return to_liti_materialized_view(self.client.get_table(table_ref))
         else:
             return None
 

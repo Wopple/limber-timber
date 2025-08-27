@@ -7,12 +7,12 @@ from pytest import fixture, mark, raises
 from liti import bigquery as bq
 from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_sql, datatype_to_sql, \
     extract_dataset_ref, interval_literal_to_sql, NULLABLE, REPEATED, REQUIRED, to_bq_table, to_column, \
-    to_dataset_ref, to_datatype, to_datatype_array, to_field_type, to_fields, to_liti_relation, to_max_length, to_mode, \
-    to_precision, to_range_element_type, to_scale, to_schema_field, to_table_ref
+    to_dataset_ref, to_datatype, to_datatype_array, to_field_type, to_fields, to_liti_materialized_view, to_liti_table, \
+    to_liti_view, to_max_length, to_mode, to_precision, to_range_element_type, to_scale, to_schema_field, to_table_ref
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, ForeignReference, \
-    Identifier, IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, RoundingMode, SchemaName, Table, \
+    Identifier, IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, RoundingMode, Schema, SchemaName, Table, \
     QualifiedName, View
 from tests.liti.util import NoRaise
 
@@ -22,8 +22,9 @@ def bq_client() -> Mock:
     client = Mock()
     client.get_dataset.return_value = None
     client.get_table.return_value = None
-    client.get_view.return_value = None
-    client.get_materialized_view.return_value = None
+    client.has_table.return_value = False
+    client.has_view.return_value = False
+    client.has_materialized_view.return_value = False
     return client
 
 
@@ -37,22 +38,45 @@ def context() -> Mock:
     return Mock()
 
 
-def make_table(name: QualifiedName) -> bq.Table:
+def make_schema(name: QualifiedName | None = None) -> bq.Dataset:
+    name = name or QualifiedName('test_project.test_dataset.test_name')
+    bq_dataset = bq.Dataset(bq.DatasetReference(name.database.string, name.schema.string))
+    return bq_dataset
+
+
+def make_table(name: QualifiedName | None = None) -> bq.Table:
+    name = name or QualifiedName('test_project.test_dataset.test_name')
     bq_table = bq.Table(name.string)
     bq_table._properties['type'] = 'TABLE'
     return bq_table
 
 
-def make_view(name: QualifiedName) -> bq.Table:
+def make_view(name: QualifiedName | None = None) -> bq.Table:
+    name = name or QualifiedName('test_project.test_dataset.test_name')
     bq_table = bq.Table(name.string)
     bq_table._properties['type'] = 'VIEW'
     return bq_table
 
 
-def make_materialized_view(name: QualifiedName) -> bq.Table:
+def make_materialized_view(name: QualifiedName | None = None) -> bq.Table:
+    name = name or QualifiedName('test_project.test_dataset.test_name')
     bq_table = bq.Table(name.string)
     bq_table._properties['type'] = 'MATERIALIZED_VIEW'
     return bq_table
+
+
+def mock_get_entity(bq_client: Mock, entity: bq.Dataset | bq.Table):
+    if isinstance(entity, bq.Dataset):
+        bq_client.get_dataset.return_value = entity
+    elif isinstance(entity, bq.Table):
+        bq_client.get_table.return_value = entity
+
+        if entity.table_type == 'TABLE':
+            bq_client.has_table.return_value = True
+        elif entity.table_type == 'VIEW':
+            bq_client.has_view.return_value = True
+        elif entity.table_type == 'MATERIALIZED_VIEW':
+            bq_client.has_materialized_view.return_value = True
 
 
 def test_to_dataset_ref():
@@ -419,7 +443,7 @@ def test_to_schema_field(column, expected):
     assert actual == expected
 
 
-def test_to_bq_table():
+def test_to_bq_table_table():
     table = Table(
         name=QualifiedName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
@@ -459,6 +483,7 @@ def test_to_bq_table():
     assert actual.dataset_id == 'test_dataset'
     assert actual.table_id == 'test_table'
     assert actual.schema == [bq.SchemaField('col_date', 'DATE', mode=REQUIRED)]
+
     assert actual.table_constraints == bq.TableConstraints(
         primary_key=bq.PrimaryKey(['col_date']),
         foreign_keys=[
@@ -469,10 +494,12 @@ def test_to_bq_table():
             )
         ],
     )
+
     assert actual.time_partitioning == bq.TimePartitioning(
         type_='DAY',
         field='col_date',
     )
+
     assert actual.require_partition_filter is True
     assert actual.clustering_fields == ['col_date']
     assert actual.friendly_name == 'test_friendly'
@@ -481,6 +508,73 @@ def test_to_bq_table():
     assert actual.resource_tags == {'t1': 'v1'}
     assert actual.expires == datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     assert actual.max_staleness == '0-0 0 1:0:0.000000'
+
+
+def test_to_bq_table_view():
+    view = View(
+        name=QualifiedName('test_project.test_dataset.test_view'),
+        columns=[Column('ignored')],
+        select_sql='SELECT 1',
+        select_file='ignored.sql',
+        privacy_policy={"ignored": None},
+        friendly_name='test_friendly',
+        description='test_description',
+        labels={'l1': 'v1'},
+        tags={'t1': 'v1'},
+        expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    )
+
+    actual = to_bq_table(view)
+
+    assert actual.project == 'test_project'
+    assert actual.dataset_id == 'test_dataset'
+    assert actual.table_id == 'test_view'
+    assert actual.schema == []
+    assert actual.view_query == 'SELECT 1'
+    assert actual.friendly_name == 'test_friendly'
+    assert actual.description == 'test_description'
+    assert actual.labels == {'l1': 'v1'}
+    assert actual.resource_tags == {'t1': 'v1'}
+    assert actual.expires == datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+
+def test_to_bq_table_materialized_view():
+    materialized_view = MaterializedView(
+        name=QualifiedName('test_project.test_dataset.test_materialized_view'),
+        select_sql='SELECT DATE \'2025-01-01\' AS col_date',
+        select_file='ignored.sql',
+        partitioning=Partitioning(
+            kind='TIME',
+            column=ColumnName('col_date'),
+            time_unit='DAY',
+            require_filter=True,
+        ),
+        clustering=[ColumnName('col_date')],
+        allow_non_incremental_definition=True,
+        enable_refresh=True,
+        refresh_interval=timedelta(hours=1),
+        friendly_name='test_friendly',
+        description='test_description',
+        labels={'l1': 'v1'},
+        tags={'t1': 'v1'},
+        expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    )
+
+    actual = to_bq_table(materialized_view)
+
+    assert actual.project == 'test_project'
+    assert actual.dataset_id == 'test_dataset'
+    assert actual.table_id == 'test_materialized_view'
+    assert actual.schema == []
+    assert actual.mview_query == 'SELECT DATE \'2025-01-01\' AS col_date'
+    assert actual.mview_allow_non_incremental_definition is True
+    assert actual.mview_enable_refresh is True
+    assert actual.mview_refresh_interval == timedelta(hours=1)
+    assert actual.friendly_name == 'test_friendly'
+    assert actual.description == 'test_description'
+    assert actual.labels == {'l1': 'v1'}
+    assert actual.resource_tags == {'t1': 'v1'}
+    assert actual.expires == datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 
 
 @mark.parametrize(
@@ -1184,7 +1278,7 @@ def test_to_column(schema_field, expected):
     assert actual == expected
 
 
-def test_to_liti_relation():
+def test_to_liti_table():
     table = bq.Table('test_project.test_dataset.test_table', [bq.SchemaField('col_date', 'DATE', mode=REQUIRED)])
     table._properties['type'] = 'TABLE'
     table.table_constraints = bq.TableConstraints(
@@ -1234,7 +1328,73 @@ def test_to_liti_relation():
         expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
     )
 
-    actual = to_liti_relation(table)
+    actual = to_liti_table(table)
+    assert actual == expected
+
+
+def test_to_liti_view():
+    table = bq.Table('test_project.test_dataset.test_table')
+    table._properties['type'] = 'VIEW'
+    table.view_query = 'SELECT DATE \'2025-01-01\' AS col_date'
+    table.friendly_name = 'test_friendly'
+    table.description = 'test_description'
+    table.labels = {'l1': 'v1'}
+    table.resource_tags = {'t1': 'v1'}
+    table.expires = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+    expected = View(
+        name=QualifiedName('test_project.test_dataset.test_table'),
+        columns=[],
+        select_sql='SELECT DATE \'2025-01-01\' AS col_date',
+        friendly_name='test_friendly',
+        description='test_description',
+        labels={'l1': 'v1'},
+        tags={'t1': 'v1'},
+        expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    )
+
+    actual = to_liti_view(table)
+    assert actual == expected
+
+
+def test_to_liti_materialized_view():
+    table = bq.Table('test_project.test_dataset.test_table', [bq.SchemaField('col_date', 'DATE', mode=REQUIRED)])
+    table._properties['type'] = 'MATERIALIZED_VIEW'
+    table.mview_query = 'SELECT DATE \'2025-01-01\' AS col_date'
+    table.mview_allow_non_incremental_definition = True
+    table.mview_enable_refresh = True
+    table.mview_refresh_interval = timedelta(hours=1)
+    table.time_partitioning = bq.TimePartitioning(
+        type_='DAY',
+        field='col_date',
+    )
+    table.clustering_fields = ['col_date']
+    table.friendly_name = 'test_friendly'
+    table.description = 'test_description'
+    table.labels = {'l1': 'v1'}
+    table.resource_tags = {'t1': 'v1'}
+    table.expires = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+    expected = MaterializedView(
+        name=QualifiedName('test_project.test_dataset.test_table'),
+        select_sql='SELECT DATE \'2025-01-01\' AS col_date',
+        partitioning=Partitioning(
+            kind='TIME',
+            column=ColumnName('col_date'),
+            time_unit='DAY',
+        ),
+        clustering=[ColumnName('col_date')],
+        allow_non_incremental_definition=True,
+        enable_refresh=True,
+        refresh_interval=timedelta(hours=1),
+        friendly_name='test_friendly',
+        description='test_description',
+        labels={'l1': 'v1'},
+        tags={'t1': 'v1'},
+        expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    )
+
+    actual = to_liti_materialized_view(table)
     assert actual == expected
 
 
@@ -1290,6 +1450,64 @@ def test_can_coerce(from_dt, to_dt, expected):
     assert actual == expected
 
 
+def test_create_schema_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
+    schema = Schema(
+        name=QualifiedName('test_project.test_dataset.test_schema'),
+    )
+
+    db_backend.create_schema(schema)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'CREATE SCHEMA `test_project.test_dataset.test_schema`\n'
+    )
+
+
+def test_create_schema_full(db_backend: BigQueryDbBackend, bq_client: Mock):
+    schema = Schema(
+        name=QualifiedName('test_project.test_dataset.test_schema'),
+        friendly_name='test_friendly',
+        description='Test description',
+        labels={'l1': 'v1', 'l2': 'v2'},
+        tags={'t1': 'v1', 't2': 'v2'},
+        location='US',
+        default_collate='und:ci',
+        default_table_expiration=timedelta(days=2.5),
+        default_partition_expiration=timedelta(days=1.5),
+        default_rounding_mode=RoundingMode('ROUND_HALF_AWAY_FROM_ZERO'),
+        default_kms_key_name='test_key',
+        failover_reservation='test_reservation',
+        is_case_sensitive=False,
+        is_primary_replica=False,
+        primary_replica='test_replica',
+        max_time_travel=timedelta(hours=48),
+        storage_billing='PHYSICAL',
+    )
+
+    db_backend.create_schema(schema)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'CREATE SCHEMA `test_project.test_dataset.test_schema`\n'
+        f'DEFAULT COLLATE \'und:ci\'\n'
+        f'OPTIONS(\n'
+        f'    friendly_name = \'test_friendly\',\n'
+        f'    description = \'Test description\',\n'
+        f'    labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')],\n'
+        f'    tags = [(\'t1\', \'v1\'), (\'t2\', \'v2\')],\n'
+        f'    location = \'US\',\n'
+        f'    default_table_expiration_days = 2.5,\n'
+        f'    default_partition_expiration_days = 1.5,\n'
+        f'    default_rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\',\n'
+        f'    default_kms_key_name = \'test_key\',\n'
+        f'    failover_reservation = \'test_reservation\',\n'
+        f'    is_case_insensitive = TRUE,\n'
+        f'    is_primary = FALSE,\n'
+        f'    primary_replica = \'test_replica\',\n'
+        f'    max_time_travel_hours = 48,\n'
+        f'    storage_billing_model = \'PHYSICAL\'\n'
+        f')\n'
+    )
+
+
 def test_create_table_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
     table = Table(
         name=QualifiedName('test_project.test_dataset.test_table'),
@@ -1309,6 +1527,7 @@ def test_create_table_full(db_backend: BigQueryDbBackend, bq_client: Mock):
     table = Table(
         name=QualifiedName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
+        default_collate='und:ci',
         primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
         foreign_keys=[ForeignKey(
             name='fk_test',
@@ -1350,6 +1569,7 @@ def test_create_table_full(db_backend: BigQueryDbBackend, bq_client: Mock):
         f'    PRIMARY KEY (`col_date`) NOT ENFORCED,\n'
         f'    CONSTRAINT `fk_test` FOREIGN KEY (`col_date`) REFERENCES `test_project.test_dataset.fk_test_table` (`fk_col_date`) NOT ENFORCED\n'
         f')\n'
+        f'DEFAULT COLLATE \'und:ci\'\n'
         f'PARTITION BY `col_date`\n'
         f'CLUSTER BY `col_date`\n'
         f'WITH CONNECTION `test_connection`\n'
@@ -1482,96 +1702,261 @@ def test_set_require_partition_filter(db_backend: BigQueryDbBackend, bq_client: 
 
 
 @mark.parametrize(
-    'description, expected',
+    'entity, description, expected',
     [
         [
+            make_schema(),
             None,
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(description = NULL)\n',
         ],
         [
+            make_schema(),
             'Test description',
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(description = \'Test description\')\n',
+        ],
+        [
+            make_table(),
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(description = NULL)\n',
+        ],
+        [
+            make_table(),
+            'Test description',
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(description = \'Test description\')\n',
+        ],
+        [
+            make_view(),
+            None,
+            f'ALTER VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(description = NULL)\n',
+        ],
+        [
+            make_view(),
+            'Test description',
+            f'ALTER VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(description = \'Test description\')\n',
+        ],
+        [
+            make_materialized_view(),
+            None,
+            f'ALTER MATERIALIZED VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(description = NULL)\n',
+        ],
+        [
+            make_materialized_view(),
+            'Test description',
+            f'ALTER MATERIALIZED VIEW `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(description = \'Test description\')\n',
         ],
     ],
 )
-def test_set_description(db_backend: BigQueryDbBackend, bq_client: Mock, description: str | None, expected: str):
-    table_name = QualifiedName('test_project.test_dataset.test_table')
-    bq_table = make_table(table_name)
-    bq_client.get_table.return_value = bq_table
+def test_set_description(
+    db_backend: BigQueryDbBackend,
+    bq_client: Mock,
+    entity: bq.Dataset | bq.Table,
+    description: str | None,
+    expected: str,
+):
+    mock_get_entity(bq_client, entity)
 
-    db_backend.set_description(table_name, description)
+    db_backend.set_description(QualifiedName('test_project.test_dataset.test_name'), description)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
 @mark.parametrize(
-    'labels, expected',
+    'entity, labels, expected',
     [
         [
+            make_schema(),
             None,
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(labels = NULL)\n',
         ],
         [
+            make_schema(),
             {'l1': 'v1', 'l2': 'v2'},
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
+        ],
+        [
+            make_table(),
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(labels = NULL)\n',
+        ],
+        [
+            make_table(),
+            {'l1': 'v1', 'l2': 'v2'},
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
+        ],
+        [
+            make_view(),
+            None,
+            f'ALTER VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(labels = NULL)\n',
+        ],
+        [
+            make_view(),
+            {'l1': 'v1', 'l2': 'v2'},
+            f'ALTER VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
+        ],
+        [
+            make_materialized_view(),
+            None,
+            f'ALTER MATERIALIZED VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(labels = NULL)\n',
+        ],
+        [
+            make_materialized_view(),
+            {'l1': 'v1', 'l2': 'v2'},
+            f'ALTER MATERIALIZED VIEW `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
         ],
     ],
 )
-def test_set_labels(db_backend: BigQueryDbBackend, bq_client: Mock, labels: dict[str, str] | None, expected: str):
-    table_name = QualifiedName('test_project.test_dataset.test_table')
-    bq_table = make_table(table_name)
-    bq_client.get_table.return_value = bq_table
+def test_set_labels(
+    db_backend: BigQueryDbBackend,
+    bq_client: Mock,
+    entity: bq.Dataset | bq.Table,
+    labels: dict[str, str] | None,
+    expected: str,
+):
+    mock_get_entity(bq_client, entity)
 
-    db_backend.set_labels(table_name, labels)
+    db_backend.set_labels(QualifiedName('test_project.test_dataset.test_name'), labels)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
 @mark.parametrize(
-    'tags, expected',
+    'entity, tags, expected',
     [
         [
+            make_schema(),
             None,
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(tags = NULL)\n',
         ],
         [
-            {'t1': 'v1', 't2': 'v2'},
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
-            f'SET OPTIONS(tags = [(\'t1\', \'v1\'), (\'t2\', \'v2\')])\n',
+            make_schema(),
+            {'l1': 'v1', 'l2': 'v2'},
+            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(tags = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
+        ],
+        [
+            make_table(),
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(tags = NULL)\n',
+        ],
+        [
+            make_table(),
+            {'l1': 'v1', 'l2': 'v2'},
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(tags = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
+        ],
+        [
+            make_view(),
+            None,
+            f'ALTER VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(tags = NULL)\n',
+        ],
+        [
+            make_view(),
+            {'l1': 'v1', 'l2': 'v2'},
+            f'ALTER VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(tags = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
+        ],
+        [
+            make_materialized_view(),
+            None,
+            f'ALTER MATERIALIZED VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(tags = NULL)\n',
+        ],
+        [
+            make_materialized_view(),
+            {'l1': 'v1', 'l2': 'v2'},
+            f'ALTER MATERIALIZED VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(tags = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
         ],
     ],
 )
-def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags: dict[str, str] | None, expected: str):
-    table_name = QualifiedName('test_project.test_dataset.test_table')
-    bq_table = make_table(table_name)
-    bq_client.get_table.return_value = bq_table
+def test_set_tags(
+    db_backend: BigQueryDbBackend,
+    bq_client: Mock,
+    entity: bq.Dataset | bq.Table,
+    tags: dict[str, str] | None,
+    expected: str,
+):
+    mock_get_entity(bq_client, entity)
 
-    db_backend.set_tags(table_name, tags)
+    db_backend.set_tags(QualifiedName('test_project.test_dataset.test_name'), tags)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
 @mark.parametrize(
-    'expiration_timestamp, expected',
+    'entity, expiration_timestamp, expected',
     [
         [
+            make_table(),
             None,
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(expiration_timestamp = NULL)\n',
         ],
         [
+            make_table(),
             datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(expiration_timestamp = TIMESTAMP \'2025-01-02 03:04:05 UTC\')\n',
         ],
         [
+            make_table(),
             datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone(timedelta(hours=1, minutes=30))),
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(expiration_timestamp = TIMESTAMP \'2025-01-02 01:34:05 UTC\')\n',
+        ],
+        [
+            make_view(),
+            None,
+            f'ALTER VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(expiration_timestamp = NULL)\n',
+        ],
+        [
+            make_view(),
+            datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+            f'ALTER VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(expiration_timestamp = TIMESTAMP \'2025-01-02 03:04:05 UTC\')\n',
+        ],
+        [
+            make_view(),
+            datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone(timedelta(hours=1, minutes=30))),
+            f'ALTER VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(expiration_timestamp = TIMESTAMP \'2025-01-02 01:34:05 UTC\')\n',
+        ],
+        [
+            make_materialized_view(),
+            None,
+            f'ALTER MATERIALIZED VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(expiration_timestamp = NULL)\n',
+        ],
+        [
+            make_materialized_view(),
+            datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+            f'ALTER MATERIALIZED VIEW `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(expiration_timestamp = TIMESTAMP \'2025-01-02 03:04:05 UTC\')\n',
+        ],
+        [
+            make_materialized_view(),
+            datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone(timedelta(hours=1, minutes=30))),
+            f'ALTER MATERIALIZED VIEW `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(expiration_timestamp = TIMESTAMP \'2025-01-02 01:34:05 UTC\')\n',
         ],
     ],
@@ -1579,34 +1964,54 @@ def test_set_tags(db_backend: BigQueryDbBackend, bq_client: Mock, tags: dict[str
 def test_set_expiration_timestamp(
     db_backend: BigQueryDbBackend,
     bq_client: Mock,
+    entity: bq.Table,
     expiration_timestamp: datetime | None,
     expected: str,
 ):
-    table_name = QualifiedName('test_project.test_dataset.test_table')
-    bq_table = make_table(table_name)
-    bq_client.get_table.return_value = bq_table
+    mock_get_entity(bq_client, entity)
 
-    db_backend.set_expiration_timestamp(table_name, expiration_timestamp)
+    db_backend.set_expiration_timestamp(QualifiedName('test_project.test_dataset.test_name'), expiration_timestamp)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 
 @mark.parametrize(
-    'default_rounding_mode, expected',
+    'entity, default_rounding_mode, expected',
     [
         [
+            make_schema(),
             None,
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(default_rounding_mode = NULL)\n',
         ],
         [
+            make_schema(),
             RoundingMode('ROUND_HALF_AWAY_FROM_ZERO'),
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\')\n',
         ],
         [
+            make_schema(),
             RoundingMode('ROUND_HALF_EVEN'),
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_EVEN\')\n',
+        ],
+        [
+            make_table(),
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(default_rounding_mode = NULL)\n',
+        ],
+        [
+            make_table(),
+            RoundingMode('ROUND_HALF_AWAY_FROM_ZERO'),
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
+            f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\')\n',
+        ],
+        [
+            make_table(),
+            RoundingMode('ROUND_HALF_EVEN'),
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_EVEN\')\n',
         ],
     ],
@@ -1614,14 +2019,13 @@ def test_set_expiration_timestamp(
 def test_set_default_rounding_mode(
     db_backend: BigQueryDbBackend,
     bq_client: Mock,
+    entity: bq.Dataset | bq.Table,
     default_rounding_mode: RoundingMode | None,
     expected: str,
 ):
-    table_name = QualifiedName('test_project.test_dataset.test_table')
-    bq_table = make_table(table_name)
-    bq_client.get_table.return_value = bq_table
+    mock_get_entity(bq_client, entity)
 
-    db_backend.set_default_rounding_mode(table_name, default_rounding_mode)
+    db_backend.set_default_rounding_mode(QualifiedName('test_project.test_dataset.test_name'), default_rounding_mode)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1631,12 +2035,12 @@ def test_set_default_rounding_mode(
     [
         [
             None,
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(max_staleness = NULL)\n',
         ],
         [
             IntervalLiteral(hour=1, minute=2, second=3, microsecond=4),
-            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER TABLE `test_project.test_dataset.test_name`\n'
             f'SET OPTIONS(max_staleness = INTERVAL \'0-0 0 1:2:3.000004\' YEAR TO SECOND)\n',
         ],
     ],
@@ -1647,11 +2051,10 @@ def test_set_max_staleness(
     max_staleness: IntervalLiteral | None,
     expected: str,
 ):
-    table_name = QualifiedName('test_project.test_dataset.test_table')
-    bq_table = make_table(table_name)
-    bq_client.get_table.return_value = bq_table
+    bq_table = make_table()
+    mock_get_entity(bq_client, bq_table)
 
-    db_backend.set_max_staleness(table_name, max_staleness)
+    db_backend.set_max_staleness(QualifiedName('test_project.test_dataset.test_name'), max_staleness)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 

@@ -360,7 +360,7 @@ class Entity(LitiModel):
 
 class Schema(Entity):
     location: str | None = None
-    collate: str | None = None
+    default_collate: str | None = None
     default_table_expiration: timedelta | None = None
     default_partition_expiration: timedelta | None = None
     default_rounding_mode: RoundingMode | None = None
@@ -381,7 +381,7 @@ class Relation(Entity):
 
 class Table(Relation):
     columns: list[Column] | None = None
-    collate: str | None = None
+    default_collate: str | None = None
     primary_key: PrimaryKey | None = None
     foreign_keys: list[ForeignKey] | None = None
     partitioning: Partitioning | None = None
