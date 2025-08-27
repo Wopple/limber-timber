@@ -14,6 +14,7 @@ from liti.core.model.v1.manifest import Manifest, Template
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, QualifiedName
+from liti.core.observe import set_defaults, validate_model
 
 log = logging.getLogger(__name__)
 
@@ -87,8 +88,8 @@ class MigrateRunner:
         logger = NoOpLogger() if self.context.silent else log
 
         for op in self.target_operations:
-            op.set_defaults(self.db_backend, self.context)
-            op.liti_validate(self.db_backend, self.context)
+            set_defaults(op, self.db_backend, self.context)
+            validate_model(op, self.db_backend, self.context)
 
         if wet_run:
             self.meta_backend.initialize()

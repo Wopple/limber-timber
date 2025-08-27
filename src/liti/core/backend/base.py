@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 
-from liti.core.base import Defaulter, Validator
 from liti.core.model.v1.datatype import Array, Datatype, Struct
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
@@ -9,6 +8,7 @@ from liti.core.model.v1.operation.data.view import CreateMaterializedView, Creat
 from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, FieldPath, ForeignKey, Identifier, \
     IntervalLiteral, MaterializedView, PrimaryKey, Relation, RoundingMode, Schema, SchemaName, StorageBilling, Table, \
     QualifiedName, View
+from liti.core.observe.observer import Defaulter, Validator
 
 CreateRelation = CreateTable | CreateView | CreateMaterializedView
 

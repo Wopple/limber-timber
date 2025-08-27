@@ -323,9 +323,6 @@ class Partitioning(LitiModel):
     expiration: timedelta | None = None
     require_filter: bool = False
 
-    DEFAULT_METHOD = 'partitioning_defaults'
-    VALIDATE_METHOD = 'validate_partitioning'
-
     @field_validator('kind', 'time_unit', mode='before')
     @classmethod
     def validate_upper(cls, value: str | None) -> str | None:
@@ -372,8 +369,6 @@ class Schema(Entity):
     max_time_travel: timedelta | None = None
     storage_billing: StorageBilling | None = None
 
-    VALIDATE_METHOD = 'validate_schema'
-
 
 class Relation(Entity):
     expiration_timestamp: datetime | None = None
@@ -392,8 +387,6 @@ class Table(Relation):
     enable_fine_grained_mutations: bool | None = None
     kms_key_name: str | None = None
     big_lake: BigLake | None = None
-
-    DEFAULT_METHOD = 'table_defaults'
 
     @model_validator(mode='after')
     def validate_model(self) -> 'Relation':
@@ -439,9 +432,6 @@ class View(Relation):
     select_file: str | None = None
     privacy_policy: dict[str, Any] | None = None
 
-    DEFAULT_METHOD = 'view_defaults'
-    VALIDATE_METHOD = 'validate_view'
-
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return False
@@ -467,9 +457,6 @@ class MaterializedView(Relation):
     allow_non_incremental_definition: bool | None = None
     enable_refresh: bool | None = None
     refresh_interval: timedelta | None = None
-
-    DEFAULT_METHOD = 'materialized_view_defaults'
-    VALIDATE_METHOD = 'validate_materialized_view'
 
     def __eq__(self, other):
         if not isinstance(other, type(self)):

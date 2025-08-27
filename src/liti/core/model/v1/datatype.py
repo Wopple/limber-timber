@@ -24,9 +24,6 @@ class Int(Datatype):
     type: Literal['INT'] = 'INT'
     bits: int | None = None
 
-    DEFAULT_METHOD = 'int_defaults'
-    VALIDATE_METHOD = 'validate_int'
-
     @property
     def bytes(self) -> int:
         return self.bits // 8
@@ -42,9 +39,6 @@ class Int(Datatype):
 class Float(Datatype):
     type: Literal['FLOAT'] = 'FLOAT'
     bits: int | None = None
-
-    DEFAULT_METHOD = 'float_defaults'
-    VALIDATE_METHOD = 'validate_float'
 
     @property
     def bytes(self) -> int:
@@ -71,17 +65,11 @@ class Numeric(Datatype):
     precision: int | None = None
     scale: int | None = None
 
-    DEFAULT_METHOD = 'numeric_defaults'
-    VALIDATE_METHOD = 'validate_numeric'
-
 
 class BigNumeric(Datatype):
     type: Literal['BIGNUMERIC'] = 'BIGNUMERIC'
     precision: int | None = None
     scale: int | None = None
-
-    DEFAULT_METHOD = 'big_numeric_defaults'
-    VALIDATE_METHOD = 'validate_big_numeric'
 
 
 class String(Datatype):
@@ -157,8 +145,6 @@ class Interval(Datatype):
 class Array(Datatype):
     type: Literal['ARRAY'] = 'ARRAY'
     inner: Datatype
-
-    VALIDATE_METHOD = 'validate_array'
 
     @model_serializer
     def serialize(self, info: FieldSerializationInfo) -> dict[str, Any]:

@@ -14,6 +14,7 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE,
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, ForeignReference, \
     Identifier, IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, RoundingMode, Schema, SchemaName, Table, \
     QualifiedName, View
+from liti.core.observe import set_defaults, validate_model
 from tests.liti.util import NoRaise
 
 
@@ -2332,26 +2333,26 @@ def test_create_materialized_view_full(db_backend: BigQueryDbBackend, bq_client:
 
 def test_int_defaults(db_backend: BigQueryDbBackend, context: Mock):
     node = Int()
-    node.set_defaults(db_backend, context)
+    set_defaults(node, db_backend, context)
     assert node.bits == 64
 
 
 def test_float_defaults(db_backend: BigQueryDbBackend, context: Mock):
     node = Float()
-    node.set_defaults(db_backend, context)
+    set_defaults(node, db_backend, context)
     assert node.bits == 64
 
 
 def test_numeric_defaults(db_backend: BigQueryDbBackend, context: Mock):
     node = Numeric()
-    node.set_defaults(db_backend, context)
+    set_defaults(node, db_backend, context)
     assert node.precision == 38
     assert node.scale == 9
 
 
 def test_big_numeric_defaults(db_backend: BigQueryDbBackend, context: Mock):
     node = BigNumeric()
-    node.set_defaults(db_backend, context)
+    set_defaults(node, db_backend, context)
     assert node.precision == 76
     assert node.scale == 38
 
@@ -2371,7 +2372,7 @@ def test_validate_int(db_backend: BigQueryDbBackend, context: Mock, bits: int | 
     node = Int(bits=bits)
 
     with raise_ctx:
-        node.liti_validate(db_backend, context)
+        validate_model(node, db_backend, context)
 
 
 @mark.parametrize(
@@ -2389,7 +2390,7 @@ def test_validate_float(db_backend: BigQueryDbBackend, context: Mock, bits: int 
     node = Float(bits=bits)
 
     with raise_ctx:
-        node.liti_validate(db_backend, context)
+        validate_model(node, db_backend, context)
 
 
 @mark.parametrize(
@@ -2421,7 +2422,7 @@ def test_validate_numeric(db_backend: BigQueryDbBackend, context: Mock, precisio
     node = Numeric(precision=precision, scale=scale)
 
     with raise_ctx:
-        node.liti_validate(db_backend, context)
+        validate_model(node, db_backend, context)
 
 
 @mark.parametrize(
@@ -2453,7 +2454,7 @@ def test_validate_big_numeric(db_backend: BigQueryDbBackend, context: Mock, prec
     node = BigNumeric(precision=precision, scale=scale)
 
     with raise_ctx:
-        node.liti_validate(db_backend, context)
+        validate_model(node, db_backend, context)
 
 
 @mark.parametrize(
@@ -2483,7 +2484,7 @@ def test_validate_array(db_backend: BigQueryDbBackend, context: Mock, inner: Dat
     node = Array(inner=inner)
 
     with raise_ctx:
-        node.liti_validate(db_backend, context)
+        validate_model(node, db_backend, context)
 
 
 @mark.parametrize(
@@ -2531,4 +2532,4 @@ def test_validate_partitioning(
     )
 
     with raise_ctx:
-        node.liti_validate(db_backend, context)
+        validate_model(node, db_backend, context)
