@@ -5,12 +5,14 @@ from unittest.mock import Mock
 from pytest import fixture, mark, raises
 
 from liti import bigquery as bq
-from liti.core.backend.bigquery import BigQueryDbBackend, can_coerce, column_to_sql, datatype_to_sql, \
+from liti.core.backend.bigquery import BigQueryDbBackend, BigQueryMetaBackend, can_coerce, column_to_sql, \
+    datatype_to_sql, \
     extract_dataset_ref, interval_literal_to_sql, NULLABLE, REPEATED, REQUIRED, to_bq_table, to_column, \
     to_dataset_ref, to_datatype, to_datatype_array, to_field_type, to_fields, to_liti_materialized_view, to_liti_table, \
     to_liti_view, to_max_length, to_mode, to_precision, to_range_element_type, to_scale, to_schema_field, to_table_ref
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
     Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
+from liti.core.model.v1.operation.data.table import CreateSchema
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, ForeignReference, \
     Identifier, IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, RoundingMode, Schema, SchemaName, Table, \
     QualifiedName, View
@@ -32,6 +34,11 @@ def bq_client() -> Mock:
 @fixture
 def db_backend(bq_client) -> BigQueryDbBackend:
     return BigQueryDbBackend(bq_client, raise_unsupported=set())
+
+
+@fixture
+def meta_backend(bq_client) -> BigQueryMetaBackend:
+    return BigQueryMetaBackend(bq_client, QualifiedName('test_project.test_dataset.meta_table'))
 
 
 @fixture
@@ -2134,6 +2141,17 @@ def test_add_column(db_backend: BigQueryDbBackend, bq_client: Mock):
     )
 
 
+def test_drop_column(db_backend: BigQueryDbBackend, bq_client: Mock):
+    table_name = QualifiedName('test_project.test_dataset.test_table')
+    column_name = ColumnName('col_date')
+    db_backend.drop_column(table_name, column_name)
+
+    bq_client.query_and_wait.assert_called_once_with(
+        f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+        f'DROP COLUMN `col_date`\n'
+    )
+
+
 def test_rename_column(db_backend: BigQueryDbBackend, bq_client: Mock):
     table_name = QualifiedName('test_project.test_dataset.test_table')
     column_name = ColumnName('col_date')
@@ -2533,3 +2551,53 @@ def test_validate_partitioning(
 
     with raise_ctx:
         validate_model(node, db_backend, context)
+
+
+def test_apply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
+    schema = Schema(name=QualifiedName('test_project.test_dataset.test_schema'))
+    create_schema = CreateSchema(schema=schema)
+    bq_client.query_and_wait.return_value = Mock(num_dml_affected_rows=1)
+
+    meta_backend.apply_operation(create_schema)
+
+    bq_client.query_and_wait.assert_called_once()
+
+    assert bq_client.query_and_wait.call_args.args[0] == (
+        f'INSERT INTO `test_project.test_dataset.meta_table` (idx, op_kind, op_data)\n'
+        f'VALUES (\n'
+        f'    (SELECT COALESCE(MAX(idx) + 1, 0) FROM `test_project.test_dataset.meta_table`),\n'
+        f'    @op_kind,\n'
+        f'    @op_data\n'
+        f')\n'
+    )
+
+    job_config: bq.QueryJobConfig = bq_client.query_and_wait.call_args.kwargs['job_config']
+
+    assert job_config.query_parameters == [
+        bq.ScalarQueryParameter('op_kind', 'STRING', 'create_schema'),
+        bq.ScalarQueryParameter('op_data', 'JSON', '{"schema":{"name":{"database":"test_project","schema":"test_dataset","name":"test_schema"}}}'),
+    ]
+
+
+def test_unapply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
+    schema = Schema(name=QualifiedName('test_project.test_dataset.test_schema'))
+    create_schema = CreateSchema(schema=schema)
+    bq_client.query_and_wait.return_value = Mock(num_dml_affected_rows=1)
+
+    meta_backend.unapply_operation(create_schema)
+
+    bq_client.query_and_wait.assert_called_once()
+
+    assert bq_client.query_and_wait.call_args.args[0] == (
+        f'DELETE FROM `test_project.test_dataset.meta_table`\n'
+        f'WHERE idx = (SELECT MAX(idx) FROM `test_project.test_dataset.meta_table`)\n'
+        f'    AND op_kind = @op_kind\n'
+        f'    AND TO_JSON_STRING(op_data) = TO_JSON_STRING(@op_data)\n'
+    )
+
+    job_config: bq.QueryJobConfig = bq_client.query_and_wait.call_args.kwargs['job_config']
+
+    assert job_config.query_parameters == [
+        bq.ScalarQueryParameter('op_kind', 'STRING', 'create_schema'),
+        bq.ScalarQueryParameter('op_data', 'JSON', '{"schema":{"name":{"database":"test_project","schema":"test_dataset","name":"test_schema"}}}'),
+    ]
