@@ -28,11 +28,12 @@ def parse_all_arguments() -> Namespace:
     parser = ArgumentParser(prog='liti')
     parser.add_argument('command', help='action to perform')
     parser.add_argument('-t', '--target', help='directory with migration files')
-    parser.add_argument('-w', '--wet', action=BooleanOptionalAction, default=False, help='[False] should perform migration side effects')
-    parser.add_argument('-d', '--down', action=BooleanOptionalAction, default=False, help='[False] should allow performing down migrations')
-    parser.add_argument('-v', '--verbose', action=BooleanOptionalAction, default=False, help='[False] should log in a wet run')
-    parser.add_argument('--db', default='memory', help='[memory] type of database backend (e.g. memory, bigquery)')
-    parser.add_argument('--meta', default='memory', help='[memory] type of metadata backend (e.g. memory, bigquery)')
+    parser.add_argument('--tpl', action='append', metavar=('template',), help='[repeatable] filename containing operation templates')
+    parser.add_argument('-w', '--wet', action=BooleanOptionalAction, default=False, help='should perform migration side effects')
+    parser.add_argument('-d', '--down', action=BooleanOptionalAction, default=False, help='should allow performing down migrations')
+    parser.add_argument('-v', '--verbose', action=BooleanOptionalAction, default=False, help='should log in a wet run')
+    parser.add_argument('--db', default='memory', help='type of database backend (e.g. memory, bigquery) (default: memory)')
+    parser.add_argument('--meta', default='memory', help='type of metadata backend (e.g. memory, bigquery) (default: memory)')
     parser.add_argument('--meta-table-name', help='fully qualified table name for a metadata table')
     parser.add_argument('--scan-database', help='database to scan')
     parser.add_argument('--scan-schema', help='schema to scan')
@@ -45,11 +46,12 @@ def parse_migrate_arguments() -> Namespace:
     parser = ArgumentParser(prog='liti')
     parser.add_argument('command', help='action to perform')
     parser.add_argument('-t', '--target', required=True, help='directory with migration files')
-    parser.add_argument('-w', '--wet', action=BooleanOptionalAction, default=False, help='[False] should perform migration side effects')
-    parser.add_argument('-d', '--down', action=BooleanOptionalAction, default=False, help='[False] should allow performing down migrations')
-    parser.add_argument('-v', '--verbose', action=BooleanOptionalAction, default=False, help='[False] should log in a wet run')
-    parser.add_argument('--db', default='memory', help='[memory] type of database backend (e.g. memory, bigquery)')
-    parser.add_argument('--meta', default='memory', help='[memory] type of metadata backend (e.g. memory, bigquery)')
+    parser.add_argument('--tpl', action='append', metavar=('template',), help='[repeatable] filename containing operation templates')
+    parser.add_argument('-w', '--wet', action=BooleanOptionalAction, default=False, help='should perform migration side effects')
+    parser.add_argument('-d', '--down', action=BooleanOptionalAction, default=False, help='should allow performing down migrations')
+    parser.add_argument('-v', '--verbose', action=BooleanOptionalAction, default=False, help='should log in a wet run')
+    parser.add_argument('--db', default='memory', help='type of database backend (e.g. memory, bigquery) (default: memory)')
+    parser.add_argument('--meta', default='memory', help='type of metadata backend (e.g. memory, bigquery) (default: memory)')
     parser.add_argument('--meta-table-name', help='fully qualified table name for a metadata table')
     parser.add_argument('--gcp-project', help='project to use for GCP backends')
     return parser.parse_args()
@@ -129,6 +131,7 @@ def migrate():
         meta_backend=meta_backend,
         target_dir=args.target and Path(args.target),
         silent=silent,
+        template_files=args.tpl and [Path(template) for template in args.tpl],
     ))
 
     runner.run(

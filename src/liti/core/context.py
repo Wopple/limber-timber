@@ -6,6 +6,7 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from liti.core.model.v1.manifest import Manifest
     from liti.core.model.v1.operation.data.base import Operation
+    from liti.core.model.v1.template import Template
     from liti.core.backend.base import DbBackend, MetaBackend
 
 
@@ -18,6 +19,8 @@ class Context(BaseModel):
     target_dir: Path | None = None
     silent: bool = False
     manifest_: Any = None
+    template_files: list[Path] | None = None
+    templates_: Any | None
     target_operations_: Any = None
 
     def __init__(
@@ -28,6 +31,8 @@ class Context(BaseModel):
         target_dir: Path | None = None,
         silent: bool = False,
         manifest: Any = None,
+        template_files: list[Path] | None = None,
+        templates: Any = None,
         target_operations: Any = None,
     ):
         """ Allows instantiation with expected field names without trailing underscores """
@@ -38,6 +43,8 @@ class Context(BaseModel):
             target_dir=target_dir,
             silent=silent,
             manifest_=manifest,
+            template_files=template_files,
+            templates_=templates,
             target_operations_=target_operations,
         )
 
@@ -64,6 +71,14 @@ class Context(BaseModel):
     @manifest.setter
     def manifest(self, value: Optional['Manifest']):
         self.manifest_ = value
+
+    @property
+    def templates(self) -> list['Template'] | None:
+        return self.templates_
+
+    @templates.setter
+    def templates(self, value: list['Template'] | None):
+        self.templates_ = value
 
     @property
     def target_operations(self) -> list['Operation'] | None:

@@ -8,12 +8,15 @@ from devtools import pformat
 
 from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.context import Context
-from liti.core.function import attach_ops, get_manifest_path, parse_manifest, parse_operations
+from liti.core.file import get_manifest_path
+from liti.core.function import attach_ops
 from liti.core.logger import NoOpLogger
-from liti.core.model.v1.manifest import Manifest, Template
+from liti.core.model.v1.manifest import Manifest
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.parse import parse_manifest, parse_operations, parse_templates
 from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, QualifiedName
+from liti.core.model.v1.template import Template
 from liti.core.observe import set_defaults, validate_model
 
 log = logging.getLogger(__name__)
@@ -61,13 +64,24 @@ class MigrateRunner:
         return self.context.manifest
 
     @property
+    def templates(self) -> list[Template] | None:
+        if self.context.templates is None and self.context.template_files:
+            self.context.templates = [
+                template
+                for path in self.context.template_files
+                for template in parse_templates(path)
+            ]
+
+        return self.context.templates
+
+    @property
     def target_operations(self) -> list[Operation]:
         if self.context.target_operations is None:
             manifest = self.manifest
             operations = parse_operations(manifest.operation_files, self.target_dir)
 
-            if manifest.templates:
-                apply_templates(operations, manifest.templates)
+            if self.templates:
+                apply_templates(operations, self.templates)
 
             self.context.target_operations = operations
 

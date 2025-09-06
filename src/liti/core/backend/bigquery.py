@@ -8,12 +8,12 @@ from liti.core.backend.base import CreateRelation, DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.context import Context
 from liti.core.error import Unsupported, UnsupportedError
-from liti.core.function import parse_operation
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, Date, DATE_TIME, DateTime, Float, \
     FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, String, Struct, TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
+from liti.core.model.v1.parse import parse_operation
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, \
     ForeignReference, Identifier, \
     IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, Relation, RoundingMode, Schema, SchemaName, Table, \

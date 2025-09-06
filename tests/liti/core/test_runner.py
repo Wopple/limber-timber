@@ -8,14 +8,16 @@ from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.context import Context
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
     Numeric, Range, STRING, Struct, TIME, TIMESTAMP
-from liti.core.model.v1.manifest import Template
 from liti.core.model.v1.operation.data.column import AddColumn
 from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.parse import parse_templates
 from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, IntervalLiteral, Partitioning, \
     PrimaryKey, RoundingMode, Table, QualifiedName
+from liti.core.model.v1.template import Template
 from liti.core.runner import apply_templates, MigrateRunner, sort_operations
 
 MakeRunner = Callable[[str], MigrateRunner]
+TemplateMakeRunner = Callable[[str, list[Path]], MigrateRunner]
 
 
 @fixture
@@ -29,11 +31,12 @@ def meta_backend() -> MemoryMetaBackend:
 
 
 @fixture
-def make_runner(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend) -> MakeRunner:
-    return lambda filename: MigrateRunner(context=Context(
+def make_runner(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend) -> MakeRunner | TemplateMakeRunner:
+    return lambda filename, template_files=None: MigrateRunner(context=Context(
         db_backend=db_backend,
         meta_backend=meta_backend,
         target_dir=Path(f'tests/res/{filename}'),
+        template_files=template_files,
     ))
 
 
@@ -959,11 +962,12 @@ def test_drop_materialized_view(db_backend: MemoryDbBackend, meta_backend: Memor
 def test_template_database_and_schema(
     db_backend: MemoryDbBackend,
     meta_backend: MemoryMetaBackend,
-    make_runner: MakeRunner,
+    make_runner: TemplateMakeRunner,
 ):
     table_name = QualifiedName('new_project.new_dataset.template_table')
+    template_files = [Path('tests/res/templates/database_and_schema.yaml')]
 
-    make_runner('target_template_database_and_schema').run(wet_run=True)
+    make_runner('target_template_database_and_schema', template_files).run(wet_run=True)
     table = db_backend.get_table(table_name)
 
     assert len(db_backend.tables) == 1
