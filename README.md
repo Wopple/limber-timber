@@ -59,12 +59,11 @@ These are listed in rough priority order.
 - ✅ CLI
 - ✅ Publish to PyPI
 - ✅ Templating
-- ➡️ JSON Schema
-    - To validate and auto complete migration files in IDEs
+- ➡️ Documentation
 - ➡️ Unit Tests
   - ➡️ Templating
-  - ➡️ Big Query Backend
-- ➡️ Documentation
+- ➡️ JSON Schema
+    - To validate and auto complete migration files in IDEs
 - ✅ In-memory Database
 - ✅ In-memory Metadata
 - ➡️ Big Query Database
