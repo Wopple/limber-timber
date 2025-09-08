@@ -1,0 +1,18 @@
+site_name: Limber Timber
+site_url: https://Wopple.github.io/limber-timber/
+repo_url: https://github.com/Wopple/limber-timber
+theme:
+  name: material
+  palette:
+    scheme: slate
+  features:
+  - navigation.instant
+  - navigation.sections
+  - content.code.copy
+plugins:
+- search
+- mkdocstrings:
+    default_handler: python
+nav:
+- Home: index.md
+- Learn: learn.md

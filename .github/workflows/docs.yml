@@ -1,0 +1,76 @@
+name: Docs
+
+on:
+  push:
+    branches:
+    - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: read versions
+      id: versions
+      run: |
+        echo "python=$(cat .python-version)" >> $GITHUB_OUTPUT
+        echo "poetry=$(cat .poetry-version)" >> $GITHUB_OUTPUT
+
+    - name: set up python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ steps.versions.outputs.python }}
+        cache: poetry
+        cache-dependency-path: |
+          pyproject.toml
+          poetry.lock
+
+    - name: install poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ steps.versions.outputs.poetry }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+
+    - name: cache virtualenv
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: install dependencies
+      run: |
+        poetry install --no-interaction --no-root
+
+    - name: build site
+      run: |
+        poetry run mkdocs build --strict --site-dir site
+
+    - name: upload site artifact
+      uses: actions/upload-pages-artifact@v4
+      with:
+        path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: deploy site
+      id: deployment
+      uses: actions/deploy-pages@v4
