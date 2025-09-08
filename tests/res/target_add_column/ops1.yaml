@@ -3,10 +3,7 @@ operations:
 - kind: create_table
   data:
     table:
-      name:
-        database: my_project
-        schema: my_dataset
-        name: revert_table
+      name: my_project.my_dataset.revert_table
       columns:
       - name: col_bool
         datatype: BOOL
