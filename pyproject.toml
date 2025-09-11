@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "limber-timber"
 version = "0.0.16"
-description = "Database Migrations Made Easy"
+description = "It's data based!"
 authors = ["Daniel Tashjian <thewopple@gmail.com>"]
 readme = "README.md"
 classifiers = [

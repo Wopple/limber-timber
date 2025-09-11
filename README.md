@@ -1,6 +1,6 @@
 # Limber Timber
 
-***Database Migrations Made Easy***
+***It's data based!***
 
 ---
 
