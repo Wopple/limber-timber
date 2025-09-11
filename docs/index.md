@@ -10,6 +10,9 @@
 Limber Timber is a database migrations tool written in python with flexibility in mind. It is the database migrations
 tool I always wanted but never existed (until now).
 
+Currently only Big Query is supported as that is what I'm using at work. The codebase is written to support different
+backends, and I plan to implement them eventually. Pull requests are welcome.
+
 ### Migrations Written in Data
 
 Data is trivial to parse and thus easy to manipulate. You describe the migrations in data, and Limber Timber does the rest.

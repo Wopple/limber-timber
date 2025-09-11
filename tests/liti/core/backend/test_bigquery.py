@@ -1460,19 +1460,19 @@ def test_can_coerce(from_dt, to_dt, expected):
 
 def test_create_schema_minimal(db_backend: BigQueryDbBackend, bq_client: Mock):
     schema = Schema(
-        name=QualifiedName('test_project.test_dataset.test_schema'),
+        name=QualifiedName('test_project.test_schema'),
     )
 
     db_backend.create_schema(schema)
 
     bq_client.query_and_wait.assert_called_once_with(
-        f'CREATE SCHEMA `test_project.test_dataset.test_schema`\n'
+        f'CREATE SCHEMA `test_project.test_schema`\n'
     )
 
 
 def test_create_schema_full(db_backend: BigQueryDbBackend, bq_client: Mock):
     schema = Schema(
-        name=QualifiedName('test_project.test_dataset.test_schema'),
+        name=QualifiedName('test_project.test_schema'),
         friendly_name='test_friendly',
         description='Test description',
         labels={'l1': 'v1', 'l2': 'v2'},
@@ -1494,7 +1494,7 @@ def test_create_schema_full(db_backend: BigQueryDbBackend, bq_client: Mock):
     db_backend.create_schema(schema)
 
     bq_client.query_and_wait.assert_called_once_with(
-        f'CREATE SCHEMA `test_project.test_dataset.test_schema`\n'
+        f'CREATE SCHEMA `test_project.test_schema`\n'
         f'DEFAULT COLLATE \'und:ci\'\n'
         f'OPTIONS(\n'
         f'    friendly_name = \'test_friendly\',\n'
@@ -2554,7 +2554,7 @@ def test_validate_partitioning(
 
 
 def test_apply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
-    schema = Schema(name=QualifiedName('test_project.test_dataset.test_schema'))
+    schema = Schema(name=QualifiedName(database='test_project', schema='test_schema'))
     create_schema = CreateSchema(schema=schema)
     bq_client.query_and_wait.return_value = Mock(num_dml_affected_rows=1)
 
@@ -2575,12 +2575,12 @@ def test_apply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
 
     assert job_config.query_parameters == [
         bq.ScalarQueryParameter('op_kind', 'STRING', 'create_schema'),
-        bq.ScalarQueryParameter('op_data', 'JSON', '{"schema":{"name":{"database":"test_project","schema":"test_dataset","name":"test_schema"}}}'),
+        bq.ScalarQueryParameter('op_data', 'JSON', '{"schema":{"name":{"database":"test_project","schema":"test_schema"}}}'),
     ]
 
 
 def test_unapply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
-    schema = Schema(name=QualifiedName('test_project.test_dataset.test_schema'))
+    schema = Schema(name=QualifiedName(database='test_project', schema='test_schema'))
     create_schema = CreateSchema(schema=schema)
     bq_client.query_and_wait.return_value = Mock(num_dml_affected_rows=1)
 
@@ -2599,5 +2599,5 @@ def test_unapply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
 
     assert job_config.query_parameters == [
         bq.ScalarQueryParameter('op_kind', 'STRING', 'create_schema'),
-        bq.ScalarQueryParameter('op_data', 'JSON', '{"schema":{"name":{"database":"test_project","schema":"test_dataset","name":"test_schema"}}}'),
+        bq.ScalarQueryParameter('op_data', 'JSON', '{"schema":{"name":{"database":"test_project","schema":"test_schema"}}}'),
     ]

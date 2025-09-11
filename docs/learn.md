@@ -38,11 +38,11 @@ data:
       datatype: INT64
 ```
 
-## Operation Files
+## Operation File
 
 These are data files containing a list of operations. Operations are applied in the order they are listed.
 
-Example operations file:
+Example operation file:
 
 ```yaml
 # note the -'s which make this file a list instead of an object
@@ -103,4 +103,4 @@ model/
   create_users.yaml
 ```
 
-Note the sort order of the operations filenames is irrelevant.
+Note the sort order of the operation filenames is irrelevant.
