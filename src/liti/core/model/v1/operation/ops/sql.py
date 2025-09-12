@@ -17,6 +17,9 @@ class ExecuteSqlOps(OperationOps):
         with open(path) as f:
             sql = f.read()
 
+        if self.op.entity_names:
+            sql = sql.format(**self.op.entity_names)
+
         self.context.db_backend.execute_sql(sql)
 
     def down(self) -> ExecuteSql:
@@ -36,6 +39,9 @@ class ExecuteSqlOps(OperationOps):
         if isinstance(self.op.is_up, str):
             with open(path) as f:
                 sql = f.read()
+
+            if self.op.entity_names:
+                sql = sql.format(**self.op.entity_names)
 
             return self.context.db_backend.execute_bool_value_query(sql)
         elif isinstance(self.op.is_up, bool):

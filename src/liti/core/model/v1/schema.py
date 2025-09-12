@@ -426,10 +426,24 @@ class Table(Relation):
         ]
 
 
-class View(Relation):
-    columns: list[Column] | None = None
+class ViewLike(LitiModel):
     select_sql: str | None = None
     select_file: str | None = None
+    entity_names: dict[str, QualifiedName] | None = None
+
+    @property
+    def formatted_select_sql(self) -> str | None:
+        if self.select_sql is not None:
+            if self.entity_names:
+                return self.select_sql.format(**self.entity_names)
+            else:
+                return self.select_sql
+        else:
+            return None
+
+
+class View(Relation, ViewLike):
+    columns: list[Column] | None = None
     privacy_policy: dict[str, Any] | None = None
 
     def __eq__(self, other):
@@ -449,9 +463,7 @@ class View(Relation):
         return {column.name: column for column in self.columns or []}
 
 
-class MaterializedView(Relation):
-    select_sql: str | None = None
-    select_file: str | None = None
+class MaterializedView(Relation, ViewLike):
     partitioning: Partitioning | None = None
     clustering: list[ColumnName] | None = None
     allow_non_incremental_definition: bool | None = None

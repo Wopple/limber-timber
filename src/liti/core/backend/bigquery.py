@@ -203,6 +203,7 @@ def set_bq_partitioning(relation: Relation, bq_table: bq.Table):
         else:
             raise ValueError(f'Unrecognized partitioning kind: {relation.partitioning}')
 
+
 def table_to_bq_table(table: Table) -> bq.Table:
     bq_table = bq.Table(
         table_ref=to_table_ref(table.name),
@@ -247,14 +248,14 @@ def table_to_bq_table(table: Table) -> bq.Table:
     return bq_table
 
 
-def view_to_bq_table(relation: Relation) -> bq.Table:
-    bq_table = bq.Table(to_table_ref(relation.name))
-    bq_table.friendly_name = relation.friendly_name
-    bq_table.description = relation.description
-    bq_table.labels = relation.labels
-    bq_table.resource_tags = relation.tags
-    bq_table.expires = relation.expiration_timestamp
-    bq_table.view_query = relation.select_sql
+def view_to_bq_table(view: View) -> bq.Table:
+    bq_table = bq.Table(to_table_ref(view.name))
+    bq_table.friendly_name = view.friendly_name
+    bq_table.description = view.description
+    bq_table.labels = view.labels
+    bq_table.resource_tags = view.tags
+    bq_table.expires = view.expiration_timestamp
+    bq_table.view_query = view.formatted_select_sql
 
     # TODO: figure out what to do about bq.Table missing fields
     return bq_table
@@ -269,7 +270,7 @@ def materialized_view_to_bq_table(materialized_view: MaterializedView) -> bq.Tab
     bq_table.labels = materialized_view.labels
     bq_table.resource_tags = materialized_view.tags
     bq_table.expires = materialized_view.expiration_timestamp
-    bq_table.mview_query = materialized_view.select_sql
+    bq_table.mview_query = materialized_view.formatted_select_sql
     bq_table.mview_allow_non_incremental_definition = materialized_view.allow_non_incremental_definition
     bq_table.mview_enable_refresh = materialized_view.enable_refresh
     bq_table.mview_refresh_interval = materialized_view.refresh_interval
@@ -1228,7 +1229,7 @@ class BigQueryDbBackend(DbBackend):
             f'CREATE OR REPLACE VIEW `{view.name}`{columns_sql}\n'
             f'{options_sql}'
             f'AS\n'
-            f'{view.select_sql}\n'
+            f'{view.formatted_select_sql}\n'
         )
 
     def drop_view(self, name: QualifiedName):
@@ -1289,7 +1290,7 @@ class BigQueryDbBackend(DbBackend):
             f'{cluster_sql}'
             f'{options_sql}'
             f'AS\n'
-            f'{materialized_view.select_sql}\n'
+            f'{materialized_view.formatted_select_sql}\n'
         )
 
     def drop_materialized_view(self, name: QualifiedName):

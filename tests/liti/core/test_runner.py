@@ -763,6 +763,7 @@ def test_create_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 1
     assert view.select_sql == 'SELECT 1 AS foo\n'
+    assert view.formatted_select_sql == 'SELECT 1 AS foo\n'
     assert view.columns == [Column('foo', INT64)]
     assert view.friendly_name == 'my_friendly_name'
     assert view.description == 'My description'
@@ -786,6 +787,7 @@ def test_create_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 2
     assert view.select_sql == 'SELECT 2 AS bar\n'
+    assert view.formatted_select_sql == 'SELECT 2 AS bar\n'
     assert view.columns == [Column('bar', INT64)]
 
     make_runner('target_create_view').run(wet_run=True, allow_down=True)
@@ -794,6 +796,7 @@ def test_create_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 1
     assert view.select_sql == 'SELECT 1 AS foo\n'
+    assert view.formatted_select_sql == 'SELECT 1 AS foo\n'
     assert view.columns == [Column('foo', INT64)]
 
 
@@ -813,6 +816,7 @@ def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend,
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 1
     assert view.select_sql == 'SELECT 1 AS foo\n'
+    assert view.formatted_select_sql == 'SELECT 1 AS foo\n'
     assert view.columns == [Column('foo', INT64)]
     assert view.friendly_name == 'my_friendly_name'
     assert view.description == 'My description'
@@ -840,6 +844,7 @@ def test_create_materialized_view(db_backend: MemoryDbBackend, meta_backend: Mem
     assert len(db_backend.materialized_views) == 1
     assert len(meta_backend.get_applied_operations()) == 2
     assert materialized_view.select_sql == 'SELECT NOT col_bool AS not_col_bool, col_date FROM my_project.my_dataset.source_table\n'
+    assert materialized_view.formatted_select_sql == 'SELECT NOT col_bool AS not_col_bool, col_date FROM my_project.my_dataset.source_table\n'
 
     assert materialized_view.partitioning == Partitioning(
         kind='TIME',
@@ -872,6 +877,7 @@ def test_create_materialized_view(db_backend: MemoryDbBackend, meta_backend: Mem
     assert len(db_backend.materialized_views) == 1
     assert len(meta_backend.get_applied_operations()) == 3
     assert materialized_view.select_sql == 'SELECT col_bool, col_date FROM my_project.my_dataset.source_table\n'
+    assert materialized_view.formatted_select_sql == 'SELECT col_bool, col_date FROM my_project.my_dataset.source_table\n'
     assert materialized_view.partitioning is None
     assert materialized_view.clustering is None
     assert materialized_view.friendly_name is None
@@ -889,6 +895,7 @@ def test_create_materialized_view(db_backend: MemoryDbBackend, meta_backend: Mem
     assert len(db_backend.materialized_views) == 1
     assert len(meta_backend.get_applied_operations()) == 2
     assert materialized_view.select_sql == 'SELECT NOT col_bool AS not_col_bool, col_date FROM my_project.my_dataset.source_table\n'
+    assert materialized_view.formatted_select_sql == 'SELECT NOT col_bool AS not_col_bool, col_date FROM my_project.my_dataset.source_table\n'
 
     assert materialized_view.partitioning == Partitioning(
         kind='TIME',
@@ -932,6 +939,7 @@ def test_drop_materialized_view(db_backend: MemoryDbBackend, meta_backend: Memor
     assert len(db_backend.materialized_views) == 1
     assert len(meta_backend.get_applied_operations()) == 2
     assert materialized_view.select_sql == 'SELECT NOT col_bool AS not_col_bool, col_date FROM my_project.my_dataset.source_table\n'
+    assert materialized_view.formatted_select_sql == 'SELECT NOT col_bool AS not_col_bool, col_date FROM my_project.my_dataset.source_table\n'
 
     assert materialized_view.partitioning == Partitioning(
         kind='TIME',

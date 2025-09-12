@@ -1,6 +1,7 @@
 from typing import ClassVar
 
 from liti.core.model.v1.operation.data.base import Operation
+from liti.core.model.v1.schema import QualifiedName
 
 
 class ExecuteSql(Operation):
@@ -23,11 +24,16 @@ class ExecuteSql(Operation):
         the query must return TRUE if the down migration has been applied
         the query must return FALSE if the down migration has not been applied
         TRUE and FALSE behave as if the query returned that value
+    :param entity_names: mapping from python string format keys to fully qualified names
+        SQL can be written as a python format string with named parameters
+        the parameters will be replaced with the fully qualified names using str.format
+        this field is provided to allow for templating tables, views, etc.
     """
 
     up: str
     down: str
     is_up: str | bool = False
     is_down: str | bool = False
+    entity_names: dict[str, QualifiedName] | None = None
 
     KIND: ClassVar[str] = 'execute_sql'
