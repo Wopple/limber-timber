@@ -4,6 +4,8 @@ from typing import Any, Callable, Generator, get_args, get_origin
 
 from pydantic import BaseModel
 
+from liti.core.reflect import recursive_subclasses
+
 
 def is_match(match: Any, value: Any) -> bool:
     # circular import
@@ -12,6 +14,10 @@ def is_match(match: Any, value: Any) -> bool:
     if isinstance(match, dict) and isinstance(value, list | tuple | set):
         # skip checking collection items
         return True
+    elif isinstance(match, str) and isinstance(value, dict):
+        return match in value
+    elif isinstance(match, dict) and isinstance(value, dict):
+        return all(mk in value and is_match(mv, value[mk]) for mk, mv in match.items())
     elif isinstance(value, LitiModel):
         # dig deeper into the model
         return all(is_match(inner, getattr(value, field)) for field, inner in match.items())
@@ -21,7 +27,7 @@ def is_match(match: Any, value: Any) -> bool:
         # avoids having to specify '.string' in templates
         return match == value.string
     else:
-        # match must be on the left hand side for STAR comparisons
+        # match must be on the left hand side so STAR uses its __eq__ implementation
         return match == value
 
 
@@ -55,14 +61,14 @@ class LitiModel(BaseModel):
 
         return {
             subclass.__name__: subclass
-            for subclass in LitiModel.__subclasses__()
+            for subclass in recursive_subclasses(LitiModel)
         }[name]
 
     def get_roots(self, root: type['LitiModel'], full_match: Any) -> Generator[tuple['LitiModel', Any], None, None]:
-        """ Yields all the root nodes of the given type that match the provided `full_match`
+        """ Yields all the nodes of type `root` that match `full_match`
 
-        Also yields the remaining local match portion associated with each root in case the template path traverses
-        through collection nodes. Those local matches can be used to check each item in the collections.
+        Also yields the remaining field matches associated with each root in case the template path traverses through
+        collection nodes. Those field matches can be used to check each item in the collections.
         """
 
         # this can be a bit duplicative since each call to `is_match` is recursive,
@@ -72,6 +78,7 @@ class LitiModel(BaseModel):
             return
 
         if isinstance(self, root):
+            # TODO: this does not handle recursive datatypes, update the logic if we ever have recursive LitiModels
             yield self, full_match
         else:
             for field_name in self.__pydantic_fields__.keys():
@@ -80,9 +87,21 @@ class LitiModel(BaseModel):
                 if isinstance(field, list | tuple | set):
                     for item in field:
                         if isinstance(item, LitiModel):
-                            yield from item.get_roots(root, full_match[field_name])
+                            yield from item.get_roots(root, full_match.get(field_name, STAR))
+                elif isinstance(field, dict) and field_name in full_match:
+                    match = full_match[field_name]
+
+                    if match is STAR or isinstance(match, dict):
+                        for key, item in field.items():
+                            if key in match and isinstance(item, LitiModel):
+                                yield from item.get_roots(root, match[key])
+                    else:
+                        item = field.get(match)
+
+                        if isinstance(item, LitiModel):
+                            yield from item.get_roots(root, STAR)
                 elif isinstance(field, LitiModel):
-                    yield from field.get_roots(root, full_match[field_name])
+                    yield from field.get_roots(root, full_match.get(field_name, STAR))
 
     def get_update_fns(self, path: list[str], matches: list[Any]) -> Generator[Callable[[Any], None], None, None]:
         """ Yields functions to replace selected fields with a provided value
@@ -122,6 +141,17 @@ class LitiModel(BaseModel):
                 for item in field:
                     if isinstance(item, LitiModel):
                         yield from item.get_update_fns(tail, field_matches)
+            elif isinstance(field, dict):
+                key, *dict_tail = tail
+                item = field.get(key)
+
+                if dict_tail:
+                    # dig deeper
+                    if isinstance(item, LitiModel):
+                        yield from item.get_update_fns(dict_tail, field_matches)
+                # yield the leaf dict value if it matches
+                elif all(is_match(fm, item) for fm in field_matches):
+                    yield lambda value: field.update({key: value})
             elif isinstance(field, LitiModel):
                 yield from field.get_update_fns(tail, field_matches)
         # yield the leaf field if it matches
@@ -137,7 +167,12 @@ class LitiModel(BaseModel):
 
 
 def extract_subclass(ty: type, parent: type) -> type | None:
-    """ Returns the first subclass of parent if any exist, supports direct subclasses and union types """
+    """ Returns the first encountered subclass of parent if any exist, supports plain subclasses and union types
+
+    This is needed to support instantiation of the proper ValidatedString subtypes based on field type information.
+    We cannot instantiate a Union[Identifier, None], but we can instantiate an Identifier and assign it to a field of
+    type Union[Identifier, None].
+    """
 
     if issubclass(ty, parent):
         return ty

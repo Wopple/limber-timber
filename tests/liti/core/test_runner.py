@@ -10,9 +10,8 @@ from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME
     Numeric, Range, STRING, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.operation.data.column import AddColumn
 from liti.core.model.v1.operation.data.table import CreateTable
-from liti.core.model.v1.parse import parse_templates
 from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, IntervalLiteral, Partitioning, \
-    PrimaryKey, RoundingMode, Table, QualifiedName
+    PrimaryKey, QualifiedName, RoundingMode, Table
 from liti.core.model.v1.template import Template
 from liti.core.runner import apply_templates, MigrateRunner, sort_operations
 
@@ -755,10 +754,10 @@ def test_set_column_description(db_backend: MemoryDbBackend, meta_backend: Memor
 
 
 def test_create_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = QualifiedName('my_project.my_dataset.view_table')
+    view_name = QualifiedName('my_project.my_dataset.view_table')
 
     make_runner('target_create_view').run(wet_run=True)
-    view = db_backend.get_view(table_name)
+    view = db_backend.get_view(view_name)
 
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 1
@@ -782,7 +781,7 @@ def test_create_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
     assert view.privacy_policy == {'p1': 123, 'p2': 'baz'}
 
     make_runner('target_replace_view').run(wet_run=True)
-    view = db_backend.get_view(table_name)
+    view = db_backend.get_view(view_name)
 
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 2
@@ -791,7 +790,7 @@ def test_create_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
     assert view.columns == [Column('bar', INT64)]
 
     make_runner('target_create_view').run(wet_run=True, allow_down=True)
-    view = db_backend.get_view(table_name)
+    view = db_backend.get_view(view_name)
 
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 1
@@ -800,18 +799,39 @@ def test_create_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBacken
     assert view.columns == [Column('foo', INT64)]
 
 
+def test_create_view_templated(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
+    view_name = QualifiedName('my_project.my_dataset.view_table')
+    template_files = [Path('tests/res/templates/create_view_templated.yaml')]
+
+    make_runner('target_create_view_templated', template_files).run(wet_run=True)
+    view = db_backend.get_view(view_name)
+
+    assert len(db_backend.views) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+
+    assert view.select_sql == (
+        'SELECT {function_param}(int_col) AS foo\n'
+        'FROM {table_param}\n'
+    )
+
+    assert view.formatted_select_sql == (
+        'SELECT my_project.functions_schema.function_param(int_col) AS foo\n'
+        'FROM my_project.staging_schema.table_param\n'
+    )
+
+
 def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = QualifiedName('my_project.my_dataset.view_table')
+    view_name = QualifiedName('my_project.my_dataset.view_table')
 
     make_runner('target_drop_view').run(wet_run=True)
-    view = db_backend.get_view(table_name)
+    view = db_backend.get_view(view_name)
 
     assert len(db_backend.views) == 0
     assert len(meta_backend.get_applied_operations()) == 2
     assert view is None
 
     make_runner('target_create_view').run(wet_run=True, allow_down=True)
-    view = db_backend.get_view(table_name)
+    view = db_backend.get_view(view_name)
 
     assert len(db_backend.views) == 1
     assert len(meta_backend.get_applied_operations()) == 1
@@ -836,10 +856,10 @@ def test_drop_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend,
 
 
 def test_create_materialized_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = QualifiedName('my_project.my_dataset.materialized_view_table')
+    materialized_view_name = QualifiedName('my_project.my_dataset.materialized_view_table')
 
     make_runner('target_create_materialized_view').run(wet_run=True)
-    materialized_view = db_backend.get_materialized_view(table_name)
+    materialized_view = db_backend.get_materialized_view(materialized_view_name)
 
     assert len(db_backend.materialized_views) == 1
     assert len(meta_backend.get_applied_operations()) == 2
@@ -872,7 +892,7 @@ def test_create_materialized_view(db_backend: MemoryDbBackend, meta_backend: Mem
     assert materialized_view.refresh_interval == timedelta(hours=1)
 
     make_runner('target_replace_materialized_view').run(wet_run=True)
-    materialized_view = db_backend.get_materialized_view(table_name)
+    materialized_view = db_backend.get_materialized_view(materialized_view_name)
 
     assert len(db_backend.materialized_views) == 1
     assert len(meta_backend.get_applied_operations()) == 3
@@ -890,7 +910,7 @@ def test_create_materialized_view(db_backend: MemoryDbBackend, meta_backend: Mem
     assert materialized_view.refresh_interval == timedelta(hours=2)
 
     make_runner('target_create_materialized_view').run(wet_run=True, allow_down=True)
-    materialized_view = db_backend.get_materialized_view(table_name)
+    materialized_view = db_backend.get_materialized_view(materialized_view_name)
 
     assert len(db_backend.materialized_views) == 1
     assert len(meta_backend.get_applied_operations()) == 2
@@ -924,17 +944,17 @@ def test_create_materialized_view(db_backend: MemoryDbBackend, meta_backend: Mem
 
 
 def test_drop_materialized_view(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBackend, make_runner: MakeRunner):
-    table_name = QualifiedName('my_project.my_dataset.materialized_view_table')
+    materialized_view_name = QualifiedName('my_project.my_dataset.materialized_view_table')
 
     make_runner('target_drop_materialized_view').run(wet_run=True)
-    materialized_view = db_backend.get_materialized_view(table_name)
+    materialized_view = db_backend.get_materialized_view(materialized_view_name)
 
     assert len(db_backend.materialized_views) == 0
     assert len(meta_backend.get_applied_operations()) == 3
     assert materialized_view is None
 
     make_runner('target_create_materialized_view').run(wet_run=True, allow_down=True)
-    materialized_view = db_backend.get_materialized_view(table_name)
+    materialized_view = db_backend.get_materialized_view(materialized_view_name)
 
     assert len(db_backend.materialized_views) == 1
     assert len(meta_backend.get_applied_operations()) == 2

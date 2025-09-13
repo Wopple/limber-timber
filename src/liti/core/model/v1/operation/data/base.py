@@ -1,6 +1,7 @@
 from typing import Any, ClassVar, Literal
 
 from liti.core.base import LitiModel
+from liti.core.reflect import recursive_subclasses
 
 EntityKind = Literal['SCHEMA', 'TABLE', 'VIEW', 'MATERIALIZED_VIEW']
 
@@ -16,7 +17,7 @@ class Operation(LitiModel):
 
         return {
             subclass.KIND: subclass
-            for subclass in Operation.__subclasses__()
+            for subclass in recursive_subclasses(Operation)
         }[kind]
 
     def to_op_data(self, format: Literal['json', 'yaml']) -> dict[str, Any]:

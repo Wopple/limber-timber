@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "limber-timber"
-version = "0.0.16"
+version = "0.0.17"
 description = "It's data based!"
 authors = ["Daniel Tashjian <thewopple@gmail.com>"]
 readme = "README.md"

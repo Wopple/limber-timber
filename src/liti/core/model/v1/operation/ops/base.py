@@ -5,6 +5,7 @@ from liti.core.backend.base import DbBackend, MetaBackend
 from liti.core.context import Context
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.schema import MaterializedView, QualifiedName, Schema, Table, View
+from liti.core.reflect import recursive_subclasses
 
 
 class OperationOps(ABC):
@@ -47,7 +48,7 @@ class OperationOps(ABC):
 
         return {
             getattr(subclass, '__annotations__')['op']: subclass
-            for subclass in OperationOps.__subclasses__()
+            for subclass in recursive_subclasses(OperationOps)
         }[type(op)]
 
     @abstractmethod

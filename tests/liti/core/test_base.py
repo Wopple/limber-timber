@@ -61,6 +61,153 @@ def test_get_roots():
     assert actual_match_2 is STAR
 
 
+def test_get_roots_dict_no_match():
+    class Child(LitiModel):
+        int_field: int
+
+    class Parent(LitiModel):
+        dict_field_1: dict[str, Child]
+        dict_field_2: dict[str, Child]
+
+    child_1 = Child(int_field=1)
+    child_2 = Child(int_field=2)
+    child_3 = Child(int_field=3)
+    child_4 = Child(int_field=4)
+
+    parent = Parent(
+        dict_field_1={
+            'child_1': child_1,
+            'child_2': child_2,
+        },
+        dict_field_2={
+            'child_3': child_3,
+            'child_4': child_4,
+        },
+    )
+
+    full_match = {'dict_field_1': {'child_5': {'int_field': 5}}}
+
+    roots = parent.get_roots(Child, full_match)
+
+    with raises(StopIteration):
+        next(roots)
+
+
+def test_get_roots_dict_single():
+    class Child(LitiModel):
+        int_field: int
+
+    class Parent(LitiModel):
+        dict_field_1: dict[str, Child]
+        dict_field_2: dict[str, Child]
+
+    child_1 = Child(int_field=1)
+    child_2 = Child(int_field=2)
+    child_3 = Child(int_field=3)
+    child_4 = Child(int_field=4)
+
+    parent = Parent(
+        dict_field_1={
+            'child_1': child_1,
+            'child_2': child_2,
+        },
+        dict_field_2={
+            'child_3': child_3,
+            'child_4': child_4,
+        },
+    )
+
+    full_match = {'dict_field_1': 'child_2'}
+
+    roots = parent.get_roots(Child, full_match)
+    actual_child, actual_match = next(roots)
+
+    with raises(StopIteration):
+        next(roots)
+
+    assert actual_child == child_2
+    assert actual_match is STAR
+
+
+def test_get_roots_dict_single_nested():
+    class Child(LitiModel):
+        int_field: int
+
+    class Parent(LitiModel):
+        dict_field_1: dict[str, Child]
+        dict_field_2: dict[str, Child]
+
+    child_1 = Child(int_field=1)
+    child_2 = Child(int_field=2)
+    child_3 = Child(int_field=3)
+    child_4 = Child(int_field=4)
+
+    parent = Parent(
+        dict_field_1={
+            'child_1': child_1,
+            'child_2': child_2,
+        },
+        dict_field_2={
+            'child_3': child_3,
+            'child_4': child_4,
+        },
+    )
+
+    full_match = {'dict_field_1': {'child_2': {'int_field': 2}}}
+
+    roots = parent.get_roots(Child, full_match)
+    actual_child, actual_match = next(roots)
+
+    with raises(StopIteration):
+        next(roots)
+
+    assert actual_child == child_2
+    assert actual_match == {'int_field': 2}
+
+
+def test_get_roots_dict_star():
+    class Child(LitiModel):
+        int_field: int
+
+    class Parent(LitiModel):
+        dict_field_1: dict[str, Child]
+        dict_field_2: dict[str, Child]
+
+    child_1 = Child(int_field=1)
+    child_2 = Child(int_field=2)
+    child_3 = Child(int_field=3)
+    child_4 = Child(int_field=4)
+
+    parent = Parent(
+        dict_field_1={
+            'child_1': child_1,
+            'child_2': child_2,
+        },
+        dict_field_2={
+            'child_3': child_3,
+            'child_4': child_4,
+        },
+    )
+
+    roots = parent.get_roots(Child, STAR)
+    actual_child_1, actual_match_1 = next(roots)
+    actual_child_2, actual_match_2 = next(roots)
+    actual_child_3, actual_match_3 = next(roots)
+    actual_child_4, actual_match_4 = next(roots)
+
+    with raises(StopIteration):
+        next(roots)
+
+    assert actual_child_1 == child_1
+    assert actual_match_1 == {'int_field': 1}
+    assert actual_child_2 == child_2
+    assert actual_match_2 == {'int_field': 2}
+    assert actual_child_3 == child_3
+    assert actual_match_3 == {'int_field': 3}
+    assert actual_child_4 == child_4
+    assert actual_match_4 == {'int_field': 4}
+
+
 @mark.parametrize(
     'field, match, set_value, expected',
     [

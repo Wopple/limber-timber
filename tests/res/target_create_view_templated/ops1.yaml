@@ -1,0 +1,14 @@
+version: 1
+operations:
+- kind: create_view
+  data:
+    view:
+      name: my_project.my_dataset.view_table
+      select_file: ../sql/create_view_templated.sql
+      entity_names:
+        table_param:
+          database: my_project
+          name: table_param
+        function_param:
+          database: my_project
+          name: function_param
