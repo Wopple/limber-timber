@@ -21,8 +21,8 @@ def parse_templates(path: Path) -> list[Template]:
 
     return [
         Template(
-            operation_types=[LitiModel.by_name(name) for name in template.get('operation_types', [])],
-            root_type=LitiModel.by_name(template['root_type']),
+            operation_kinds=template.get('operation_kinds', []),
+            root_type=LitiModel.by_name(template['root_type']) if template.get('root_type') else None,
             path=template['path'].split('.'),
             value=template['value'],
             full_match=template.get('full_match', STAR),
@@ -33,7 +33,7 @@ def parse_templates(path: Path) -> list[Template]:
 
 
 def parse_operation(op_kind: str, op_data: dict) -> Operation:
-    return Operation.get_kind(op_kind)(**op_data)
+    return Operation.by_kind(op_kind)(**op_data)
 
 
 def parse_operation_file(path: Path) -> list[Operation]:

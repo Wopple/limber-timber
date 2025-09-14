@@ -52,9 +52,8 @@ failure.
 
 ### Templates
 
-Templating is usually hacked into migrations using string interpolation before running the migrations tool. In Limber
-Timber, templates are first class. If you so choose to use string interpolation anyway, well... I hope you know what you
-are doing!
+In Limber Timber, templates are first class. This means you do not need a preprocessing step in your deployments to fill
+out parameters. You write your templates in data and provide those template files to the migration runner.
 
 ### Scanning
 

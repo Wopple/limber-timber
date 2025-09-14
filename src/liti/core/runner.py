@@ -29,8 +29,12 @@ def apply_templates(operations: list[Operation], templates: list[Template]):
         lambda fn=update_fn, v=template.value: fn(v)
         for op in operations
         for template in templates
-        if type(op) in template.operation_types or not template.operation_types
-        for root, root_match in op.get_roots(template.root_type, template.full_match)
+        if not template.operation_kinds or type(op) in [Operation.by_kind(k) for k in template.operation_kinds]
+        for root, root_match in (
+            op.get_roots(template.root_type, template.full_match)
+            if template.root_type is not None
+            else [(op, template.full_match)]
+        )
         for update_fn in root.get_update_fns(template.path, [template.local_match, root_match])
     ]
 

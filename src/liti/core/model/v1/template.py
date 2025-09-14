@@ -8,11 +8,11 @@ from liti.core.base import LitiModel, Star, STAR
 class Template(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # the types of top level operations to perform replacements within, empty means all
-    operation_types: list[type[LitiModel]] = Field(default_factory=list)
+    # the kinds of operations to perform replacements within, empty means consider all operations
+    operation_kinds: list[str] = Field(default_factory=list)
 
     # the root type from which to start looking for the value to replace
-    root_type: type[LitiModel]
+    root_type: type[LitiModel] = None
 
     # the path from the root to the field to replace
     path: list[str]
