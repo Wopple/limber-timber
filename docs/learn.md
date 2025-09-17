@@ -147,26 +147,26 @@ This field is optional.
 
 #### root_type
 
-The root type is a Limber Timber model class name. It affects where the `path` searches from. The template will search
-for all instances of that class in the operation, and replace values within those instances. If no root type is
-provided, the operation is used as the root. In the example, this template will use each `QualifiedName` as a root to
-replace the value.
+The root type is a Limber Timber model class name (see the reference page). It affects where the `path` searches from.
+The template will search for all instances of that class in the operation, and replace values within those instances. If
+no root type is provided, the operation is used as the root. In the example, this template will use each `QualifiedName`
+as a root to replace the value.
 
 This field is optional.
 
 #### path
 
-This is a path from each selected root to the value that needs to be replaced. A path is `"."` delimited strings.
-Starting with each root, the first string in the path is a field name to look for the field to replace the value. The
-template will search nested structures in this way to find that location. When the path encounters a `tuple`, `list`, or
-`set`, all values within that collection will be explored. So a template that encounters a `list` will replace a field
-nested within each list item. When a path encounters a `dict`, the next string in the path is instead used to look up a
-key within that dict. Currently only `dict[str, Any]` is supported in this way. In the example, the value being replaced
-is the `schema` field within each `QualifiedName`
+This is a path from each selected root to the value that needs to be replaced. A path is a string of `"."` delimited
+strings. Starting with each root, the first string in the path is a field name to look for the field to replace the
+value. The template will search nested structures in this way to find that location. When the path encounters a `tuple`,
+`list`, or `set`, all values within that collection will be explored. So a template that encounters a `list` will
+replace a field nested within each list item. When a path encounters a `dict`, the next string in the path is instead
+used to look up a key within that dict. Currently only `dict[str, Any]` is supported in this way. In the example, the
+value being replaced is the `schema` field within each `QualifiedName`
 
 > Note: `schema` is a sub-class of `ValidatedString` which stores its string value in a field named `string`. However,
-> we do not use `schema.string` for the path as a convenience due to special handling. This applies to all
-> `ValidatedString`s in paths and matches.
+> we do not use `schema.string` for the path as a convenience due to special handling. This applies to every
+> `ValidatedString`.
 
 This field is required.
 
