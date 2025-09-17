@@ -9,7 +9,7 @@ from liti.core.model.v1.schema import ColumnName, ForeignKey, Identifier, Interv
 
 
 class CreateSchema(Operation):
-    """ Semantics: CREATE """
+    """ Semantics: `CREATE SCHEMA` """
 
     schema: Schema
 
@@ -21,7 +21,7 @@ class CreateSchema(Operation):
 
 
 class DropSchema(Operation):
-    """ Semantics: DROP """
+    """ Semantics: `DROP TABLE` """
 
     schema_name: QualifiedName
 
@@ -132,7 +132,7 @@ class SetStorageBilling(Operation):
 
 
 class CreateTable(Operation):
-    """ Semantics: CREATE """
+    """ Semantics: `CREATE TABLE` """
 
     table: Table
 
@@ -144,7 +144,7 @@ class CreateTable(Operation):
 
 
 class DropTable(Operation):
-    """ Semantics: DROP """
+    """ Semantics: `DROP TABLE` """
 
     table_name: QualifiedName
 

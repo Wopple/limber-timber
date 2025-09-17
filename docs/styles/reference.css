@@ -1,0 +1,4 @@
+/* Indent members relative to class heading */
+.doc.doc-contents .doc.doc-children {
+  margin-left: 2em;
+}

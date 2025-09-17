@@ -19,38 +19,9 @@ pip install limber-timber
 
 I am writing the migration system I always wanted but does not exist (yet).
 
-# Notable Feature Goals
+# Docs
 
-- Migrations specified in data, not SQL
-- Down migrations automatically inferred from up migrations
-  - Yes, down migrations for drop table and drop column are automatically inferred
-- Separation of database and metadata
-- In-memory support
-- Database adoption
-- No checksums
-- Manifest instead of numbered or timestamped migration filenames
-- JSON schema for migration files
-- Error recovery for backends that do not support DDL transactions
-
-# Not Goals
-
-- ORM
-- Parsing SQL
-- Specifying all kinds of migrations in pure data (e.g. DML migrations will use SQL)
-- Preserving lost data
-
-# Rationale
-
-- It is cumbersome to iterate on migrations without robust down migrations
-- Automatically inferred down migrations reduces developer burden
-- Writing migrations in data is cleaner and not specific to a database
-- Never parsing SQL reduces the complexity of the codebase
-- A lightweight open source library makes it easy to add missing features
-- JSON schema allows IDEs to be configured for migration file validation and auto-completion
-- Separation of database and metadata allows for more flexible metadata storage options
-- In-memory database and metadata allow for application unit testing
-- No checksums allows for modifying migration files without breaking the migrations
-- Manifest files cause git merge conflicts when parallel development has collisions
+https://Wopple.github.io/limber-timber
 
 # Roadmap
 

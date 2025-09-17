@@ -5,7 +5,7 @@ from liti.core.model.v1.schema import MaterializedView, QualifiedName, View
 
 
 class CreateView(Operation):
-    """ Semantics: CREATE OR REPLACE """
+    """ Semantics: `CREATE OR REPLACE VIEW` """
 
     view: View
 
@@ -17,7 +17,7 @@ class CreateView(Operation):
 
 
 class DropView(Operation):
-    """ Semantics: DROP """
+    """ Semantics: `DROP VIEW` """
 
     view_name: QualifiedName
 
@@ -29,7 +29,7 @@ class DropView(Operation):
 
 
 class CreateMaterializedView(Operation):
-    """ Semantics: CREATE OR REPLACE """
+    """ Semantics: `CREATE OR REPLACE MATERIALIZED VIEW` """
 
     materialized_view: MaterializedView
 
@@ -41,7 +41,7 @@ class CreateMaterializedView(Operation):
 
 
 class DropMaterializedView(Operation):
-    """ Semantics: DROP """
+    """ Semantics: `DROP MATERIALIZED VIEW` """
 
     materialized_view_name: QualifiedName
 
