@@ -12,7 +12,7 @@ Both JSON and YAML are supported. They are designated by file extension.
 
 ## Operation
 
-The core of Limber Timber is the operation. An operation is the unit of migration, whereas in other migrations tools it
+The core of Limber Timber is the operation. An operation is the unit of migration, whereas in other migration tools it
 is a file. Operations include `create_table`, `add_column`, and so on. Each operation has its own set of fields which
 parametrize the operation. The metadata table stores the operations that have been applied.
 
