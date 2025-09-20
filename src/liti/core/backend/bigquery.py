@@ -552,7 +552,8 @@ def to_liti_schema(dataset: bq.Dataset) -> Schema:
         default_kms_key_name = None
 
     if dataset.max_time_travel_hours is not None:
-        max_time_travel = timedelta(hours=dataset.max_time_travel_hours)
+        # the code comments say the value is an int, but a str is observed at runtime
+        max_time_travel = timedelta(hours=int(dataset.max_time_travel_hours))
     else:
         max_time_travel = None
 
@@ -799,8 +800,11 @@ class BigQueryDbBackend(DbBackend):
             return None
 
     def get_schema(self, name: QualifiedName) -> Schema | None:
-        bq_dataset = self.client.get_dataset(extract_dataset_ref(name))
-        return bq_dataset and to_liti_schema(bq_dataset)
+        if name.is_schema():
+            bq_dataset = self.client.get_dataset(extract_dataset_ref(name))
+            return bq_dataset and to_liti_schema(bq_dataset)
+        else:
+            return None
 
     def create_schema(self, schema: Schema):
         options = []

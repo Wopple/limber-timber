@@ -80,22 +80,17 @@ class OperationOps(ABC):
         """ Return the named entity among the supported entity kinds or None if it does not exist """
 
         db_backend = db_backend or self.db_backend
+        entity = db_backend.get_entity(name)
 
-        if 'SCHEMA' in self.op.supported_entity_kinds:
-            schema = db_backend.get_schema(name)
-
-            if schema is not None:
-                return schema
-
-        if any(k in self.op.supported_entity_kinds for k in ('TABLE', 'VIEW', 'MATERIALIZED_VIEW')):
-            relation = db_backend.get_relation(name)
-
-            for entity_kind in self.op.supported_entity_kinds:
-                if entity_kind == 'TABLE' and isinstance(relation, Table):
-                    return relation
-                elif entity_kind == 'VIEW' and isinstance(relation, View):
-                    return relation
-                elif entity_kind == 'MATERIALIZED_VIEW' and isinstance(relation, MaterializedView):
-                    return relation
+        # only return the entity if its kind is supported by this operation
+        for entity_kind in self.op.supported_entity_kinds:
+            if entity_kind == 'SCHEMA' and isinstance(entity, Schema):
+                return entity
+            elif entity_kind == 'TABLE' and isinstance(entity, Table):
+                return entity
+            elif entity_kind == 'VIEW' and isinstance(entity, View):
+                return entity
+            elif entity_kind == 'MATERIALIZED_VIEW' and isinstance(entity, MaterializedView):
+                return entity
 
         return None

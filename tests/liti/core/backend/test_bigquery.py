@@ -47,7 +47,7 @@ def context() -> Mock:
 
 
 def make_schema(name: QualifiedName | None = None) -> bq.Dataset:
-    name = name or QualifiedName('test_project.test_dataset.test_name')
+    name = name or QualifiedName(database='test_project', schema='test_dataset')
     bq_dataset = bq.Dataset(bq.DatasetReference(name.database.string, name.schema.string))
     return bq_dataset
 
@@ -1715,13 +1715,13 @@ def test_set_require_partition_filter(db_backend: BigQueryDbBackend, bq_client: 
         [
             make_schema(),
             None,
-            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'ALTER SCHEMA `test_project.test_dataset`\n'
             f'SET OPTIONS(description = NULL)\n',
         ],
         [
             make_schema(),
             'Test description',
-            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'ALTER SCHEMA `test_project.test_dataset`\n'
             f'SET OPTIONS(description = \'Test description\')\n',
         ],
         [
@@ -1771,7 +1771,12 @@ def test_set_description(
 ):
     mock_get_entity(bq_client, entity)
 
-    db_backend.set_description(QualifiedName('test_project.test_dataset.test_name'), description)
+    if isinstance(entity, bq.Dataset):
+        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+    else:
+        qualified_name = QualifiedName('test_project.test_dataset.test_name')
+
+    db_backend.set_description(qualified_name, description)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1782,13 +1787,13 @@ def test_set_description(
         [
             make_schema(),
             None,
-            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'ALTER SCHEMA `test_project.test_dataset`\n'
             f'SET OPTIONS(labels = NULL)\n',
         ],
         [
             make_schema(),
             {'l1': 'v1', 'l2': 'v2'},
-            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'ALTER SCHEMA `test_project.test_dataset`\n'
             f'SET OPTIONS(labels = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
         ],
         [
@@ -1838,7 +1843,12 @@ def test_set_labels(
 ):
     mock_get_entity(bq_client, entity)
 
-    db_backend.set_labels(QualifiedName('test_project.test_dataset.test_name'), labels)
+    if isinstance(entity, bq.Dataset):
+        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+    else:
+        qualified_name = QualifiedName('test_project.test_dataset.test_name')
+
+    db_backend.set_labels(qualified_name, labels)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1849,13 +1859,13 @@ def test_set_labels(
         [
             make_schema(),
             None,
-            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'ALTER SCHEMA `test_project.test_dataset`\n'
             f'SET OPTIONS(tags = NULL)\n',
         ],
         [
             make_schema(),
             {'l1': 'v1', 'l2': 'v2'},
-            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'ALTER SCHEMA `test_project.test_dataset`\n'
             f'SET OPTIONS(tags = [(\'l1\', \'v1\'), (\'l2\', \'v2\')])\n',
         ],
         [
@@ -1905,7 +1915,12 @@ def test_set_tags(
 ):
     mock_get_entity(bq_client, entity)
 
-    db_backend.set_tags(QualifiedName('test_project.test_dataset.test_name'), tags)
+    if isinstance(entity, bq.Dataset):
+        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+    else:
+        qualified_name = QualifiedName('test_project.test_dataset.test_name')
+
+    db_backend.set_tags(qualified_name, tags)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1978,7 +1993,12 @@ def test_set_expiration_timestamp(
 ):
     mock_get_entity(bq_client, entity)
 
-    db_backend.set_expiration_timestamp(QualifiedName('test_project.test_dataset.test_name'), expiration_timestamp)
+    if isinstance(entity, bq.Dataset):
+        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+    else:
+        qualified_name = QualifiedName('test_project.test_dataset.test_name')
+
+    db_backend.set_expiration_timestamp(qualified_name, expiration_timestamp)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 
@@ -1989,19 +2009,19 @@ def test_set_expiration_timestamp(
         [
             make_schema(),
             None,
-            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'ALTER SCHEMA `test_project.test_dataset`\n'
             f'SET OPTIONS(default_rounding_mode = NULL)\n',
         ],
         [
             make_schema(),
             RoundingMode('ROUND_HALF_AWAY_FROM_ZERO'),
-            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'ALTER SCHEMA `test_project.test_dataset`\n'
             f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_AWAY_FROM_ZERO\')\n',
         ],
         [
             make_schema(),
             RoundingMode('ROUND_HALF_EVEN'),
-            f'ALTER SCHEMA `test_project.test_dataset.test_name`\n'
+            f'ALTER SCHEMA `test_project.test_dataset`\n'
             f'SET OPTIONS(default_rounding_mode = \'ROUND_HALF_EVEN\')\n',
         ],
         [
@@ -2033,7 +2053,12 @@ def test_set_default_rounding_mode(
 ):
     mock_get_entity(bq_client, entity)
 
-    db_backend.set_default_rounding_mode(QualifiedName('test_project.test_dataset.test_name'), default_rounding_mode)
+    if isinstance(entity, bq.Dataset):
+        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+    else:
+        qualified_name = QualifiedName('test_project.test_dataset.test_name')
+
+    db_backend.set_default_rounding_mode(qualified_name, default_rounding_mode)
 
     bq_client.query_and_wait.assert_called_once_with(expected)
 

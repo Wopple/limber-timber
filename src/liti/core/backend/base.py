@@ -27,7 +27,10 @@ class DbBackend(ABC, Defaulter, Validator):
         return self.get_schema(name) or self.get_relation(name)
 
     def get_relation(self, name: QualifiedName) -> Relation | None:
-        return self.get_table(name) or self.get_view(name) or self.get_materialized_view(name)
+        if name.is_fully_qualified():
+            return self.get_table(name) or self.get_view(name) or self.get_materialized_view(name)
+        else:
+            return None
 
     def has_schema(self, name: QualifiedName) -> bool:
         return self.get_schema(name) is not None

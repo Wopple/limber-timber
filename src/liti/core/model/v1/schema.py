@@ -244,6 +244,18 @@ class QualifiedName(LitiModel):
         else:
             return data
 
+    def is_fully_qualified(self) -> bool:
+        if self.database and self.schema and self.name:
+            return True
+        else:
+            return False
+
+    def is_schema(self) -> bool:
+        if self.database and self.schema and self.name is None:
+            return True
+        else:
+            return False
+
     def with_name(self, name: Identifier) -> 'QualifiedName':
         return self.model_copy(update={'name': name})
 
