@@ -11,3 +11,9 @@ operation_files:
 - sql/set_clustering.yaml
 - sql/set_friendly_name.yaml
 - sql/set_description.yaml
+- sql/set_labels.yaml
+- sql/set_expiration_timestamp.yaml
+- sql/set_default_rounding_mode.yaml
+- sql/set_max_staleness.yaml
+- sql/set_enable_change_history.yaml
+- sql/set_enable_fine_grained_mutations.yaml

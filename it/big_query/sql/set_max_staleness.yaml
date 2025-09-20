@@ -1,0 +1,15 @@
+version: 1
+operations:
+- kind: set_max_staleness
+  data:
+    entity_name: table_1
+    max_staleness:
+      minute: 1
+- kind: set_max_staleness
+  data:
+    entity_name: table_2
+    max_staleness:
+      minute: 2
+- kind: set_max_staleness
+  data:
+    entity_name: table_2

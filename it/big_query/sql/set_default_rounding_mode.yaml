@@ -1,0 +1,18 @@
+version: 1
+operations:
+- kind: set_default_rounding_mode
+  data:
+    entity_name:
+      schema: my_dataset
+    rounding_mode: ROUND_HALF_AWAY_FROM_ZERO
+- kind: set_default_rounding_mode
+  data:
+    entity_name: table_1
+    rounding_mode: ROUND_HALF_EVEN
+- kind: set_default_rounding_mode
+  data:
+    entity_name: table_2
+    rounding_mode: ROUND_HALF_AWAY_FROM_ZERO
+- kind: set_default_rounding_mode
+  data:
+    entity_name: table_2

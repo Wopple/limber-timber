@@ -1,0 +1,13 @@
+version: 1
+operations:
+- kind: set_expiration_timestamp
+  data:
+    entity_name: table_1
+    expiration_timestamp: "2100-01-01 01:00:00"
+- kind: set_expiration_timestamp
+  data:
+    entity_name: table_2
+    expiration_timestamp: "2100-01-01 02:00:00"
+- kind: set_expiration_timestamp
+  data:
+    entity_name: table_2

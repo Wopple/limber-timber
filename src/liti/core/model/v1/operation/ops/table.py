@@ -549,8 +549,15 @@ class SetDefaultRoundingModeOps(OperationOps):
             raise ValueError(f'Entity {self.op.entity_name} not found in simulated database')
 
     def is_up(self) -> bool:
-        entity = self.get_entity(self.op.entity_name)
-        return entity is not None and entity.default_rounding_mode == self.op.rounding_mode
+        # circular import
+        from liti.core.backend.bigquery import BigQueryDbBackend
+
+        if isinstance(self.db_backend, BigQueryDbBackend):
+            # the big query API does not provide the default rounding mode, always apply
+            return False
+        else:
+            entity = self.get_entity(self.op.entity_name)
+            return entity is not None and entity.default_rounding_mode == self.op.rounding_mode
 
 
 class SetMaxStalenessOps(OperationOps):
@@ -573,8 +580,16 @@ class SetMaxStalenessOps(OperationOps):
             raise ValueError(f'Entity {self.op.entity_name} not found in simulated database')
 
     def is_up(self) -> bool:
-        entity = self.get_entity(self.op.entity_name)
-        return entity is not None and entity.max_staleness == self.op.max_staleness
+        # circular import
+        from liti.core.backend.bigquery import BigQueryDbBackend
+
+        if isinstance(self.db_backend, BigQueryDbBackend):
+            # the big query API provides max staleness in a custom string format that needs to be parsed, always apply
+            # TODO: parse the big query value and use it here
+            return False
+        else:
+            entity = self.get_entity(self.op.entity_name)
+            return entity is not None and entity.max_staleness == self.op.max_staleness
 
 
 class SetEnableChangeHistoryOps(OperationOps):
@@ -593,7 +608,14 @@ class SetEnableChangeHistoryOps(OperationOps):
         return d.SetEnableChangeHistory(table_name=self.op.table_name, enabled=sim_table.enable_change_history)
 
     def is_up(self) -> bool:
-        return self.db_backend.get_table(self.op.table_name).enable_change_history == self.op.enabled
+        # circular import
+        from liti.core.backend.bigquery import BigQueryDbBackend
+
+        if isinstance(self.db_backend, BigQueryDbBackend):
+            # the big query API does not provide the change history flag, always apply
+            return False
+        else:
+            return self.db_backend.get_table(self.op.table_name).enable_change_history == self.op.enabled
 
 
 class SetEnableFineGrainedMutationsOps(OperationOps):
@@ -616,7 +638,14 @@ class SetEnableFineGrainedMutationsOps(OperationOps):
         )
 
     def is_up(self) -> bool:
-        return self.db_backend.get_table(self.op.table_name).enable_fine_grained_mutations == self.op.enabled
+        # circular import
+        from liti.core.backend.bigquery import BigQueryDbBackend
+
+        if isinstance(self.db_backend, BigQueryDbBackend):
+            # the big query API does not provide the fine grained mutations flag, always apply
+            return False
+        else:
+            return self.db_backend.get_table(self.op.table_name).enable_fine_grained_mutations == self.op.enabled
 
 
 class SetKmsKeyNameOps(OperationOps):
@@ -635,4 +664,11 @@ class SetKmsKeyNameOps(OperationOps):
         return d.SetKmsKeyName(table_name=self.op.table_name, key_name=sim_table.kms_key_name)
 
     def is_up(self) -> bool:
-        return self.db_backend.get_table(self.op.table_name).kms_key_name == self.op.key_name
+        # circular import
+        from liti.core.backend.bigquery import BigQueryDbBackend
+
+        if isinstance(self.db_backend, BigQueryDbBackend):
+            # the big query API does not provide the kms key name, always apply
+            return False
+        else:
+            return self.db_backend.get_table(self.op.table_name).kms_key_name == self.op.key_name

@@ -1,0 +1,24 @@
+version: 1
+operations:
+- kind: set_labels
+  data:
+    entity_name:
+      schema: my_dataset
+    labels:
+      label1: "schema"
+      label2: "other"
+- kind: set_labels
+  data:
+    entity_name: table_1
+    labels:
+      label1: "t1"
+      label2: "other"
+- kind: set_labels
+  data:
+    entity_name: table_2
+    labels:
+      label1: "t2"
+      label2: "other"
+- kind: set_labels
+  data:
+    entity_name: table_2

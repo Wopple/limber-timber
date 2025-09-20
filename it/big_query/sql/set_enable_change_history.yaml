@@ -1,0 +1,10 @@
+version: 1
+operations:
+- kind: set_enable_change_history
+  data:
+    table_name: table_1
+    enabled: false
+- kind: set_enable_change_history
+  data:
+    table_name: table_2
+    enabled: true
