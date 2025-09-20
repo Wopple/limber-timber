@@ -10,6 +10,7 @@ from liti.core.model.v1.datatype import Datatype, parse_datatype
 
 DATABASE_CHARS = set(ascii_letters + digits + '_-')
 IDENTIFIER_CHARS = set(ascii_letters + digits + '_')
+CONSTRAINT_NAME_CHARS = set(ascii_letters + digits + '_$')
 FIELD_PATH_CHARS = set(ascii_letters + digits + '_.')
 
 RoundingModeLiteral = Literal[
@@ -84,6 +85,21 @@ class ValidatedString(LitiModel):
     def __hash__(self) -> int:
         return hash((self.__class__.__name__, self.string))
 
+    def __eq__(self, other) -> bool:
+        return other is not None and self.string == other.string
+
+    def __lt__(self, other) -> bool:
+        return self.string < other.string
+
+    def __le__(self, other) -> bool:
+        return not self < other
+
+    def __gt__(self, other) -> bool:
+        return self.string > other.string
+
+    def __ge__(self, other) -> bool:
+        return not self > other
+
     def __str__(self) -> str:
         return self.string
 
@@ -113,6 +129,13 @@ class DatabaseName(ValidatedString):
 
 class Identifier(ValidatedString):
     VALID_CHARS = IDENTIFIER_CHARS
+
+    def __init__(self, string: str | None = None, **kwargs):
+        super().__init__(string, **kwargs)
+
+
+class ConstraintName(ValidatedString):
+    VALID_CHARS = CONSTRAINT_NAME_CHARS
 
     def __init__(self, string: str | None = None, **kwargs):
         super().__init__(string, **kwargs)
@@ -236,7 +259,7 @@ class ForeignReference(LitiModel):
 
 
 class ForeignKey(LitiModel):
-    name: str | None = None
+    name: ConstraintName | None = None
     foreign_table_name: QualifiedName
     references: list[ForeignReference] = Field(min_length=1)
     enforced: bool | None = None
@@ -248,21 +271,24 @@ class ForeignKey(LitiModel):
             local_names = '_'.join(ref.local_column_name.string for ref in self.references)
             foreign_table = self.foreign_table_name.string.replace('.', '_').replace('-', '_')
             foreign_names = '_'.join(ref.foreign_column_name.string for ref in self.references)
-            self.name = f'fk__{local_names}__{foreign_table}__{foreign_names}'
+            self.name = ConstraintName(f'fk__{local_names}__{foreign_table}__{foreign_names}')
 
         return self
 
     @field_validator('name', mode='before')
     @classmethod
-    def validate_name(cls, value: str | None) -> str | None:
+    def validate_name(cls, value: str | ConstraintName | None) -> ConstraintName | None:
         """ Custom validation to handle backend generated foreign key values like 'fk$1'
 
         If one of these values is provided, it will be replaced with a valid liti generated value.
         """
 
-        # Returning None will cause the model validation logic to generate a name
-        if isinstance(value, str) and any(c not in IDENTIFIER_CHARS for c in value):
-            return None
+        if isinstance(value, str):
+            if any(c not in IDENTIFIER_CHARS for c in value):
+                # Returning None will cause the model validation logic to generate a name
+                return None
+            else:
+                return ConstraintName(value)
         else:
             return value
 
@@ -409,7 +435,7 @@ class Table(Relation):
         return {column.name: column for column in self.columns or []}
 
     @property
-    def foreign_key_map(self) -> dict[Identifier, ForeignKey]:
+    def foreign_key_map(self) -> dict[ConstraintName, ForeignKey]:
         # Recreate the map to ensure it is up-to-date
         if self.foreign_keys:
             return {fk.name: fk for fk in self.foreign_keys}
@@ -420,7 +446,7 @@ class Table(Relation):
         self.foreign_keys.append(foreign_key)
         self.canonicalize()
 
-    def drop_constraint(self, constraint_name: Identifier):
+    def drop_constraint(self, constraint_name: ConstraintName):
         self.foreign_keys = [
             fk for fk in self.foreign_keys if fk.name != constraint_name
         ]

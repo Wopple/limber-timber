@@ -1091,7 +1091,7 @@ def test_apply_templates():
         ],
     ],
 )
-def test_sort_operations(graph, expected):
+def test_sort_operations(graph: dict[str, list[str]], expected: list[str]):
     def to_table_name(name: str) -> QualifiedName:
         return QualifiedName(f'my_project.my_dataset.{name}')
 
@@ -1111,6 +1111,6 @@ def test_sort_operations(graph, expected):
             ],
         )
 
-    operations = [CreateTable(table=to_table(l, fs)) for l, fs in graph.items()]
+    operations = [CreateTable(table=to_table(local, foreigns)) for local, foreigns in graph.items()]
     actual = sort_operations(operations)
     assert [op.table.name for op in actual] == [to_table_name(name) for name in expected]

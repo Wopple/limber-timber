@@ -4,7 +4,7 @@ from pydantic import field_validator
 
 from liti.core.model.v1.datatype import Datatype, parse_datatype
 from liti.core.model.v1.operation.data.base import EntityKind, Operation
-from liti.core.model.v1.schema import Column, ColumnName, FieldPath, RoundingMode, QualifiedName
+from liti.core.model.v1.schema import Column, ColumnName, FieldPath, QualifiedName, RoundingMode
 
 
 class AddColumn(Operation):

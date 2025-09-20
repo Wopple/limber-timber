@@ -28,4 +28,4 @@ def test_foreign_key_validation(input_name: str | None, expected: str):
         ],
     )
 
-    assert foreign_key.name == expected
+    assert foreign_key.name.string == expected

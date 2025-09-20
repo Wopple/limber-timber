@@ -14,7 +14,7 @@ from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.parse import parse_operation
-from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, FieldPath, ForeignKey, \
+from liti.core.model.v1.schema import BigLake, Column, ColumnName, ConstraintName, DatabaseName, FieldPath, ForeignKey, \
     ForeignReference, Identifier, \
     IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, Relation, RoundingMode, Schema, SchemaName, Table, \
     QualifiedName, View
@@ -164,7 +164,7 @@ def to_schema_field(column: Column) -> bq.SchemaField:
 
 def to_bq_foreign_key(foreign_key: ForeignKey) -> bq.ForeignKey:
     return bq.ForeignKey(
-        name=foreign_key.name,
+        name=foreign_key.name.string,
         referenced_table=to_table_ref(foreign_key.foreign_table_name),
         column_references=[
             bq.ColumnReference(
@@ -1039,7 +1039,7 @@ class BigQueryDbBackend(DbBackend):
             f' NOT ENFORCED\n'
         )
 
-    def drop_constraint(self, table_name: QualifiedName, constraint_name: Identifier):
+    def drop_constraint(self, table_name: QualifiedName, constraint_name: ConstraintName):
         self.client.query_and_wait(
             f'ALTER TABLE `{table_name}`\n'
             f'DROP CONSTRAINT `{constraint_name}`\n'

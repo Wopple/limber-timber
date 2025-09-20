@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from pydantic import field_validator
 
 from liti.core.model.v1.operation.data.base import EntityKind, Operation
-from liti.core.model.v1.schema import ColumnName, ForeignKey, Identifier, IntervalLiteral, PrimaryKey, RoundingMode, \
-    Schema, StorageBilling, Table, QualifiedName
+from liti.core.model.v1.schema import ColumnName, ConstraintName, ForeignKey, Identifier, IntervalLiteral, PrimaryKey, \
+    QualifiedName, RoundingMode, Schema, StorageBilling, Table
 
 
 class CreateSchema(Operation):
@@ -190,7 +190,7 @@ class AddForeignKey(Operation):
 
 class DropConstraint(Operation):
     table_name: QualifiedName
-    constraint_name: Identifier
+    constraint_name: ConstraintName
 
     KIND: ClassVar[str] = 'drop_constraint'
 

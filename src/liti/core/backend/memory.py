@@ -5,7 +5,8 @@ from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
-from liti.core.model.v1.schema import Column, ColumnName, DatabaseName, ForeignKey, Identifier, IntervalLiteral, \
+from liti.core.model.v1.schema import Column, ColumnName, ConstraintName, DatabaseName, ForeignKey, Identifier, \
+    IntervalLiteral, \
     MaterializedView, PrimaryKey, RoundingMode, Schema, SchemaName, Table, QualifiedName, View
 
 
@@ -86,7 +87,7 @@ class MemoryDbBackend(DbBackend):
     def add_foreign_key(self, table_name: QualifiedName, foreign_key: ForeignKey):
         self.tables[table_name].add_foreign_key(foreign_key)
 
-    def drop_constraint(self, table_name: QualifiedName, constraint_name: Identifier):
+    def drop_constraint(self, table_name: QualifiedName, constraint_name: ConstraintName):
         self.tables[table_name].drop_constraint(constraint_name)
 
     def set_partition_expiration(self, table_name: QualifiedName, expiration: timedelta | None):
