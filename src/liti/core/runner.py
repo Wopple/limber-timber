@@ -199,13 +199,13 @@ class ScanRunner:
         :param format: ['yaml'] the format to use when printing the operations
         """
 
-        database.liti_validate(self.db_backend, self.context)
-        schema.liti_validate(self.db_backend, self.context)
+        validate_model(database, self.db_backend, self.context)
+        validate_model(schema, self.db_backend, self.context)
 
         if table:
-            table.liti_validate(self.db_backend, self.context)
+            validate_model(table, self.db_backend, self.context)
 
-            table_name = QualifiedName(database=database, schema=schema, table_name=table)
+            table_name = QualifiedName(database=database, schema=schema, name=table)
             create_table = self.db_backend.scan_relation(table_name)
 
             if create_table is None:
