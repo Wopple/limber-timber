@@ -45,8 +45,9 @@ These are data files containing a list of operations. Operations are applied in 
 Example operation file:
 
 ```yaml
-# note the -'s which make this file a list instead of an object
-
+# This is the version of the model in case it becomes useful in the future.
+version: 1
+operations:
 - kind: create_table
   data:
     table:
@@ -79,7 +80,7 @@ named one of:
 Example manifest file:
 
 ```yaml
-# This is the version of the model in case it becomes useful in the future.
+# This is the version of the manifest in case it becomes useful in the future.
 version: 1
 operation_files:
 # model/ and auth/ are directory names for organization,
