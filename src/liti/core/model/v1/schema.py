@@ -440,6 +440,8 @@ class Table(Relation):
 
         if self.foreign_keys:
             self.foreign_keys.sort(key=lambda fk: fk.name)
+        else:
+            self.foreign_keys = None
 
     @property
     def column_map(self) -> dict[ColumnName, Column]:
@@ -455,13 +457,19 @@ class Table(Relation):
             return {}
 
     def add_foreign_key(self, foreign_key: ForeignKey):
-        self.foreign_keys.append(foreign_key)
+        if self.foreign_keys:
+            self.foreign_keys.append(foreign_key)
+        else:
+            self.foreign_keys = [foreign_key]
+
         self.canonicalize()
 
     def drop_constraint(self, constraint_name: ConstraintName):
         self.foreign_keys = [
             fk for fk in self.foreign_keys if fk.name != constraint_name
         ]
+
+        self.canonicalize()
 
 
 class ViewLike(LitiModel):
