@@ -1,0 +1,18 @@
+version: 1
+operations:
+- kind: set_description
+  data:
+    entity_name:
+      schema: my_dataset
+    description: schema_description
+- kind: set_description
+  data:
+    entity_name: table_1
+    description: t1_description_new
+- kind: set_description
+  data:
+    entity_name: table_2
+    description: t2_description_new
+- kind: set_description
+  data:
+    entity_name: table_2

@@ -1,0 +1,207 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name: table_1
+      friendly_name: table_1_friendly
+      description: table_1_friendly
+      labels:
+        k1: v1
+        k2: v2
+      expiration_timestamp: "2100-01-01 00:00:00"
+      columns:
+      - name: t1_bool_col
+        datatype: BOOL
+        nullable: false
+      - name: t1_int_col
+        datatype: INT64
+        default_expression: "0"
+        nullable: false
+        description: t1_int_col_description
+      - name: t1_float_col
+        datatype: FLOAT64
+        nullable: true
+      - name: t1_numeric_col
+        datatype:
+          type: NUMERIC
+          precision: 4
+          scale: 1
+        nullable: true
+        rounding_mode: ROUND_HALF_EVEN
+      - name: t1_bignumeric_col
+        datatype:
+          type: BIGNUMERIC
+          precision: 8
+          scale: 2
+        nullable: true
+      - name: t1_geography_col
+        datatype: GEOGRAPHY
+        nullable: true
+      - name: t1_string_col
+        datatype: STRING
+        nullable: true
+      - name: t1_json_col
+        datatype: JSON
+        nullable: true
+      - name: t1_date_col
+        datatype: DATE
+        nullable: false
+      - name: t1_time_col
+        datatype: TIME
+        nullable: true
+      - name: t1_datetime_col
+        datatype: DATETIME
+        nullable: true
+      - name: t1_timestamp_col
+        datatype: TIMESTAMP
+        nullable: true
+      - name: t1_range_date_col
+        datatype:
+          type: RANGE
+          kind: DATE
+        nullable: true
+      - name: t1_range_datetime_col
+        datatype:
+          type: RANGE
+          kind: DATETIME
+        nullable: true
+      - name: t1_range_timestamp_col
+        datatype:
+          type: RANGE
+          kind: TIMESTAMP
+        nullable: true
+      - name: t1_interval_col
+        datatype: INTERVAL
+        nullable: true
+      - name: t1_array_col
+        datatype:
+          type: ARRAY
+          inner: BOOL
+        nullable: true
+      - name: t1_struct_col
+        datatype:
+          type: STRUCT
+          fields:
+            f1: BOOL
+            f2: INT64
+        nullable: true
+      primary_key:
+        column_names:
+        - t1_bool_col
+        - t1_int_col
+      partitioning:
+        kind: TIME
+        column: t1_date_col
+        expiration: P1Y
+        require_filter: true
+      clustering:
+      - t1_string_col
+      - t1_timestamp_col
+      default_rounding_mode: ROUND_HALF_AWAY_FROM_ZERO
+      max_staleness:
+        hour: 1
+      enable_change_history: true
+      enable_fine_grained_mutations: true
+- kind: create_table
+  data:
+    table:
+      name: table_2
+      columns:
+      - name: t2_int_col
+        datatype:
+          type: INT
+          bits: 64
+        nullable: false
+      - name: t2_string_col
+        datatype: STRING
+      - name: t2_datetime_col
+        datatype: DATETIME
+      - name: t2_array_col
+        datatype:
+          type: ARRAY
+          inner:
+            type: STRUCT
+            fields:
+              f1: BOOL
+              f2: INT64
+        nullable: true
+      - name: t2_struct_col
+        datatype:
+          type: STRUCT
+          fields:
+            f1: BOOL
+            f2:
+              type: ARRAY
+              inner: BOOL
+      primary_key:
+        column_names:
+        - t2_int_col
+      partitioning:
+        kind: TIME
+        column: t2_datetime_col
+        time_unit: YEAR
+      enable_change_history: false
+      enable_fine_grained_mutations: false
+- kind: create_table
+  data:
+    table:
+      name: table_3
+      columns:
+      - name: t3_int_col
+        datatype: INT64
+        nullable: false
+      - name: t3_datetime_col
+        datatype: DATETIME
+      foreign_keys:
+      - name: fk__t3
+        foreign_table_name: table_2
+        references:
+        - local_column_name: t3_int_col
+          foreign_column_name: t2_int_col
+      partitioning:
+        kind: TIME
+        column: t3_datetime_col
+        time_unit: MONTH
+- kind: create_table
+  data:
+    table:
+      name: table_4
+      columns:
+      - name: t4_datetime_col
+        datatype: DATETIME
+      partitioning:
+        kind: TIME
+        column: t4_datetime_col
+        time_unit: DAY
+- kind: create_table
+  data:
+    table:
+      name: table_5
+      columns:
+      - name: t5_datetime_col
+        datatype: DATETIME
+      partitioning:
+        kind: TIME
+        column: t5_datetime_col
+        time_unit: HOUR
+- kind: create_table
+  data:
+    table:
+      name: table_6
+      columns:
+      - name: t6_int_col
+        datatype: INT64
+      partitioning:
+        kind: INT
+        column: t6_int_col
+        int_start: 4
+        int_end: 12
+        int_step: 4
+- kind: create_table
+  data:
+    table:
+      name: table_7
+      columns:
+      - name: t7_bool_col
+        datatype: BOOL

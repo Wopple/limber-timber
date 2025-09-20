@@ -1,0 +1,13 @@
+version: 1
+operation_files:
+- sql/create_table.yaml
+- sql/drop_table.yaml
+- sql/rename_table.yaml
+- sql/set_primary_key.yaml
+- sql/add_foreign_key.yaml
+- sql/drop_constraint.yaml
+- sql/set_partition_expiration.yaml
+- sql/set_require_partition_filter.yaml
+- sql/set_clustering.yaml
+- sql/set_friendly_name.yaml
+- sql/set_description.yaml

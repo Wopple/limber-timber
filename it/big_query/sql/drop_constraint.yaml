@@ -1,0 +1,6 @@
+version: 1
+operations:
+- kind: drop_constraint
+  data:
+    table_name: table_8
+    constraint_name: fk__t8_bool_col_t8_int_col__table_1__t1_bool_col_t1_int_col

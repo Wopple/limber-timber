@@ -1,0 +1,15 @@
+version: 1
+operations:
+- kind: set_clustering
+  data:
+    table_name: table_1
+    column_names:
+    - t1_bool_col
+- kind: set_clustering
+  data:
+    table_name: table_2
+    column_names:
+    - t2_int_col
+- kind: set_clustering
+  data:
+    table_name: table_2

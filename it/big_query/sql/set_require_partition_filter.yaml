@@ -1,0 +1,10 @@
+version: 1
+operations:
+- kind: set_require_partition_filter
+  data:
+    table_name: table_1
+    require_filter: false
+- kind: set_require_partition_filter
+  data:
+    table_name: table_2
+    require_filter: true

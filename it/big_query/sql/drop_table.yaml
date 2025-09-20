@@ -1,0 +1,12 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name: table_drop
+      columns:
+      - name: t_drop_bool_col
+        datatype: BOOL
+- kind: drop_table
+  data:
+    table_name: table_drop

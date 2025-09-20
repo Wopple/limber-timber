@@ -1,0 +1,21 @@
+version: 1
+operations:
+- kind: create_table
+  data:
+    table:
+      name: table_8
+      columns:
+      - name: t8_bool_col
+        datatype: BOOL
+      - name: t8_int_col
+        datatype: INT64
+- kind: add_foreign_key
+  data:
+    table_name: table_8
+    foreign_key:
+      foreign_table_name: table_1
+      references:
+      - local_column_name: t8_bool_col
+        foreign_column_name: t1_bool_col
+      - local_column_name: t8_int_col
+        foreign_column_name: t1_int_col

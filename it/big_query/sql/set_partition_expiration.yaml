@@ -1,0 +1,13 @@
+version: 1
+operations:
+- kind: set_partition_expiration
+  data:
+    table_name: table_1
+    expiration: P30D
+- kind: set_partition_expiration
+  data:
+    table_name: table_2
+    expiration: P60D
+- kind: set_partition_expiration
+  data:
+    table_name: table_2

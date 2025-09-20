@@ -1,0 +1,6 @@
+version: 1
+operations:
+- kind: rename_table
+  data:
+    from_name: table_3
+    to_name: table_3_renamed

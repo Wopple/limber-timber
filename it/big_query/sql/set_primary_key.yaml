@@ -1,0 +1,8 @@
+version: 1
+operations:
+- kind: set_primary_key
+  data:
+    table_name: table_3_renamed
+    primary_key:
+      column_names:
+      - t3_int_col
