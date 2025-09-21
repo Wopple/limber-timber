@@ -3,7 +3,7 @@ operations:
 - kind: set_labels
   data:
     entity_name:
-      schema: my_dataset
+      schema: test_schema_1
     labels:
       label1: "schema"
       label2: "other"

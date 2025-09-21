@@ -121,7 +121,14 @@ class SetFailoverReservationOps(OperationOps):
         return d.SetFailoverReservation(schema_name=self.op.schema_name, reservation=sim_schema.failover_reservation)
 
     def is_up(self) -> bool:
-        return self.db_backend.get_schema(self.op.schema_name).failover_reservation == self.op.reservation
+        # circular import
+        from liti.core.backend.bigquery import BigQueryDbBackend
+
+        if isinstance(self.db_backend, BigQueryDbBackend):
+            # the big query API does not provide the failover reservation, always apply
+            return False
+        else:
+            return self.db_backend.get_schema(self.op.schema_name).failover_reservation == self.op.reservation
 
 
 class SetCaseSensitiveOps(OperationOps):
@@ -140,7 +147,7 @@ class SetCaseSensitiveOps(OperationOps):
         return d.SetCaseSensitive(schema_name=self.op.schema_name, case_sensitive=sim_schema.is_case_sensitive)
 
     def is_up(self) -> bool:
-        return self.db_backend.get_schema(self.op.schema_name).is_case_sensitive == self.op.case_sensitive
+        return self.db_backend.get_schema(self.op.schema_name).is_case_sensitive is self.op.case_sensitive
 
 
 class SetIsPrimaryReplicaOps(OperationOps):
@@ -156,10 +163,17 @@ class SetIsPrimaryReplicaOps(OperationOps):
     def down(self) -> d.SetIsPrimaryReplica:
         sim_db = self.simulate(self.meta_backend.get_previous_operations())
         sim_schema = sim_db.get_schema(self.op.schema_name)
-        return d.SetIsPrimaryReplica(schema_name=self.op.schema_name, is_primary=sim_schema.is_case_sensitive)
+        return d.SetIsPrimaryReplica(schema_name=self.op.schema_name, is_primary=sim_schema.is_primary_replica)
 
     def is_up(self) -> bool:
-        return self.db_backend.get_schema(self.op.schema_name).is_case_sensitive == self.op.is_primary
+        # circular import
+        from liti.core.backend.bigquery import BigQueryDbBackend
+
+        if isinstance(self.db_backend, BigQueryDbBackend):
+            # the big query API does not say if it is the primary replica, always apply
+            return False
+        else:
+            return self.db_backend.get_schema(self.op.schema_name).is_primary_replica is self.op.is_primary
 
 
 class SetPrimaryReplicaOps(OperationOps):
@@ -178,7 +192,14 @@ class SetPrimaryReplicaOps(OperationOps):
         return d.SetPrimaryReplica(schema_name=self.op.schema_name, replica=sim_schema.primary_replica)
 
     def is_up(self) -> bool:
-        return self.db_backend.get_schema(self.op.schema_name).primary_replica == self.op.replica
+        # circular import
+        from liti.core.backend.bigquery import BigQueryDbBackend
+
+        if isinstance(self.db_backend, BigQueryDbBackend):
+            # the big query API does not provide the primary replica, always apply
+            return False
+        else:
+            return self.db_backend.get_schema(self.op.schema_name).primary_replica == self.op.replica
 
 
 class SetMaxTimeTravelOps(OperationOps):

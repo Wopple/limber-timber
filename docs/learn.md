@@ -217,3 +217,47 @@ Example template file:
   path: schema
   value: replacement_schema
 ```
+
+# Gotchas
+
+Limber Timber is not without its gotchas.
+
+1. Only modify resources created by your migrations.
+
+Limber Timber runs simulations of the migrations in memory as part of its normal behavior. If your operations modify a
+resource that was not created by an earlier operation, that resource will not exist in memory and the runner will fail.
+For example, a common practice is to have your metadata in the same schema as the tables it manages. However, that means
+that schema has to be created before any operations are run, so Limber Timber can break if you modify that schema. It is
+recommended you put your metadata in a separate schema that only stores metadata, and create the schema you want to
+manage with an operation.
+
+2. Be careful with table expirations.
+
+Limber Timber will not understand that a table was supposed to expire by a certain time. If you create a table with an
+expiration date, it is recommend you do not further modify that resource. It may make sense to create those kinds of
+tables with a dedicated set of migrations.
+
+3. Instantiate your template targets in the operation files.
+
+Currently, templates will only instantiate `ValidatedString`s for you for convenience. It is not smart enough to
+instantiate models that are `None` when the template is setting some of the fields. This is a temporary limitation that
+is planned to be supported later for improved ergonomics.
+
+4. Be aware of irreversible operations.
+
+Not all changes can be reversed nicely. This is usually due to limitations in backend support. For example, Big Query
+does not allow adding columns with a `NOT NULL` constraint, nor does it allow updating a column to be `NOT NULL`. It
+would be complicated and high risk to work around this limitation, so Limber Timber simply reverses dropped columns as
+`NULLABLE` and no-ops when reversing a column altered to be `NULLABLE`.
+
+5. Be careful of certain failure scenarios.
+
+While Limber Timber does its best to fail in recoverable ways, there are some failure scenarios that require manual
+intervention. Two related scenarios can happen when the backend does not support transactional updates to the schema:
+
+- running an up operation but failing to update the metadata, then running a down operation
+- running a down operation but failing to update the metadata, then running an up operation
+
+When running an operation, Limber Timber will first check the schema to see if it has already been applied so it does
+not try to apply it again. However, if the operation being applied is different from the operation that failed in a
+previous run, it has no way to know about that application to correct the error.

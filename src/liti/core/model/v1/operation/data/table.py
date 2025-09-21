@@ -122,7 +122,7 @@ class SetMaxTimeTravel(Operation):
 
 class SetStorageBilling(Operation):
     schema_name: QualifiedName
-    storage_billing: StorageBilling | None = None
+    storage_billing: StorageBilling
 
     KIND: ClassVar[str] = 'set_storage_billing'
 

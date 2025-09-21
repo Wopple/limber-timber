@@ -18,7 +18,7 @@ def is_match(match: Any, value: Any) -> bool:
         return match in value
     elif isinstance(match, dict) and isinstance(value, dict):
         return all(mk in value and is_match(mv, value[mk]) for mk, mv in match.items())
-    elif isinstance(value, LitiModel):
+    elif isinstance(match, dict) and isinstance(value, LitiModel):
         # dig deeper into the model
         return all(is_match(inner, getattr(value, field)) for field, inner in match.items())
     elif isinstance(match, float) and isinstance(value, float):

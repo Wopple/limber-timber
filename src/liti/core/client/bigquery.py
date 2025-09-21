@@ -1,6 +1,8 @@
 import logging
 from typing import Iterable
 
+from google.api_core.exceptions import NotFound
+
 from liti import bigquery as bq
 
 log = logging.getLogger(__name__)
@@ -50,7 +52,10 @@ class BqClient:
         return self.client.query_and_wait(sql, job_config=job_config)
 
     def get_dataset(self, dataset_ref: bq.DatasetReference) -> bq.Dataset | None:
-        return self.client.get_dataset(dataset_ref)
+        try:
+            return self.client.get_dataset(dataset_ref)
+        except NotFound:
+            return None
 
     def delete_dataset(self, dataset_ref: bq.DatasetReference):
         self.client.delete_dataset(dataset_ref)

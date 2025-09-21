@@ -15,9 +15,8 @@ from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.parse import parse_operation
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, ConstraintName, DatabaseName, FieldPath, ForeignKey, \
-    ForeignReference, Identifier, \
-    IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, Relation, RoundingMode, Schema, SchemaName, Table, \
-    QualifiedName, View
+    ForeignReference, Identifier, IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, QualifiedName, Relation, \
+    RoundingMode, Schema, SchemaName, StorageBilling, Table, View
 
 log = logging.getLogger(__name__)
 
@@ -526,8 +525,8 @@ def to_liti_foreign_key(foreign_key: bq.ForeignKey) -> ForeignKey:
         foreign_table_name=to_table_name(foreign_key.referenced_table),
         references=[
             ForeignReference(
-                local_column_name=ColumnName(ref.referencing_column),
-                foreign_column_name=ColumnName(ref.referenced_column),
+                local_column_name=ref.referencing_column,
+                foreign_column_name=ref.referenced_column,
             )
             for ref in foreign_key.column_references
         ],
@@ -589,7 +588,7 @@ def to_liti_partitioning(table: bq.Table) -> Partitioning | None:
 
         return Partitioning(
             kind='TIME',
-            column=ColumnName(time_partition.field),
+            column=time_partition.field,
             time_unit=time_partition.type_,
             expiration=expiration,
             require_filter=table.require_partition_filter or False,
@@ -599,7 +598,7 @@ def to_liti_partitioning(table: bq.Table) -> Partitioning | None:
 
         return Partitioning(
             kind='INT',
-            column=ColumnName(table.range_partitioning.field),
+            column=table.range_partitioning.field,
             int_start=range_.start,
             int_end=range_.end,
             int_step=range_.interval,
@@ -615,7 +614,7 @@ def to_liti_table(table: bq.Table) -> Table:
 
     if table.table_constraints is not None:
         if table.table_constraints.primary_key:
-            primary_key = PrimaryKey(column_names=[ColumnName(col) for col in table.table_constraints.primary_key.columns])
+            primary_key = PrimaryKey(column_names=table.table_constraints.primary_key.columns)
 
         if table.table_constraints.foreign_keys:
             foreign_keys = [to_liti_foreign_key(fk) for fk in table.table_constraints.foreign_keys]
@@ -632,7 +631,7 @@ def to_liti_table(table: bq.Table) -> Table:
         primary_key=primary_key,
         foreign_keys=foreign_keys,
         partitioning=to_liti_partitioning(table),
-        clustering=[ColumnName(field) for field in table.clustering_fields] if table.clustering_fields else None,
+        clustering=table.clustering_fields or None,
         friendly_name=table.friendly_name,
         description=table.description,
         labels=table.labels or None,
@@ -670,7 +669,7 @@ def to_liti_materialized_view(table: bq.Table) -> MaterializedView:
 
         partitioning = Partitioning(
             kind='TIME',
-            column=ColumnName(time_partition.field),
+            column=time_partition.field,
             time_unit=time_partition.type_,
             expiration=expiration,
             require_filter=table.require_partition_filter or False,
@@ -680,7 +679,7 @@ def to_liti_materialized_view(table: bq.Table) -> MaterializedView:
 
         partitioning = Partitioning(
             kind='INT',
-            column=ColumnName(table.range_partitioning.field),
+            column=table.range_partitioning.field,
             int_start=range_.start,
             int_end=range_.end,
             int_step=range_.interval,
@@ -696,7 +695,7 @@ def to_liti_materialized_view(table: bq.Table) -> MaterializedView:
         name=to_table_name(table),
         select_sql=select_sql or None,
         partitioning=partitioning,
-        clustering=[ColumnName(field) for field in table.clustering_fields] if table.clustering_fields else None,
+        clustering=table.clustering_fields or None,
         allow_non_incremental_definition=allow_non_incremental_definition,
         enable_refresh=enable_refresh,
         refresh_interval=refresh_interval,
@@ -881,6 +880,45 @@ class BigQueryDbBackend(DbBackend):
 
     def drop_schema(self, name: QualifiedName):
         self.client.delete_dataset(extract_dataset_ref(name))
+
+    def set_default_table_expiration(self, schema_name: QualifiedName, expiration: timedelta | None):
+        self.set_schema_option(
+            schema_name,
+            'default_table_expiration_days',
+            str(expiration.total_seconds() / ONE_DAY_IN_SECONDS) if expiration is not None else 'NULL',
+        )
+
+    def set_default_partition_expiration(self, schema_name: QualifiedName, expiration: timedelta | None):
+        self.set_schema_option(
+            schema_name,
+            'default_partition_expiration_days',
+            str(expiration.total_seconds() / ONE_DAY_IN_SECONDS) if expiration is not None else 'NULL',
+        )
+
+    def set_default_kms_key_name(self, schema_name: QualifiedName, key_name: str | None):
+        self.set_schema_option(schema_name, 'default_kms_key_name', f'\'{key_name}\'' if key_name else 'NULL')
+
+    def set_failover_reservation(self, schema_name: QualifiedName, reservation: str | None):
+        self.set_schema_option(schema_name, 'failover_reservation', f'\'{reservation}\'' if reservation else 'NULL')
+
+    def set_case_sensitive(self, schema_name: QualifiedName, case_sensitive: bool):
+        self.set_schema_option(schema_name, 'is_case_insensitive', 'TRUE' if not case_sensitive else 'FALSE')
+
+    def set_is_primary_replica(self, schema_name: QualifiedName, is_primary: bool):
+        self.set_schema_option(schema_name, 'is_primary', 'TRUE' if is_primary else 'FALSE')
+
+    def set_primary_replica(self, schema_name: QualifiedName, replica: str | None):
+        self.set_schema_option(schema_name, 'primary_replica', f'\'{replica}\'' if replica else 'NULL')
+
+    def set_max_time_travel(self, schema_name: QualifiedName, duration: timedelta | None):
+        self.set_schema_option(
+            schema_name,
+            'max_time_travel_hours',
+            str(int(duration.total_seconds() / ONE_HOUR_IN_SECONDS)) if duration is not None else 'NULL',
+        )
+
+    def set_storage_billing(self, schema_name: QualifiedName, storage_billing: StorageBilling):
+        self.set_schema_option(schema_name, 'storage_billing_model', f'\'{storage_billing}\'')
 
     def get_table(self, name: QualifiedName) -> Table | None:
         table_ref = to_table_ref(name)

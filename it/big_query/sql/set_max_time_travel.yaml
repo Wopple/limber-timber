@@ -1,0 +1,11 @@
+version: 1
+operations:
+- kind: set_max_time_travel
+  data:
+    schema_name:
+      schema: test_schema_1
+    duration: P3D
+- kind: set_max_time_travel
+  data:
+    schema_name:
+      schema: test_schema_2

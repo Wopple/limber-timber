@@ -6,8 +6,8 @@ from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.schema import Column, ColumnName, ConstraintName, DatabaseName, ForeignKey, Identifier, \
-    IntervalLiteral, \
-    MaterializedView, PrimaryKey, RoundingMode, Schema, SchemaName, Table, QualifiedName, View
+    IntervalLiteral, MaterializedView, PrimaryKey, QualifiedName, RoundingMode, Schema, SchemaName, StorageBilling, \
+    Table, View
 
 
 class MemoryDbBackend(DbBackend):
@@ -62,6 +62,33 @@ class MemoryDbBackend(DbBackend):
             raise ValueError(f'Schema {name} does not exist')
 
         del self.schemas[name]
+
+    def set_default_table_expiration(self, schema_name: QualifiedName, expiration: timedelta | None):
+        self.schemas[schema_name].default_table_expiration = expiration
+
+    def set_default_partition_expiration(self, schema_name: QualifiedName, expiration: timedelta | None):
+        self.schemas[schema_name].default_partition_expiration = expiration
+
+    def set_default_kms_key_name(self, schema_name: QualifiedName, key_name: str | None):
+        self.schemas[schema_name].default_kms_key_name = key_name
+
+    def set_failover_reservation(self, schema_name: QualifiedName, reservation: str | None):
+        self.schemas[schema_name].failover_reservation = reservation
+
+    def set_case_sensitive(self, schema_name: QualifiedName, case_sensitive: bool):
+        self.schemas[schema_name].is_case_sensitive = case_sensitive
+
+    def set_is_primary_replica(self, schema_name: QualifiedName, is_primary: bool):
+        self.schemas[schema_name].is_primary_replica = is_primary
+
+    def set_primary_replica(self, schema_name: QualifiedName, replica: str | None):
+        self.schemas[schema_name].primary_replica = replica
+
+    def set_max_time_travel(self, schema_name: QualifiedName, duration: timedelta | None):
+        self.schemas[schema_name].max_time_travel = duration
+
+    def set_storage_billing(self, schema_name: QualifiedName, storage_billing: StorageBilling):
+        self.schemas[schema_name].storage_billing = storage_billing
 
     def get_table(self, name: QualifiedName) -> Table | None:
         return self.tables.get(name)

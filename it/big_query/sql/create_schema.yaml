@@ -1,0 +1,26 @@
+version: 1
+operations:
+- kind: create_schema
+  data:
+    schema:
+      name:
+        schema: test_schema_1
+      friendly_name: s1_friendly
+      description: s1_description
+      labels:
+        k1: v1
+        k2: v2
+      default_table_expiration: P7D
+      default_partition_expiration: P180D
+      default_rounding_mode: ROUND_HALF_AWAY_FROM_ZERO
+      is_case_sensitive: true
+      max_time_travel: P2D
+      storage_billing: LOGICAL
+- kind: create_schema
+  data:
+    schema:
+      name:
+        schema: test_schema_2
+      default_rounding_mode: ROUND_HALF_EVEN
+      is_case_sensitive: false
+      storage_billing: PHYSICAL

@@ -68,7 +68,7 @@ class DbBackend(ABC, Defaulter, Validator):
     def set_max_time_travel(self, schema_name: QualifiedName, duration: timedelta | None):
         raise NotImplementedError('not supported')
 
-    def set_storage_billing(self, schema_name: QualifiedName, storage_billing: StorageBilling | None):
+    def set_storage_billing(self, schema_name: QualifiedName, storage_billing: StorageBilling):
         raise NotImplementedError('not supported')
 
     def has_table(self, name: QualifiedName) -> bool:

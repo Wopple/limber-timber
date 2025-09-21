@@ -1,0 +1,7 @@
+version: 1
+operations:
+- kind: set_storage_billing
+  data:
+    schema_name:
+      schema: test_schema_1
+    storage_billing: PHYSICAL

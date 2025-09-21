@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel
 
 from liti.core.context import Context
@@ -6,11 +8,10 @@ from liti.core.model.v1.schema import MaterializedView, Partitioning, Schema, Ta
 from liti.core.observe.observer import Defaulter, Validator
 
 
-def set_defaults(model: BaseModel, defaulter: Defaulter, context: Context):
-    for field_name in model.__pydantic_fields__.keys():
-        field = getattr(model, field_name)
-
-        if isinstance(field, BaseModel):
+def set_defaults(model: Any, defaulter: Defaulter, context: Context):
+    if isinstance(model, BaseModel):
+        for field_name in model.__pydantic_fields__.keys():
+            field = getattr(model, field_name)
             set_defaults(field, defaulter, context)
 
     if isinstance(model, Int):
@@ -29,13 +30,18 @@ def set_defaults(model: BaseModel, defaulter: Defaulter, context: Context):
         defaulter.view_defaults(model, context)
     elif isinstance(model, MaterializedView):
         defaulter.materialized_view_defaults(model, context)
+    elif isinstance(model, tuple | list | set):
+        for item in model:
+            set_defaults(item, defaulter, context)
+    elif isinstance(model, dict):
+        for item in model.values():
+            set_defaults(item, defaulter, context)
 
 
-def validate_model(model: BaseModel, validator: Validator, context: Context):
-    for field_name in model.__pydantic_fields__.keys():
-        field = getattr(model, field_name)
-
-        if isinstance(field, BaseModel):
+def validate_model(model: Any, validator: Validator, context: Context):
+    if isinstance(model, BaseModel):
+        for field_name in model.__pydantic_fields__.keys():
+            field = getattr(model, field_name)
             validate_model(field, validator, context)
 
     if isinstance(model, Schema):
@@ -56,3 +62,9 @@ def validate_model(model: BaseModel, validator: Validator, context: Context):
         validator.validate_view(model, context)
     elif isinstance(model, MaterializedView):
         validator.validate_materialized_view(model, context)
+    elif isinstance(model, tuple | list | set):
+        for item in model:
+            validate_model(item, validator, context)
+    elif isinstance(model, dict):
+        for item in model.values():
+            validate_model(item, validator, context)

@@ -1,0 +1,11 @@
+version: 1
+operations:
+- kind: create_schema
+  data:
+    schema:
+      name:
+        schema: schema_drop
+- kind: drop_schema
+  data:
+    schema_name:
+      schema: schema_drop

@@ -1,0 +1,16 @@
+version: 1
+operations:
+- kind: set_default_partition_expiration
+  data:
+    schema_name:
+      schema: test_schema_1
+    expiration: P1Y
+- kind: set_default_partition_expiration
+  data:
+    schema_name:
+      schema: test_schema_2
+    expiration: P2Y
+- kind: set_default_partition_expiration
+  data:
+    schema_name:
+      schema: test_schema_2

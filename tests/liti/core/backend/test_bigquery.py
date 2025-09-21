@@ -455,22 +455,22 @@ def test_to_bq_table_table():
     table = Table(
         name=QualifiedName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
-        primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
+        primary_key=PrimaryKey(column_names=['col_date']),
         foreign_keys=[ForeignKey(
             name='fk_test',
             foreign_table_name=QualifiedName('test_project.test_dataset.fk_test_table'),
             references=[ForeignReference(
-                local_column_name=ColumnName('col_date'),
-                foreign_column_name=ColumnName('fk_col_date'),
+                local_column_name='col_date',
+                foreign_column_name='fk_col_date',
             )],
         )],
         partitioning=Partitioning(
             kind='TIME',
-            column=ColumnName('col_date'),
+            column='col_date',
             time_unit='DAY',
             require_filter=True,
         ),
-        clustering=[ColumnName('col_date')],
+        clustering=['col_date'],
         friendly_name='test_friendly',
         description='test_description',
         labels={'l1': 'v1'},
@@ -553,11 +553,11 @@ def test_to_bq_table_materialized_view():
         select_file='ignored.sql',
         partitioning=Partitioning(
             kind='TIME',
-            column=ColumnName('col_date'),
+            column='col_date',
             time_unit='DAY',
             require_filter=True,
         ),
-        clustering=[ColumnName('col_date')],
+        clustering=['col_date'],
         allow_non_incremental_definition=True,
         enable_refresh=True,
         refresh_interval=timedelta(hours=1),
@@ -1313,22 +1313,22 @@ def test_to_liti_table():
     expected = Table(
         name=QualifiedName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
-        primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
+        primary_key=PrimaryKey(column_names=['col_date']),
         foreign_keys=[ForeignKey(
             name='fk_test',
             foreign_table_name=QualifiedName('test_project.test_dataset.fk_test_table'),
             references=[ForeignReference(
-                local_column_name=ColumnName('col_date'),
-                foreign_column_name=ColumnName('fk_col_date'),
+                local_column_name='col_date',
+                foreign_column_name='fk_col_date',
             )],
             enforced=False,
         )],
         partitioning=Partitioning(
             kind='TIME',
-            column=ColumnName('col_date'),
+            column='col_date',
             time_unit='DAY',
         ),
-        clustering=[ColumnName('col_date')],
+        clustering=['col_date'],
         friendly_name='test_friendly',
         description='test_description',
         labels={'l1': 'v1'},
@@ -1388,10 +1388,10 @@ def test_to_liti_materialized_view():
         select_sql='SELECT DATE \'2025-01-01\' AS col_date',
         partitioning=Partitioning(
             kind='TIME',
-            column=ColumnName('col_date'),
+            column='col_date',
             time_unit='DAY',
         ),
-        clustering=[ColumnName('col_date')],
+        clustering=['col_date'],
         allow_non_incremental_definition=True,
         enable_refresh=True,
         refresh_interval=timedelta(hours=1),
@@ -1536,23 +1536,23 @@ def test_create_table_full(db_backend: BigQueryDbBackend, bq_client: Mock):
         name=QualifiedName('test_project.test_dataset.test_table'),
         columns=[Column('col_date', DATE)],
         default_collate='und:ci',
-        primary_key=PrimaryKey(column_names=[ColumnName('col_date')]),
+        primary_key=PrimaryKey(column_names=['col_date']),
         foreign_keys=[ForeignKey(
             name='fk_test',
             foreign_table_name=QualifiedName('test_project.test_dataset.fk_test_table'),
             references=[ForeignReference(
-                local_column_name=ColumnName('col_date'),
-                foreign_column_name=ColumnName('fk_col_date'),
+                local_column_name='col_date',
+                foreign_column_name='fk_col_date',
             )],
         )],
         partitioning=Partitioning(
             kind='TIME',
-            column=ColumnName('col_date'),
+            column='col_date',
             time_unit='DAY',
             expiration=timedelta(days=1.5),
             require_filter=True,
         ),
-        clustering=[ColumnName('col_date')],
+        clustering=['col_date'],
         friendly_name='test_friendly',
         description='Test description',
         labels={'l1': 'v1', 'l2': 'v2'},
@@ -1620,7 +1620,7 @@ def test_set_primary_key(db_backend: BigQueryDbBackend, bq_client: Mock, column_
     table_name = QualifiedName('test_project.test_dataset.test_table')
 
     if column_names:
-        primary_key = PrimaryKey(column_names=[ColumnName('col_date'), ColumnName('col_int')])
+        primary_key = PrimaryKey(column_names=['col_date', 'col_int'])
     else:
         primary_key = None
 
@@ -1635,12 +1635,12 @@ def test_add_foreign_key(db_backend: BigQueryDbBackend, bq_client: Mock):
         foreign_table_name=QualifiedName('test_project.test_dataset.fk_test_table'),
         references=[
             ForeignReference(
-                local_column_name=ColumnName('col_date'),
-                foreign_column_name=ColumnName('fk_col_date'),
+                local_column_name='col_date',
+                foreign_column_name='fk_col_date',
             ),
             ForeignReference(
-                local_column_name=ColumnName('col_int'),
-                foreign_column_name=ColumnName('fk_col_int'),
+                local_column_name='col_int',
+                foreign_column_name='fk_col_int',
             ),
         ],
     )
@@ -2336,13 +2336,13 @@ def test_create_materialized_view_full(db_backend: BigQueryDbBackend, bq_client:
         select_file='some/path.sql',
         partitioning=Partitioning(
             kind='TIME',
-            column=ColumnName('col_date'),
+            column='col_date',
             column_datatype=DATE,
             time_unit='DAY',
             expiration=timedelta(days=1.5),
             require_filter=True,
         ),
-        clustering=[ColumnName('col_date')],
+        clustering=['col_date'],
         friendly_name='test_friendly',
         description='Test description',
         labels={'l1': 'v1', 'l2': 'v2'},
