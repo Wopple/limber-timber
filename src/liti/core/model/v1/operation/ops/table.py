@@ -1,7 +1,7 @@
 from liti.core.context import Context
 from liti.core.model.v1.operation.data import table as d
 from liti.core.model.v1.operation.ops.base import OperationOps
-from liti.core.model.v1.schema import Identifier
+from liti.core.model.v1.schema import ConstraintName
 
 
 class CreateSchemaOps(OperationOps):
@@ -327,7 +327,7 @@ class AddForeignKeyOps(OperationOps):
         self.db_backend.add_foreign_key(self.op.table_name, self.op.foreign_key)
 
     def down(self) -> d.DropConstraint:
-        return d.DropConstraint(table_name=self.op.table_name, constraint_name=Identifier(self.op.foreign_key.name))
+        return d.DropConstraint(table_name=self.op.table_name, constraint_name=self.op.foreign_key.name)
 
     def is_up(self) -> bool:
         fk = self.op.foreign_key

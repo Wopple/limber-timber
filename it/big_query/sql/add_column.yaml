@@ -1,0 +1,9 @@
+version: 1
+operations:
+- kind: add_column
+  data:
+    table_name: table_1
+    column:
+      name: t1_float_new
+      datatype: FLOAT64
+      nullable: true

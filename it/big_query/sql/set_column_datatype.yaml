@@ -1,0 +1,7 @@
+version: 1
+operations:
+- kind: set_column_datatype
+  data:
+    table_name: table_1
+    column_name: t1_numeric_col
+    datatype: FLOAT64

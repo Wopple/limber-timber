@@ -1,0 +1,7 @@
+version: 1
+operations:
+- kind: rename_column
+  data:
+    table_name: table_1
+    from_name: t1_float_col
+    to_name: t1_float_col_renamed

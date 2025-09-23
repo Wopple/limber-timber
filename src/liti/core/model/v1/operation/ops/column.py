@@ -70,13 +70,12 @@ class SetColumnDatatypeOps(OperationOps):
         self.context = context
 
     def up(self):
-        sim_db = self.simulate(self.meta_backend.get_applied_operations())
-        sim_column = sim_db.get_table(self.op.table_name).column_map[self.op.column_name]
+        from_datatype = self.db_backend.get_table(self.op.table_name).column_map[self.op.column_name]
 
         self.db_backend.set_column_datatype(
             table_name=self.op.table_name,
             column_name=self.op.column_name,
-            from_datatype=sim_column.datatype,
+            from_datatype=from_datatype,
             to_datatype=self.op.datatype,
         )
 

@@ -1,0 +1,7 @@
+version: 1
+operations:
+- kind: add_column_field
+  data:
+    table_name: table_1
+    field_path: t1_struct_col.f3
+    datatype: FLOAT64

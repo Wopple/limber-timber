@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "limber-timber"
-version = "0.0.21"
+version = "0.1.0"
 description = "It's data based!"
 authors = ["Daniel Tashjian <thewopple@gmail.com>"]
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Framework :: Pytest",
     "Framework :: Pydantic :: 2",
 ]

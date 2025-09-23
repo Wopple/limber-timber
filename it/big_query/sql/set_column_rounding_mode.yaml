@@ -1,0 +1,11 @@
+version: 1
+operations:
+- kind: set_column_rounding_mode
+  data:
+    table_name: table_1
+    column_name: t1_bignumeric_col
+    rounding_mode: ROUND_HALF_EVEN
+- kind: set_column_rounding_mode
+  data:
+    table_name: table_1
+    column_name: t1_bignumeric_col

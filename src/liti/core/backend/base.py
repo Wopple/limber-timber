@@ -170,7 +170,7 @@ class DbBackend(ABC, Defaulter, Validator):
         # circular imports
         from liti.core.function import extract_nested_datatype
 
-        *path_fields, new_field = field_path.segments
+        *path_fields, old_field = field_path.segments
         table = self.get_table(table_name)
         struct = extract_nested_datatype(table, FieldPath('.'.join(path_fields)))
 
@@ -178,8 +178,8 @@ class DbBackend(ABC, Defaulter, Validator):
             struct = struct.inner
 
         if isinstance(struct, Struct):
-            if new_field in struct.fields:
-                del struct.fields[new_field]
+            if old_field in struct.fields:
+                del struct.fields[old_field]
                 return table
             else:
                 raise ValueError(f'Field path {field_path} does not exist in table {table_name}')

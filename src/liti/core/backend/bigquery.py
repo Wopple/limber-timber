@@ -26,7 +26,8 @@ REPEATED = 'REPEATED'
 
 ONE_HOUR_IN_SECONDS = 60 * 60
 ONE_DAY_IN_SECONDS = 24 * ONE_HOUR_IN_SECONDS
-ONE_DAY_IN_MILLIS = 1000 * ONE_DAY_IN_SECONDS
+ONE_SECOND_IN_MILLIS = 1000
+ONE_DAY_IN_MILLIS = ONE_DAY_IN_SECONDS * ONE_SECOND_IN_MILLIS
 
 
 def to_dataset_ref(project: DatabaseName, dataset: SchemaName) -> bq.DatasetReference:
@@ -181,7 +182,7 @@ def set_bq_partitioning(relation: Relation, bq_table: bq.Table):
 
         if relation.partitioning.kind == 'TIME':
             if relation.partitioning.expiration is not None:
-                expiration_ms = int(relation.partitioning.expiration * ONE_DAY_IN_MILLIS)
+                expiration_ms = int(relation.partitioning.expiration.total_seconds() * ONE_SECOND_IN_MILLIS)
             else:
                 expiration_ms = None
 
@@ -1161,22 +1162,17 @@ class BigQueryDbBackend(DbBackend):
         )
 
     def set_column_datatype(self, table_name: QualifiedName, column_name: ColumnName, from_datatype: Datatype, to_datatype: Datatype):
-        # TODO: work around some of these limitations by:
-        #     1. create a new table with the new datatype
-        #     2. copy data from the old table to the new table truncating values
-        #     3. drop the old table
-        #     4. rename the new table to the old table name
-        if not can_coerce(from_datatype, to_datatype):
+        if can_coerce(from_datatype, to_datatype):
+            self.client.query_and_wait(
+                f'ALTER TABLE `{table_name}`\n'
+                f'ALTER COLUMN `{column_name}`\n'
+                f'SET DATA TYPE {datatype_to_sql(to_datatype)}\n'
+            )
+        else:
             self.handle_unsupported(
                 Unsupported.SET_COLUMN_DATATYPE,
                 f'Not updating column {column_name} from {from_datatype} to {to_datatype} since Big Query does not support it',
             )
-
-        self.client.query_and_wait(
-            f'ALTER TABLE `{table_name}`\n'
-            f'ALTER COLUMN `{column_name}`\n'
-            f'SET DATA TYPE {datatype_to_sql(to_datatype)}\n'
-        )
 
     def add_column_field(self, table_name: QualifiedName, field_path: FieldPath, datatype: Datatype):
         table = super().add_column_field(table_name, field_path, datatype)

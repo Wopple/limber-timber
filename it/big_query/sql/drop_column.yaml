@@ -1,0 +1,6 @@
+version: 1
+operations:
+- kind: drop_column
+  data:
+    table_name: table_1
+    column_name: t1_array_col

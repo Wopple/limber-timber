@@ -1,6 +1,7 @@
 from typing import Any, ClassVar
 
-from pydantic import field_validator
+from pydantic import field_serializer, field_validator
+from pydantic_core.core_schema import FieldSerializationInfo
 
 from liti.core.model.v1.datatype import Datatype, parse_datatype
 from liti.core.model.v1.operation.data.base import EntityKind, Operation
@@ -57,6 +58,12 @@ class SetColumnDatatype(Operation):
     def validate_datatype(cls, value: Datatype | str | dict[str, Any]) -> Datatype:
         return parse_datatype(value)
 
+    @field_serializer('datatype')
+    @classmethod
+    def serialize_datatype(cls, value: Datatype, info: FieldSerializationInfo) -> str | dict[str, Any]:
+        # necessary to call the subclass serializer, otherwise pydantic uses Datatype
+        return value.model_dump(exclude_none=info.exclude_none)
+
 
 class AddColumnField(Operation):
     table_name: QualifiedName
@@ -73,6 +80,12 @@ class AddColumnField(Operation):
     @classmethod
     def validate_datatype(cls, value: Datatype | str | dict[str, Any]) -> Datatype:
         return parse_datatype(value)
+
+    @field_serializer('datatype')
+    @classmethod
+    def serialize_datatype(cls, value: Datatype, info: FieldSerializationInfo) -> str | dict[str, Any]:
+        # necessary to call the subclass serializer, otherwise pydantic uses Datatype
+        return value.model_dump(exclude_none=info.exclude_none)
 
 
 class DropColumnField(Operation):

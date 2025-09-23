@@ -24,3 +24,12 @@ operation_files:
 - sql/set_max_staleness.yaml
 - sql/set_enable_change_history.yaml
 - sql/set_enable_fine_grained_mutations.yaml
+- sql/add_column.yaml
+- sql/drop_column.yaml
+- sql/rename_column.yaml
+- sql/set_column_datatype.yaml
+- sql/add_column_field.yaml
+- sql/drop_column_field.yaml
+- sql/set_column_nullable.yaml
+- sql/set_column_description.yaml
+- sql/set_column_rounding_mode.yaml

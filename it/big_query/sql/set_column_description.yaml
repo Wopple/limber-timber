@@ -1,0 +1,16 @@
+version: 1
+operations:
+- kind: set_column_description
+  data:
+    table_name: table_1
+    column_name: t1_int_col
+    description: t1_int_col_new_description
+- kind: set_column_description
+  data:
+    table_name: table_1
+    column_name: t1_float_col_renamed
+    description: t1_float_col_renamed_new_description
+- kind: set_column_description
+  data:
+    table_name: table_1
+    column_name: t1_float_col_renamed

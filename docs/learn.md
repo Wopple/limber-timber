@@ -248,7 +248,9 @@ is planned to be supported later for improved ergonomics.
 Not all changes can be reversed nicely. This is usually due to limitations in backend support. For example, Big Query
 does not allow adding columns with a `NOT NULL` constraint, nor does it allow updating a column to be `NOT NULL`. It
 would be complicated and high risk to work around this limitation, so Limber Timber simply reverses dropped columns as
-`NULLABLE` and no-ops when reversing a column altered to be `NULLABLE`.
+`NULLABLE` and no-ops when reversing a column altered to be `NULLABLE`. Limber Timber will typically issue a warning
+when one of these situations is encountered and skip that behavior. These warnings can be turned into errors if so
+desired.
 
 5. Be careful of certain failure scenarios.
 
@@ -261,3 +263,10 @@ intervention. Two related scenarios can happen when the backend does not support
 When running an operation, Limber Timber will first check the schema to see if it has already been applied so it does
 not try to apply it again. However, if the operation being applied is different from the operation that failed in a
 previous run, it has no way to know about that application to correct the error.
+
+6. Be careful of backend quotas.
+
+This might not be the fault of Limber Timber, but some operations cannot be performed frequently. For example, you can
+only set the storage billing model of a Big Query dataset once every 336 hours. So if your migrations have multiple
+updates, then when you run it for a fresh environment, there will be multiple updates in a short period of time and the
+migrations will fail.
