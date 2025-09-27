@@ -10,12 +10,12 @@ from liti.core.backend.bigquery import BigQueryDbBackend, BigQueryMetaBackend, c
     extract_dataset_ref, interval_literal_to_sql, NULLABLE, REPEATED, REQUIRED, to_bq_table, to_column, \
     to_dataset_ref, to_datatype, to_datatype_array, to_field_type, to_fields, to_liti_materialized_view, to_liti_table, \
     to_liti_view, to_max_length, to_mode, to_precision, to_range_element_type, to_scale, to_schema_field, to_table_ref
-from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, DATE_TIME, Float, FLOAT64, GEOGRAPHY, \
-    Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
+from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, BYTES, Bytes, Datatype, DATE, DATE_TIME, Float, \
+    FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.operation.data.table import CreateSchema
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, DatabaseName, ForeignKey, ForeignReference, \
-    Identifier, IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, RoundingMode, Schema, SchemaName, Table, \
-    QualifiedName, View
+    Identifier, IntervalLiteral, MaterializedView, Partitioning, PrimaryKey, QualifiedName, RoundingMode, Schema, \
+    SchemaName, Table, View
 from liti.core.observe import set_defaults, validate_model
 from tests.liti.util import NoRaise
 
@@ -153,6 +153,8 @@ def test_to_table_ref(name, expected):
         [BigNumeric(precision=1, scale=1), 'BIGNUMERIC'],
         [STRING, 'STRING'],
         [String(characters=1), 'STRING'],
+        [BYTES, 'BYTES'],
+        [Bytes(bytes=1), 'BYTES'],
         [JSON, 'JSON'],
         [DATE, 'DATE'],
         [TIME, 'TIME'],
@@ -265,6 +267,12 @@ def test_to_scale(datatype, expected):
         [Array(inner=STRING), None],
         [Array(inner=String(characters=None)), None],
         [Array(inner=String(characters=1)), 1],
+        [BYTES, None],
+        [Bytes(bytes=None), None],
+        [Bytes(bytes=1), 1],
+        [Array(inner=BYTES), None],
+        [Array(inner=Bytes(bytes=None)), None],
+        [Array(inner=Bytes(bytes=1)), 1],
     ],
 )
 def test_to_max_length(datatype, expected):
@@ -379,6 +387,18 @@ def test_to_range_element_type(datatype, expected):
             bq.SchemaField(
                 name='col_string',
                 field_type='STRING',
+                max_length=1,
+            ),
+        ],
+        [
+            Column(
+                name='col_bytes',
+                datatype=Bytes(bytes=1),
+                nullable=True,
+            ),
+            bq.SchemaField(
+                name='col_bytes',
+                field_type='BYTES',
                 max_length=1,
             ),
         ],
@@ -598,6 +618,8 @@ def test_to_bq_table_materialized_view():
         [BigNumeric(precision=4, scale=3), 'BIGNUMERIC(4, 3)'],
         [STRING, 'STRING'],
         [String(characters=1), 'STRING(1)'],
+        [BYTES, 'BYTES'],
+        [Bytes(bytes=1), 'BYTES(1)'],
         [JSON, 'JSON'],
         [DATE, 'DATE'],
         [TIME, 'TIME'],
@@ -717,6 +739,14 @@ def test_interval_literal_to_sql(interval, expected):
                 nullable=True,
             ),
             '`col_string` STRING(1)',
+        ],
+        [
+            Column(
+                name='col_bytes',
+                datatype=Bytes(bytes=1),
+                nullable=True,
+            ),
+            '`col_bytes` BYTES(1)',
         ],
         [
             Column(
@@ -840,6 +870,21 @@ def test_column_to_sql(column, expected):
         ],
         [
             bq.SchemaField(
+                name='col_bytes',
+                field_type='BYTES',
+            ),
+            BYTES,
+        ],
+        [
+            bq.SchemaField(
+                name='col_bytes',
+                field_type='BYTES',
+                max_length=1,
+            ),
+            Bytes(bytes=1),
+        ],
+        [
+            bq.SchemaField(
                 name='col_range',
                 field_type='RANGE',
                 range_element_type='DATE',
@@ -958,6 +1003,21 @@ def test_to_datatype(column, expected):
         ],
         [
             bq.SchemaField(
+                name='col_bytes',
+                field_type='BYTES',
+            ),
+            BYTES,
+        ],
+        [
+            bq.SchemaField(
+                name='col_bytes',
+                field_type='BYTES',
+                max_length=1,
+            ),
+            Bytes(bytes=1),
+        ],
+        [
+            bq.SchemaField(
                 name='col_range',
                 field_type='RANGE',
                 range_element_type='DATE',
@@ -1070,6 +1130,23 @@ def test_to_datatype(column, expected):
                 mode=REPEATED,
             ),
             Array(inner=String(characters=1)),
+        ],
+        [
+            bq.SchemaField(
+                name='col_bytes',
+                field_type='BYTES',
+                mode=REPEATED,
+            ),
+            Array(inner=BYTES),
+        ],
+        [
+            bq.SchemaField(
+                name='col_bytes',
+                field_type='BYTES',
+                max_length=1,
+                mode=REPEATED,
+            ),
+            Array(inner=Bytes(bytes=1)),
         ],
         [
             bq.SchemaField(
@@ -1214,6 +1291,18 @@ def test_to_datatype_array(column, expected):
             Column(
                 name='col_string',
                 datatype=String(characters=1),
+                nullable=True,
+            ),
+        ],
+        [
+            bq.SchemaField(
+                name='col_bytes',
+                field_type='BYTES',
+                max_length=1,
+            ),
+            Column(
+                name='col_bytes',
+                datatype=Bytes(bytes=1),
                 nullable=True,
             ),
         ],
@@ -1414,11 +1503,13 @@ def test_to_liti_materialized_view():
         [INT64, Numeric(precision=1, scale=0), True],
         [INT64, BigNumeric(precision=1, scale=0), True],
         [INT64, STRING, False],
+        [INT64, BYTES, False],
         [FLOAT64, INT64, False],
         [FLOAT64, FLOAT64, False],
         [FLOAT64, Numeric(precision=1, scale=0), False],
         [FLOAT64, BigNumeric(precision=1, scale=0), False],
         [FLOAT64, STRING, False],
+        [FLOAT64, BYTES, False],
         [Numeric(precision=1, scale=0), INT64, False],
         [Numeric(precision=1, scale=0), FLOAT64, True],
         [Numeric(precision=1, scale=0), Numeric(precision=1, scale=0), False],
@@ -1428,6 +1519,7 @@ def test_to_liti_materialized_view():
         [Numeric(precision=1, scale=0), BigNumeric(precision=2, scale=0), True],
         [Numeric(precision=1, scale=0), BigNumeric(precision=1, scale=1), True],
         [Numeric(precision=1, scale=0), STRING, False],
+        [Numeric(precision=1, scale=0), BYTES, False],
         [BigNumeric(precision=1, scale=0), INT64, False],
         [BigNumeric(precision=1, scale=0), FLOAT64, True],
         [BigNumeric(precision=1, scale=0), Numeric(precision=1, scale=0), False],
@@ -1437,6 +1529,7 @@ def test_to_liti_materialized_view():
         [BigNumeric(precision=1, scale=0), BigNumeric(precision=2, scale=0), True],
         [BigNumeric(precision=1, scale=0), BigNumeric(precision=1, scale=1), True],
         [BigNumeric(precision=1, scale=0), STRING, False],
+        [BigNumeric(precision=1, scale=0), BYTES, False],
         [STRING, INT64, False],
         [STRING, FLOAT64, False],
         [STRING, Numeric(precision=1, scale=0), False],
@@ -1444,6 +1537,9 @@ def test_to_liti_materialized_view():
         [STRING, STRING, False],
         [STRING, String(characters=1), False],
         [STRING, String(characters=2), False],
+        [STRING, BYTES, False],
+        [STRING, Bytes(bytes=1), False],
+        [STRING, Bytes(bytes=2), False],
         [String(characters=1), INT64, False],
         [String(characters=1), FLOAT64, False],
         [String(characters=1), Numeric(precision=1, scale=0), False],
@@ -1451,6 +1547,29 @@ def test_to_liti_materialized_view():
         [String(characters=1), STRING, True],
         [String(characters=1), String(characters=1), False],
         [String(characters=1), String(characters=2), True],
+        [String(characters=1), BYTES, False],
+        [String(characters=1), Bytes(bytes=1), False],
+        [String(characters=1), Bytes(bytes=2), False],
+        [BYTES, INT64, False],
+        [BYTES, FLOAT64, False],
+        [BYTES, Numeric(precision=1, scale=0), False],
+        [BYTES, BigNumeric(precision=1, scale=0), False],
+        [BYTES, STRING, False],
+        [BYTES, String(characters=1), False],
+        [BYTES, String(characters=2), False],
+        [BYTES, BYTES, False],
+        [BYTES, Bytes(bytes=1), False],
+        [BYTES, Bytes(bytes=2), False],
+        [Bytes(bytes=1), INT64, False],
+        [Bytes(bytes=1), FLOAT64, False],
+        [Bytes(bytes=1), Numeric(precision=1, scale=0), False],
+        [Bytes(bytes=1), BigNumeric(precision=1, scale=0), False],
+        [Bytes(bytes=1), STRING, False],
+        [Bytes(bytes=1), String(characters=1), False],
+        [Bytes(bytes=1), String(characters=2), False],
+        [Bytes(bytes=1), BYTES, True],
+        [Bytes(bytes=1), Bytes(bytes=1), False],
+        [Bytes(bytes=1), Bytes(bytes=2), True],
     ],
 )
 def test_can_coerce(from_dt, to_dt, expected):
@@ -2510,6 +2629,7 @@ def test_validate_big_numeric(db_backend: BigQueryDbBackend, context: Mock, prec
         [Numeric(), NoRaise()],
         [BigNumeric(), NoRaise()],
         [STRING, NoRaise()],
+        [BYTES, NoRaise()],
         [JSON, NoRaise()],
         [DATE, NoRaise()],
         [TIME, NoRaise()],

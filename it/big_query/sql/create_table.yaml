@@ -25,11 +25,20 @@ operations:
       - name: t1_numeric_col
         datatype:
           type: NUMERIC
+        nullable: true
+        rounding_mode: ROUND_HALF_EVEN
+      - name: t1_numeric_4_1_col
+        datatype:
+          type: NUMERIC
           precision: 4
           scale: 1
         nullable: true
         rounding_mode: ROUND_HALF_EVEN
       - name: t1_bignumeric_col
+        datatype:
+          type: BIGNUMERIC
+        nullable: true
+      - name: t1_bignumeric_8_2_col
         datatype:
           type: BIGNUMERIC
           precision: 8
@@ -40,6 +49,19 @@ operations:
         nullable: true
       - name: t1_string_col
         datatype: STRING
+        nullable: true
+      - name: t1_string_1_col
+        datatype:
+          type: STRING
+          characters: 1
+        nullable: true
+      - name: t1_bytes_col
+        datatype: BYTES
+        nullable: true
+      - name: t1_bytes_1_col
+        datatype:
+          type: BYTES
+          bytes: 1
         nullable: true
       - name: t1_json_col
         datatype: JSON

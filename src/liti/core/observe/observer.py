@@ -1,6 +1,6 @@
 from liti.core.context import Context
 
-from liti.core.model.v1.datatype import Array, BigNumeric, Float, Int, Numeric
+from liti.core.model.v1.datatype import Array, BigNumeric, Bytes, Float, Int, Numeric, String
 from liti.core.model.v1.schema import MaterializedView, Partitioning, Schema, Table, View
 
 
@@ -58,6 +58,12 @@ class Validator:
         pass
 
     def validate_big_numeric(self, node: BigNumeric, context: Context):
+        pass
+
+    def validate_string(self, node: String, context: Context):
+        pass
+
+    def validate_bytes(self, node: Bytes, context: Context):
         pass
 
     def validate_array(self, node: Array, context: Context):

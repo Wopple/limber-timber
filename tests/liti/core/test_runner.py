@@ -6,8 +6,8 @@ from pytest import fixture, mark
 
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.context import Context
-from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, INT64, JSON, \
-    Numeric, Range, STRING, Struct, TIME, TIMESTAMP
+from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, BYTES, Bytes, DATE, DATE_TIME, FLOAT64, GEOGRAPHY, \
+    INT64, JSON, Numeric, Range, STRING, String, Struct, TIME, TIMESTAMP
 from liti.core.model.v1.operation.data.column import AddColumn
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.schema import Column, ColumnName, ForeignKey, ForeignReference, IntervalLiteral, Partitioning, \
@@ -57,9 +57,14 @@ def test_all_datatypes(db_backend: MemoryDbBackend, meta_backend: MemoryMetaBack
             Column('col_int_64_bits', INT64),
             Column('col_float_64_bits', FLOAT64),
             Column('col_geography', GEOGRAPHY),
-            Column('col_numeric', Numeric(precision=38, scale=9)),
-            Column('col_big_numeric', BigNumeric(precision=76, scale=38)),
+            Column('col_numeric', Numeric()),
+            Column('col_numeric_4_1', Numeric(precision=4, scale=1)),
+            Column('col_big_numeric', BigNumeric()),
+            Column('col_big_numeric_8_2', BigNumeric(precision=8, scale=2)),
             Column('col_string', STRING),
+            Column('col_string_1', String(characters=1)),
+            Column('col_bytes', BYTES),
+            Column('col_bytes_1', Bytes(bytes=1)),
             Column('col_json', JSON),
             Column('col_date', DATE),
             Column('col_time', TIME),

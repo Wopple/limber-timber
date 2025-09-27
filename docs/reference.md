@@ -487,6 +487,12 @@ The `KIND` class constant is the string value to use in the operation file to sp
         - type
         - characters
 
+::: liti.core.model.v1.datatype.Bytes
+    options:
+      members:
+        - type
+        - bytes
+
 ::: liti.core.model.v1.datatype.Json
     options:
       members:

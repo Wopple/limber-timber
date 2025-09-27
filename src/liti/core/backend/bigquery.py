@@ -8,8 +8,8 @@ from liti.core.backend.base import CreateRelation, DbBackend, MetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.context import Context
 from liti.core.error import Unsupported, UnsupportedError
-from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Datatype, DATE, Date, DATE_TIME, DateTime, Float, \
-    FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, String, Struct, TIME, TIMESTAMP, Timestamp
+from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Bytes, Datatype, DATE, Date, DATE_TIME, DateTime, \
+    Float, FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, String, Struct, TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
@@ -67,6 +67,8 @@ def to_field_type(datatype: Datatype) -> str:
         return 'BIGNUMERIC'
     elif isinstance(datatype, String):
         return 'STRING'
+    elif isinstance(datatype, Bytes):
+        return 'BYTES'
     elif datatype == JSON:
         return 'JSON'
     elif datatype == DATE:
@@ -133,6 +135,8 @@ def to_max_length(datatype: Datatype) -> int | None:
         return to_max_length(datatype.inner)
     elif isinstance(datatype, String):
         return datatype.characters
+    elif isinstance(datatype, Bytes):
+        return datatype.bytes
     else:
         return None
 
@@ -320,6 +324,11 @@ def datatype_to_sql(datatype: Datatype) -> str:
             return 'STRING'
         else:
             return f'STRING({datatype.characters})'
+    elif isinstance(datatype, Bytes):
+        if datatype.bytes is None:
+            return 'BYTES'
+        else:
+            return f'BYTES({datatype.bytes})'
     elif datatype == JSON:
         return 'JSON'
     elif datatype == DATE:
@@ -470,6 +479,8 @@ def to_datatype(schema_field: bq.SchemaField) -> Datatype:
         )
     elif field_type == 'STRING':
         return String(characters=schema_field.max_length)
+    elif field_type == 'BYTES':
+        return Bytes(bytes=schema_field.max_length)
     elif field_type == 'JSON':
         return JSON
     elif field_type == 'DATE':
@@ -737,6 +748,15 @@ def can_coerce_string(from_dt: String, to_dt: Any) -> bool:
         return False
 
 
+def can_coerce_bytes(from_dt: Bytes, to_dt: Any) -> bool:
+    if isinstance(to_dt, Bytes):
+        return from_dt.bytes is not None and (
+            to_dt.bytes is None or from_dt.bytes < to_dt.bytes
+        )
+    else:
+        return False
+
+
 def can_coerce(from_dt: Any, to_dt: Any) -> bool:
     if from_dt == INT64:
         return can_coerce_int(to_dt)
@@ -746,6 +766,8 @@ def can_coerce(from_dt: Any, to_dt: Any) -> bool:
         return can_coerce_big_numeric(from_dt, to_dt)
     elif isinstance(from_dt, String):
         return can_coerce_string(from_dt, to_dt)
+    elif isinstance(from_dt, Bytes):
+        return can_coerce_bytes(from_dt, to_dt)
     else:
         return False
 
@@ -1454,6 +1476,14 @@ class BigQueryDbBackend(DbBackend):
 
         if not (max(1, node.scale) <= node.precision <= node.scale + 38):
             raise ValueError(f'Precision must be between {max(1, node.scale)} and {node.scale + 38}: {node.precision}')
+
+    def validate_string(self, node: String, context: Context):
+        if node.characters is not None and node.characters <= 0:
+            raise ValueError(f'String.characters must be positive: {node.characters}')
+
+    def validate_bytes(self, node: Bytes, context: Context):
+        if node.bytes is not None and node.bytes <= 0:
+            raise ValueError(f'Bytes.bytes must be positive: {node.bytes}')
 
     def validate_array(self, node: Array, context: Context):
         if isinstance(node.inner, Array):

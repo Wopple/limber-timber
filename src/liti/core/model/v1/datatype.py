@@ -84,6 +84,18 @@ class String(Datatype):
             return nxt(self)
 
 
+class Bytes(Datatype):
+    type: Literal['BYTES'] = 'BYTES'
+    bytes: int | None = None
+
+    @model_serializer(mode='wrap')
+    def serialize(self, nxt: SerializerFunctionWrapHandler) -> str | dict[str, Any]:
+        if self.bytes is None:
+            return self.type
+        else:
+            return nxt(self)
+
+
 class Json(Datatype):
     type: Literal['JSON'] = 'JSON'
 
@@ -174,6 +186,7 @@ INT64 = Int(bits=64)
 FLOAT64 = Float(bits=64)
 GEOGRAPHY = Geography()
 STRING = String()
+BYTES = Bytes()
 JSON = Json()
 DATE = Date()
 TIME = Time()
@@ -200,6 +213,8 @@ def parse_datatype(data: Datatype | str | dict[str, Any]) -> Datatype:
             return GEOGRAPHY
         elif data == 'STRING':
             return STRING
+        elif data == 'BYTES':
+            return BYTES
         elif data == 'JSON':
             return JSON
         elif data == 'DATE':
@@ -224,6 +239,10 @@ def parse_datatype(data: Datatype | str | dict[str, Any]) -> Datatype:
             return Numeric(precision=data.get('precision'), scale=data.get('scale'))
         elif type_ == 'BIGNUMERIC':
             return BigNumeric(precision=data.get('precision'), scale=data.get('scale'))
+        elif type_ == 'STRING':
+            return String(characters=data.get('characters'))
+        elif type_ == 'BYTES':
+            return Bytes(bytes=data.get('bytes'))
         elif type_ == 'RANGE':
             return Range(kind=data['kind'])
         elif type_ == 'ARRAY':

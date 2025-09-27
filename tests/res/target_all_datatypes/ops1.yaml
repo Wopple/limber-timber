@@ -37,15 +37,31 @@ operations:
       - name: col_numeric
         datatype:
           type: NUMERIC
-          precision: 38
-          scale: 9
+      - name: col_numeric_4_1
+        datatype:
+          type: NUMERIC
+          precision: 4
+          scale: 1
       - name: col_big_numeric
         datatype:
           type: BIGNUMERIC
-          precision: 76
-          scale: 38
+      - name: col_big_numeric_8_2
+        datatype:
+          type: BIGNUMERIC
+          precision: 8
+          scale: 2
       - name: col_string
         datatype: STRING
+      - name: col_string_1
+        datatype:
+          type: STRING
+          characters: 1
+      - name: col_bytes
+        datatype: BYTES
+      - name: col_bytes_1
+        datatype:
+          type: BYTES
+          bytes: 1
       - name: col_json
         datatype: JSON
       - name: col_date
