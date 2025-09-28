@@ -21,19 +21,19 @@ class MemoryDbBackend(DbBackend):
         tables = [
             CreateTable(table=table)
             for name, table in self.tables.items()
-            if name.database == database and name.schema == schema
+            if name.database == database and name.schema_name == schema
         ]
 
         views = [
             CreateView(view=view)
             for name, view in self.views.items()
-            if name.database == database and name.schema == schema
+            if name.database == database and name.schema_name == schema
         ]
 
         materialized_views = [
             CreateMaterializedView(materialized_view=materialized_view)
             for name, materialized_view in self.materialized_views.items()
-            if name.database == database and name.schema == schema
+            if name.database == database and name.schema_name == schema
         ]
 
         return tables + materialized_views + views

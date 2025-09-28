@@ -5,7 +5,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: kms_key_name_table
       columns:
       - name: col_date
@@ -15,6 +15,6 @@ operations:
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: kms_key_name_table
     key_name: my/new/key/name

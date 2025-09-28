@@ -5,7 +5,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: column_field_table
       columns:
       - name: col_struct

@@ -168,7 +168,7 @@ class ColumnName(Identifier):
 
 class QualifiedName(LitiModel):
     database: DatabaseName | None = None
-    schema: SchemaName | None = None
+    schema_name: SchemaName | None = None
     name: Identifier | None = None
 
     def __init__(self, name: str | None = None, /, **kwargs):
@@ -191,12 +191,12 @@ class QualifiedName(LitiModel):
 
             super().__init__(
                 database=database_part and DatabaseName(database_part),
-                schema=schema_part and SchemaName(schema_part),
+                schema_name=schema_part and SchemaName(schema_part),
                 name=name_part and Identifier(name_part),
             )
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.database, self.schema, self.name))
+        return hash((self.__class__.__name__, self.database, self.schema_name, self.name))
 
     def __str__(self) -> str:
         return self.string
@@ -208,8 +208,8 @@ class QualifiedName(LitiModel):
         if self.database:
             parts.append(self.database.string)
 
-        if self.schema:
-            parts.append(self.schema.string)
+        if self.schema_name:
+            parts.append(self.schema_name.string)
 
         if self.name:
             parts.append(self.name.string)
@@ -238,20 +238,20 @@ class QualifiedName(LitiModel):
 
             return {
                 'database': database_part and DatabaseName(database_part),
-                'schema': schema_part and SchemaName(schema_part),
+                'schema_name': schema_part and SchemaName(schema_part),
                 'name': name_part and Identifier(name_part),
             }
         else:
             return data
 
     def is_fully_qualified(self) -> bool:
-        if self.database and self.schema and self.name:
+        if self.database and self.schema_name and self.name:
             return True
         else:
             return False
 
     def is_schema(self) -> bool:
-        if self.database and self.schema and self.name is None:
+        if self.database and self.schema_name and self.name is None:
             return True
         else:
             return False

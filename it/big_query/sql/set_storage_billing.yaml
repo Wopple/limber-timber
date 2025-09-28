@@ -3,5 +3,5 @@ operations:
 - kind: set_storage_billing
   data:
     schema_name:
-      schema: test_schema_1
+      schema_name: test_schema_1
     storage_billing: PHYSICAL

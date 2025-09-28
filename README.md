@@ -99,7 +99,7 @@ operations:
     table:
       name:
         database: your_project
-        schema: your_dataset
+        schema_name: your_dataset
         table_name: users
       columns:
       - name: id
@@ -116,7 +116,7 @@ operations:
   data:
     table_name:
       database: your_project
-      schema: your_dataset
+      schema_name: your_dataset
       table_name: users
     from_name: name
     to_name: firstname
@@ -124,7 +124,7 @@ operations:
   data:
     table_name:
       database: your_project
-      schema: your_dataset
+      schema_name: your_dataset
       table_name: users
     column:
       name: lastname

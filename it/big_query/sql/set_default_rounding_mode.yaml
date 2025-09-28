@@ -3,7 +3,7 @@ operations:
 - kind: set_default_rounding_mode
   data:
     entity_name:
-      schema: test_schema_1
+      schema_name: test_schema_1
     rounding_mode: ROUND_HALF_AWAY_FROM_ZERO
 - kind: set_default_rounding_mode
   data:

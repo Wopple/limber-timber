@@ -3,7 +3,7 @@ operations:
 - kind: set_friendly_name
   data:
     entity_name:
-      schema: test_schema_1
+      schema_name: test_schema_1
     friendly_name: schema_friendly
 - kind: set_friendly_name
   data:

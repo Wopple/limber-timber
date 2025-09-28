@@ -26,7 +26,7 @@ data:
   table:
     name:
       database: recordly
-      schema: auth
+      schema_name: auth
       name: user_resource_access
     columns:
     - name: user_id
@@ -128,7 +128,7 @@ Example template:
 operation_kinds:
 - create_table
 root_type: QualifiedName
-path: schema
+path: schema_name
 value: staging_schema
 full_match:
   table:
@@ -163,11 +163,11 @@ value. The template will search nested structures in this way to find that locat
 `list`, or `set`, all values within that collection will be explored. So a template that encounters a `list` will
 replace a field nested within each list item. When a path encounters a `dict`, the next string in the path is instead
 used to look up a key within that dict. Currently only `dict[str, Any]` is supported in this way. In the example, the
-value being replaced is the `schema` field within each `QualifiedName`
+value being replaced is the `schema_name` field within each `QualifiedName`
 
-> Note: `schema` is a sub-class of `ValidatedString` which stores its string value in a field named `string`. However,
-> we do not use `schema.string` for the path as a convenience due to special handling. This applies to every
-> `ValidatedString`.
+> Note: `schema_name` is a sub-class of `ValidatedString` which stores its string value in a field named `string`.
+> However, we do not use `schema_name.string` for the path as a convenience due to special handling. This applies to
+> every `ValidatedString`.
 
 This field is required.
 
@@ -212,9 +212,9 @@ Example template file:
 - root_type: QualifiedName
   path: database
   value: replacement_database
-# within all `QualifiedName`s, replace the schema value with "replacement_schema"
+# within all `QualifiedName`s, replace the schema_name value with "replacement_schema"
 - root_type: QualifiedName
-  path: schema
+  path: schema_name
   value: replacement_schema
 ```
 

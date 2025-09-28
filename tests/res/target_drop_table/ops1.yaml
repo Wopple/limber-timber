@@ -5,7 +5,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: revert_table
       columns:
       - name: col_bool
@@ -14,5 +14,5 @@ operations:
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: revert_table

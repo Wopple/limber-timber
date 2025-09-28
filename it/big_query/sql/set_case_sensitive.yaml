@@ -3,10 +3,10 @@ operations:
 - kind: set_case_sensitive
   data:
     schema_name:
-      schema: test_schema_1
+      schema_name: test_schema_1
     case_sensitive: false
 - kind: set_case_sensitive
   data:
     schema_name:
-      schema: test_schema_2
+      schema_name: test_schema_2
     case_sensitive: true

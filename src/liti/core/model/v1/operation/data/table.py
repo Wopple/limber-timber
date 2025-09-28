@@ -11,7 +11,7 @@ from liti.core.model.v1.schema import ColumnName, ConstraintName, ForeignKey, Id
 class CreateSchema(Operation):
     """ Semantics: `CREATE SCHEMA` """
 
-    schema: Schema
+    schema_object: Schema
 
     KIND: ClassVar[str] = 'create_schema'
 

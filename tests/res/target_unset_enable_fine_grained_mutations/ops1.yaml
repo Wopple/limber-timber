@@ -5,7 +5,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: fine_grained_mutations_table
       columns:
       - name: col_date

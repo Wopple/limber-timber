@@ -10,7 +10,7 @@ The `KIND` class constant is the string value to use in the operation file to sp
     options:
       members:
         - KIND
-        - schema
+        - schema_object
 
 ::: liti.core.model.v1.operation.data.table.DropSchema
     options:
@@ -353,7 +353,7 @@ The `KIND` class constant is the string value to use in the operation file to sp
     options:
       members:
         - database
-        - schema
+        - schema_name
         - name
 
 ::: liti.core.model.v1.schema.PrimaryKey

@@ -5,7 +5,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: source_table
       columns:
       - name: col_bool
@@ -22,7 +22,7 @@ operations:
     materialized_view:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: materialized_view_table
       select_file: ../sql/create_materialized_view.sql
       partitioning:
@@ -47,5 +47,5 @@ operations:
   data:
     materialized_view_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: materialized_view_table

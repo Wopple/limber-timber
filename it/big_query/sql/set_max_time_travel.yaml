@@ -3,9 +3,9 @@ operations:
 - kind: set_max_time_travel
   data:
     schema_name:
-      schema: test_schema_1
+      schema_name: test_schema_1
     duration: P3D
 - kind: set_max_time_travel
   data:
     schema_name:
-      schema: test_schema_2
+      schema_name: test_schema_2

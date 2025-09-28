@@ -47,8 +47,8 @@ def context() -> Mock:
 
 
 def make_schema(name: QualifiedName | None = None) -> bq.Dataset:
-    name = name or QualifiedName(database='test_project', schema='test_dataset')
-    bq_dataset = bq.Dataset(bq.DatasetReference(name.database.string, name.schema.string))
+    name = name or QualifiedName(database='test_project', schema_name='test_dataset')
+    bq_dataset = bq.Dataset(bq.DatasetReference(name.database.string, name.schema_name.string))
     return bq_dataset
 
 
@@ -1891,7 +1891,7 @@ def test_set_description(
     mock_get_entity(bq_client, entity)
 
     if isinstance(entity, bq.Dataset):
-        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+        qualified_name = QualifiedName(database='test_project', schema_name='test_dataset')
     else:
         qualified_name = QualifiedName('test_project.test_dataset.test_name')
 
@@ -1963,7 +1963,7 @@ def test_set_labels(
     mock_get_entity(bq_client, entity)
 
     if isinstance(entity, bq.Dataset):
-        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+        qualified_name = QualifiedName(database='test_project', schema_name='test_dataset')
     else:
         qualified_name = QualifiedName('test_project.test_dataset.test_name')
 
@@ -2035,7 +2035,7 @@ def test_set_tags(
     mock_get_entity(bq_client, entity)
 
     if isinstance(entity, bq.Dataset):
-        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+        qualified_name = QualifiedName(database='test_project', schema_name='test_dataset')
     else:
         qualified_name = QualifiedName('test_project.test_dataset.test_name')
 
@@ -2113,7 +2113,7 @@ def test_set_expiration_timestamp(
     mock_get_entity(bq_client, entity)
 
     if isinstance(entity, bq.Dataset):
-        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+        qualified_name = QualifiedName(database='test_project', schema_name='test_dataset')
     else:
         qualified_name = QualifiedName('test_project.test_dataset.test_name')
 
@@ -2173,7 +2173,7 @@ def test_set_default_rounding_mode(
     mock_get_entity(bq_client, entity)
 
     if isinstance(entity, bq.Dataset):
-        qualified_name = QualifiedName(database='test_project', schema='test_dataset')
+        qualified_name = QualifiedName(database='test_project', schema_name='test_dataset')
     else:
         qualified_name = QualifiedName('test_project.test_dataset.test_name')
 
@@ -2699,8 +2699,8 @@ def test_validate_partitioning(
 
 
 def test_apply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
-    schema = Schema(name=QualifiedName(database='test_project', schema='test_schema'))
-    create_schema = CreateSchema(schema=schema)
+    schema = Schema(name=QualifiedName(database='test_project', schema_name='test_schema'))
+    create_schema = CreateSchema(schema_object=schema)
     bq_client.query_and_wait.return_value = Mock(num_dml_affected_rows=1)
 
     meta_backend.apply_operation(create_schema)
@@ -2720,13 +2720,17 @@ def test_apply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
 
     assert job_config.query_parameters == [
         bq.ScalarQueryParameter('op_kind', 'STRING', 'create_schema'),
-        bq.ScalarQueryParameter('op_data', 'JSON', '{"schema":{"name":{"database":"test_project","schema":"test_schema"}}}'),
+        bq.ScalarQueryParameter(
+            'op_data',
+            'JSON',
+            '{"schema_object":{"name":{"database":"test_project","schema_name":"test_schema"}}}',
+        ),
     ]
 
 
 def test_unapply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
-    schema = Schema(name=QualifiedName(database='test_project', schema='test_schema'))
-    create_schema = CreateSchema(schema=schema)
+    schema = Schema(name=QualifiedName(database='test_project', schema_name='test_schema'))
+    create_schema = CreateSchema(schema_object=schema)
     bq_client.query_and_wait.return_value = Mock(num_dml_affected_rows=1)
 
     meta_backend.unapply_operation(create_schema)
@@ -2744,5 +2748,9 @@ def test_unapply_operation(meta_backend: BigQueryMetaBackend, bq_client: Mock):
 
     assert job_config.query_parameters == [
         bq.ScalarQueryParameter('op_kind', 'STRING', 'create_schema'),
-        bq.ScalarQueryParameter('op_data', 'JSON', '{"schema":{"name":{"database":"test_project","schema":"test_schema"}}}'),
+        bq.ScalarQueryParameter(
+            'op_data',
+            'JSON',
+            '{"schema_object":{"name":{"database":"test_project","schema_name":"test_schema"}}}',
+        ),
     ]

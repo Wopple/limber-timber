@@ -5,8 +5,8 @@ operation_files:
 - sql/set_default_table_expiration.yaml
 - sql/set_default_partition_expiration.yaml
 - sql/set_case_sensitive.yaml
-- sql/set_max_time_travel.yaml
-- sql/set_storage_billing.yaml
+#- sql/set_max_time_travel.yaml
+#- sql/set_storage_billing.yaml
 - sql/create_table.yaml
 - sql/drop_table.yaml
 - sql/rename_table.yaml

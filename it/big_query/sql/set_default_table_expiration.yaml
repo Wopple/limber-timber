@@ -3,14 +3,14 @@ operations:
 - kind: set_default_table_expiration
   data:
     schema_name:
-      schema: test_schema_1
+      schema_name: test_schema_1
     expiration: P100Y
 - kind: set_default_table_expiration
   data:
     schema_name:
-      schema: test_schema_2
+      schema_name: test_schema_2
     expiration: P100Y
 - kind: set_default_table_expiration
   data:
     schema_name:
-      schema: test_schema_2
+      schema_name: test_schema_2

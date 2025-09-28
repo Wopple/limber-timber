@@ -3,7 +3,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from liti.core.context import Context
-from liti.core.model.v1.datatype import Array, BigNumeric, Float, Int, Numeric
+from liti.core.model.v1.datatype import Array, BigNumeric, Bytes, Float, Int, Numeric, String
 from liti.core.model.v1.schema import MaterializedView, Partitioning, Schema, Table, View
 from liti.core.observe.observer import Defaulter, Validator
 
@@ -54,6 +54,10 @@ def validate_model(model: Any, validator: Validator, context: Context):
         validator.validate_numeric(model, context)
     elif isinstance(model, BigNumeric):
         validator.validate_big_numeric(model, context)
+    elif isinstance(model, String):
+        validator.validate_string(model, context)
+    elif isinstance(model, Bytes):
+        validator.validate_bytes(model, context)
     elif isinstance(model, Array):
         validator.validate_array(model, context)
     elif isinstance(model, Partitioning):

@@ -5,7 +5,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: datatype_table
       columns:
       - name: col_int
@@ -24,7 +24,7 @@ operations:
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: datatype_table
     column_name: col_int
     datatype:
@@ -35,7 +35,7 @@ operations:
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: datatype_table
     column_name: col_numeric
     datatype: FLOAT64
@@ -43,7 +43,7 @@ operations:
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: datatype_table
     column_name: col_bignumeric
     datatype:

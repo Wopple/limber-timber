@@ -5,7 +5,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: column_field_table
       columns:
       - name: col_struct
@@ -23,7 +23,7 @@ operations:
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: column_field_table
     field_path: col_struct.field_string
     datatype: STRING
@@ -31,7 +31,7 @@ operations:
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: column_field_table
     field_path: col_struct.field_array_struct.field_array_string
     datatype:

@@ -5,7 +5,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: partitioning_table
       columns:
       - name: col_date
@@ -19,12 +19,12 @@ operations:
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: partitioning_table
     expiration: P30D
 - kind: set_partition_expiration
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: partitioning_table

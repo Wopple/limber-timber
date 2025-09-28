@@ -36,7 +36,7 @@ def to_dataset_ref(project: DatabaseName, dataset: SchemaName) -> bq.DatasetRefe
 
 def extract_dataset_ref(name: QualifiedName | bq.TableListItem) -> bq.DatasetReference:
     if isinstance(name, QualifiedName):
-        return to_dataset_ref(name.database, name.schema)
+        return to_dataset_ref(name.database, name.schema_name)
     elif isinstance(name, bq.TableListItem):
         return bq.DatasetReference(name.project, name.dataset_id)
     else:
@@ -447,7 +447,7 @@ def to_table_name(table: bq.Table | bq.TableReference | bq.TableListItem) -> Qua
     if isinstance(table, bq.Table | bq.TableReference):
         return QualifiedName(
             database=DatabaseName(table.project),
-            schema=SchemaName(table.dataset_id),
+            schema_name=SchemaName(table.dataset_id),
             name=Identifier(table.table_id),
         )
     elif isinstance(table, bq.TableListItem):
@@ -569,7 +569,7 @@ def to_liti_schema(dataset: bq.Dataset) -> Schema:
         max_time_travel = None
 
     return Schema(
-        name=QualifiedName(database=dataset.project, schema=dataset.dataset_id),
+        name=QualifiedName(database=dataset.project, schema_name=dataset.dataset_id),
         friendly_name=dataset.friendly_name,
         description=dataset.description,
         labels=dataset.labels or None,
@@ -1441,7 +1441,7 @@ class BigQueryDbBackend(DbBackend):
         if node.name.database is None or len(node.name.database.string) == 0:
             raise ValueError('Schema requires a database')
 
-        if node.name.schema is None or len(node.name.schema.string) == 0:
+        if node.name.schema_name is None or len(node.name.schema_name.string) == 0:
             raise ValueError('Schema requires a schema')
 
         if node.name.name is not None:
@@ -1580,7 +1580,7 @@ class BigQueryMetaBackend(MetaBackend):
 
     def initialize(self):
         self.client.query_and_wait(
-            f'CREATE SCHEMA IF NOT EXISTS `{self.table_name.database}.{self.table_name.schema}`;\n'
+            f'CREATE SCHEMA IF NOT EXISTS `{self.table_name.database}.{self.table_name.schema_name}`;\n'
             f'\n'
             f'CREATE TABLE IF NOT EXISTS `{self.table_name}` (\n'
             f'    idx INT64 NOT NULL,\n'

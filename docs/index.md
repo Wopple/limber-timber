@@ -13,6 +13,24 @@ I always wanted but never existed (until now).
 Currently only Big Query is supported as that is what I'm using at work. The codebase is written to support different
 backends, and I plan to implement them eventually. Pull requests are welcome.
 
+# Installation
+
+Limber Timber is distributed through [PyPI](https://pypi.org/project/pip/). This means it can be installed through a
+variety of common tools. For example:
+
+```shell
+# for CLI usage
+poetry add --dev limber-timber
+
+# for library usage
+poetry add limber-timber
+
+# check that it is installed
+poetry run liti
+```
+
+# Features
+
 ### Migrations Written in Data
 
 Data is trivial to parse and thus easy to manipulate. You describe the migrations in data, and Limber Timber does the

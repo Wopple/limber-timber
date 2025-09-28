@@ -12,13 +12,13 @@ class CreateSchemaOps(OperationOps):
         self.context = context
 
     def up(self):
-        self.db_backend.create_schema(self.op.schema)
+        self.db_backend.create_schema(self.op.schema_object)
 
     def down(self) -> d.DropSchema:
-        return d.DropSchema(schema_name=self.op.schema.name)
+        return d.DropSchema(schema_name=self.op.schema_object.name)
 
     def is_up(self) -> bool:
-        return self.db_backend.has_schema(self.op.schema.name)
+        return self.db_backend.has_schema(self.op.schema_object.name)
 
 
 class DropSchemaOps(OperationOps):
@@ -34,7 +34,7 @@ class DropSchemaOps(OperationOps):
     def down(self) -> d.CreateSchema:
         sim_db = self.simulate(self.meta_backend.get_previous_operations())
         sim_schema = sim_db.get_schema(self.op.schema_name)
-        return d.CreateSchema(schema=sim_schema)
+        return d.CreateSchema(schema_object=sim_schema)
 
     def is_up(self) -> bool:
         return not self.db_backend.has_schema(self.op.schema_name)

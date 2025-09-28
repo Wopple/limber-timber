@@ -2,9 +2,9 @@ version: 1
 operations:
 - kind: create_schema
   data:
-    schema:
+    schema_object:
       name:
-        schema: test_schema_1
+        schema_name: test_schema_1
       friendly_name: s1_friendly
       description: s1_description
       labels:
@@ -18,9 +18,9 @@ operations:
       storage_billing: LOGICAL
 - kind: create_schema
   data:
-    schema:
+    schema_object:
       name:
-        schema: test_schema_2
+        schema_name: test_schema_2
       default_rounding_mode: ROUND_HALF_EVEN
       is_case_sensitive: false
       storage_billing: PHYSICAL

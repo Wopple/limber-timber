@@ -5,7 +5,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: revert_table
       columns:
       - name: col_bool
@@ -15,7 +15,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: all_pos_table
       columns:
       - name: col_bool
@@ -34,7 +34,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: all_neg_table
       columns:
       - name: col_bool
@@ -53,7 +53,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: only_year_table
       columns:
       - name: col_bool
@@ -65,7 +65,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: only_month_table
       columns:
       - name: col_bool
@@ -77,7 +77,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: only_day_table
       columns:
       - name: col_bool
@@ -89,7 +89,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: only_hour_table
       columns:
       - name: col_bool
@@ -101,7 +101,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: only_minute_table
       columns:
       - name: col_bool
@@ -113,7 +113,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: only_second_table
       columns:
       - name: col_bool
@@ -125,7 +125,7 @@ operations:
     table:
       name:
         database: my_project
-        schema: my_dataset
+        schema_name: my_dataset
         name: only_microsecond_table
       columns:
       - name: col_bool

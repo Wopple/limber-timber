@@ -1,12 +1,12 @@
-# match the table_param and replace its schema
+# match the table_param and replace its schema_name
 - operation_kinds:
   - create_view
   root_type: View
-  path: entity_names.table_param.schema
+  path: entity_names.table_param.schema_name
   value: staging_schema
-# match the function_param and replace its schema
+# match the function_param and replace its schema_name
 - operation_kinds:
   - create_view
   root_type: View
-  path: entity_names.function_param.schema
+  path: entity_names.function_param.schema_name
   value: functions_schema

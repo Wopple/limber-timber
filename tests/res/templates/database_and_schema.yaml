@@ -2,7 +2,7 @@
 - root_type: QualifiedName
   path: database
   value: new_project
-# match all QualifiedName.schema, and replace their values with "new_dataset"
+# match all QualifiedName.schema_name, and replace their values with "new_dataset"
 - root_type: QualifiedName
-  path: schema
+  path: schema_name
   value: new_dataset

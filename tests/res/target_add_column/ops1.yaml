@@ -11,7 +11,7 @@ operations:
   data:
     table_name:
       database: my_project
-      schema: my_dataset
+      schema_name: my_dataset
       name: revert_table
     column:
       name: add_col

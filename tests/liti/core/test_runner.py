@@ -1040,7 +1040,7 @@ def test_apply_templates():
         ),
         Template(
             root_type=QualifiedName,
-            path=['schema'],
+            path=['schema_name'],
             value='new_dataset',
         ),
     ]
@@ -1048,11 +1048,11 @@ def test_apply_templates():
     apply_templates(operations, templates)
 
     assert table_name.database.string == 'new_project'
-    assert table_name.schema.string == 'new_dataset'
+    assert table_name.schema_name.string == 'new_dataset'
     assert foreign_table_name.database.string == 'new_project'
-    assert foreign_table_name.schema.string == 'new_dataset'
+    assert foreign_table_name.schema_name.string == 'new_dataset'
     assert add_table_name.database.string == 'new_project'
-    assert add_table_name.schema.string == 'new_dataset'
+    assert add_table_name.schema_name.string == 'new_dataset'
 
 
 @mark.parametrize(
