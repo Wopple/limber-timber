@@ -30,4 +30,5 @@ plugins:
 nav:
 - Home: index.md
 - Learn: learn.md
+- How Tos: how_tos.md
 - Reference: reference.md
