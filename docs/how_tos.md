@@ -2,13 +2,13 @@ Below are a collection of short step-by-step guides to perform tasks with Limber
 
 # Hello World
 
-This is a minimal example of creating a table.
+This is a minimal example of creating a Big Query table using the CLI.
 
 - the runner creates a Big Query dataset for storing the metadata named `my_project.my_migrations`
 - the runner creates a metadata table named `my_project.my_migrations.hello_world`
 - runs a dry run to show the migrations that will be applied
-- the migrations create a Big Query dataset named `my_project.my_dataset`
-- the migrations create a table named `my_project.my_dataset.my_table`
+- the migrations create a Big Query dataset named `my_project.hello_world`
+- the migrations create a table named `my_project.hello_world.my_table`
 
 ---
 
@@ -24,13 +24,13 @@ mkdir migrations
 # ./migrations/manifest.yaml
 version: 1
 operation_files:
-- sql/hello_world.yaml
+- ops/hello_world.yaml
 ```
 
 3) Create the operation file.
 
 ```yaml
-# ./migrations/sql/hello_world.yaml
+# ./migrations/ops/hello_world.yaml
 version: 1
 operations:
 - kind: create_schema
@@ -38,11 +38,11 @@ operations:
     schema_object:
       name:
         project: my_project
-        schema_name: my_dataset
+        schema_name: hello_world
 - kind: create_table
   data:
     table:
-      name: my_project.my_dataset.my_table
+      name: my_project.hello_world.my_table
       columns:
       - name: my_column
         datatype: BOOL
@@ -67,3 +67,156 @@ liti migrate -w \
     --meta bigquery \
     --meta-table-name my_project.my_migrations.hello_world
 ```
+
+Dry runs are the default and wet runs require an explicit flag as a safety precaution.
+
+# Roll Back
+
+Imagine you are iterating on your database design while in development. You want to work with this development cycle:
+
+- apply migrations
+- test things out
+- if it is no good, roll back migrations
+- repeat
+
+Here's what that flow looks like:
+
+1) Update the migrations to add a column.
+
+```yaml
+# ./migrations/manifest.yaml
+version: 1
+operation_files:
+- ops/create_schema.yaml
+- ops/create_table.yaml
+- ops/add_column.yaml # new line
+```
+
+```yaml
+# ./migrations/ops/add_column.yaml
+version: 1
+operations:
+- kind: add_column
+  data:
+    table_name: my_project.my_app.my_table
+    column:
+      name: my_new_column
+      datatype: INT64
+```
+
+2) Apply the updated migrations.
+
+```shell
+liti migrate -w \
+    -t migrations \
+    --db bigquery \
+    --meta bigquery \
+    --meta-table-name my_project.my_migrations.my_app
+```
+
+Now assume you have done some testing and decided against using that new column.
+
+3) Revert the updated migration files.
+
+```yaml
+# ./migrations/manifest.yaml
+version: 1
+operation_files:
+- ops/create_schema.yaml
+- ops/create_table.yaml
+```
+
+```yaml
+# ./migrations/ops/add_column.yaml
+# [file deleted]
+```
+
+4) Run a wet run.
+
+```shell
+liti migrate -w \
+    -t migrations \
+    --db bigquery \
+    --meta bigquery \
+    --meta-table-name my_project.my_migrations.my_app
+```
+
+Oops, that failed.
+
+5) Run a wet run with down migrations enabled.
+
+```shell
+liti migrate -wd \
+    -t migrations \
+    --db bigquery \
+    --meta bigquery \
+    --meta-table-name my_project.my_migrations.my_app
+```
+
+Down migrations are disabled by default and require an explicit flag as a safety precaution.
+
+# Adopt a Database
+
+Imagine you are learning about Limber Timber and are liking what you see. However, you have an existing migration system
+with a lot of incremental migrations. Adopting Limber Timber and replacing your existing migrations is a major burden
+which tips the balance against being worth the effort.
+
+This scenario is made easier with Limber Timber thanks to:
+
+- schema scanning
+- running migrations in memory
+
+Here's how to have Limber Timber adopt an existing database.
+
+1) Scan the schema you want to adopt.
+
+```shell
+liti scan \
+    --db bigquery \
+    --scan-database my_project \
+    --scan-schema my_app \
+    > migrations/ops/adopt.yaml
+```
+
+This will create an operation file that generates the same schema.
+
+However, scanning is not perfect:
+
+- the `create_schema` operation is not included (soon: will be fixed)
+- views may be created before their dependencies (soon: respect `entity_names` dependency order)
+- if you have cyclical foreign keys, it will fail (soon: generate with warning)
+- the generated file is verbose
+- it will scan a migrations table if you have any in the schema
+- scanning will not create templates
+
+Therefore...
+
+2) Make manual adjustments to the generated operations.
+
+3) Create your manifest.
+
+```yaml
+# ./migrations/manifest.yaml
+version: 1
+operation_files:
+- ops/adopt.yaml
+```
+
+4) Run a wet run partially in memory.
+
+Running a wet run will write to both the database schema and the meta table. Either can be configured to run in memory
+to essentially "do nothing." So we are going to run the schema migrations in memory and write to the meta table for real
+so the only persistent change is the creation of the meta table.
+
+```shell
+liti migrate -w \
+    -t migrations \
+    --db memory \
+    --meta bigquery \
+    --meta-table-name my_project.my_migrations.my_app
+```
+
+Now when you run Limber Timber it will assume those migrations have already run. If you run the migrations in a fresh
+environment it will perform the schema migrations you expect.
+
+Adoption complete!

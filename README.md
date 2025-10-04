@@ -47,14 +47,12 @@ These are listed in rough priority order.
 - ✅ Database Specific Validation
 - ➡️ Github Actions
     - ➡️ Release
+- ➡️ Grouped Operation Application
+    - To reduce round trips with the backend and reduce migration time
 - ➡️ Expand Grouped Operations
   - To handle complex operations that do not have atomic support in the backend
-- ➡️ Grouped Operation Application
-  - To reduce round trips with the backend and reduce migration time
 - ✅ Minimize Scan Output
 - ✅ Arbitrary DML SQL Migrations
-- ➡️ Optional Backend Installation
-  - To minimize dependency bloat
 - ➡️ File System Metadata
 - ➡️ SQLite Database
 - ➡️ SQLite Metadata
@@ -62,165 +60,61 @@ These are listed in rough priority order.
 - ➡️ Postgres Metadata
 - ➡️ MySQL Database
 - ➡️ MySQL Metadata
+- ➡️ Optional Backend Installation
+    - To minimize dependency bloat
 
-# Usage
+# Contribution
 
-### Create Migrations
+If you want to contribute, the roadmap is a good place to start. I will only accept contributions if:
 
-1. Create your target manifest
+1. I agree with the design decisions
+2. The code style matches the existing code
 
-> Note: All migration files can use any of these extensions:
-> - `.json`
-> - `.yaml`
-> - `.yml`
+It is highly recommended but not necessary to:
 
-Create a target directory with a manifest file named `manifest.yaml`.
+3. Include unit tests
 
-```yaml
-# target_dir/manifest.yaml
-version: 1
-operation_files:
-- path/to/create_user_table.yaml
-- path/to/enrich_user_name.yaml
-```
+If you have any questions, you can reach out to me on [discord](https://discord.gg/b4jGYACJJy).
 
-2. Create your target migration operations
+### Design Principles
 
-> Tip: Using a subdirectory for the operations files makes it easy to configure your IDE to apply the correct JSON schema.
+- The default behavior is safe and automated
+- The behavior can be configured to be fast and efficient
+- High flexibility to support future and unknown use-cases
+- Prefer supporting narrow use cases well rather than broad use cases poorly
+- Apply heavy importance to the Single Responsibility Principle
+- Put complex logic in easily tested functions
 
-Create the files listed in your manifest.
+### Code Style
 
-```yaml
-# target_dir/path/to/create_user_table.yaml
-version: 1
-operations:
-- kind: create_table
-  data:
-    table:
-      name:
-        database: your_project
-        schema_name: your_dataset
-        table_name: users
-      columns:
-      - name: id
-        datatype: INT64
-      - name: name
-        datatype: STRING
-```
-
-```yaml
-# target_dir/path/to/enrich_user_name.yaml
-version: 1
-operations:
-- kind: rename_column
-  data:
-    table_name:
-      database: your_project
-      schema_name: your_dataset
-      table_name: users
-    from_name: name
-    to_name: firstname
-- kind: add_column
-  data:
-    table_name:
-      database: your_project
-      schema_name: your_dataset
-      table_name: users
-    column:
-      name: lastname
-      datatype: STRING
-```
-
-3. Check what migrations will run
-
-```shell
-poetry run liti migrate \
-    -t target_dir \
-    --db bigquery \
-    --meta bigquery \
-    --meta-table-name your_project.your_dataset._migrations
-```
-
-4. Run the migrations
-
-```shell
-poetry run liti migrate -w \
-    -t target_dir \
-    --db bigquery \
-    --meta bigquery \
-    --meta-table-name your_project.your_dataset._migrations
-```
-
-### Scan Database
-
-You can also scan a schema / table which will print out the operations file that generates that schema / table.
-
-```shell
-# scan a schema
-poetry run liti scan \
-    --db bigquery \
-    --scan-database your_project \
-    --scan-schema your_dataset
-```
-
-```shell
-# scan a table
-poetry run liti scan \
-    --db bigquery \
-    --scan-database your_project \
-    --scan-schema your_dataset \
-    --scan-table your_table
-```
-
-# Learn
-
-Being completely new to this project, you will have no idea where to start. Here. This is where you start. This is a
-crash course on what Limber Timber is and how its put together.
-
-### The Big Picture
-
-Limber Timber uses the `Operation` to describe changes to a database. These operations are pure data. They can be
-serialized to JSON or YAML, and can be deserialized from the same. Developers write JSON or YAML files to describe the
-migrations for their application.
-
-The `Operation` can be enhanced to become an `OperationOps`. This type brings behavior to the data. It allows you to:
-- check if the operation has been applied to the database
-  - useful for recovery from a failure between applying an operation and writing it to the metadata
-- apply the operation, i.e. the "up" migration
-- produce the inverse `Operation` that will perform the "down" migration
-
-Down migrations are inferred from the up migrations, so developers only ever have to write the up migrations.
-
-### Migration Files
-
-Migration files start with a manifest file. The manifest points to the operation files in the order they should be
-applied. Each operation file contains a list of operations in the order they should be applied. In this way,
-```
-# file1
-[op1, op2]
-
-# file2
-[op3]
-```
-is exactly the same as:
-```
-# file1
-[op1]
-
-# file2
-[op2, op3]
-```
-
-The migrational unit is the `Operation`, not the file. Grouping operations into files can help for organization, but
-having a single file with all operations or many files each with one operation are both valid. There are no checksums
-and no need to specially name your files. You can also organize your migrations with sub-directories, just specify the
-paths in the manifest.
-
-One major benefit to this system is if parallel developers add operations, one will merge first, and then the other will
-get a merge conflict. This is much better than having migrations applied out of order (or breaking) after the fact. You
-learn right away about the conflict, and the developer is prompted to resolve it. This benefit assumes all developers
-are using the same style for adding new migrations: either adding a new file to the manifest, or adding a new operation
-to the most recent file.
+- 4-space indentation
+- Prefer single quotes
+  - exceptions
+    - `pyproject.toml`
+    - docstrings
+    - nested f-strings
+- Use newlines to visually separate blocks and conceptual groups of code
+- Include explicit `else` blocks
+  - exceptions
+    - assertive if-statements
+- Naming
+  - balance brevity and clarity: say exactly what is needed
+  - do not restate what is already clear from the context
+- Comments
+  - dos
+    - clarify confusing code
+    - explain the 'why'
+    - first try to explain with the code instead of a comment
+  - do nots
+    - make assumptions about the reader
+    - state that which is explained by the nearby code
+    - cover up for poor code
+    - just because
+- Multiline strings use concatenated single line strings
+  - exceptions
+    - docstrings
+- No `from my.module import *`
+  - instead: `from my import module as md`
 
 ### Python Modules
 
@@ -267,56 +161,3 @@ engine.
 
 This module is for the runners associated with the various ways `liti` can be run. Main code will instantiate a runner
 and run it.
-
-# Contribution
-
-If you want to contribute, the roadmap is a good place to start. I will only accept contributions if:
-
-1. I agree with the design decisions
-2. The code style matches the existing code
-
-It is highly recommended but not necessary to:
-
-1. Include unit tests
-
-If you have any questions, you can reach out to me on [discord](https://discord.gg/b4jGYACJJy).
-
-### Design Principles
-
-- The default behavior is safe and automated
-- The behavior can be configured to be fast and efficient
-- High flexibility to support future and unknown use-cases
-- Prefer supporting narrow use cases well rather than broad use cases poorly
-- Apply heavy importance to the Single Responsibility Principle
-- Put complex logic in easily tested functions
-
-### Code Style
-
-- 4-space indentation
-- Prefer single quotes
-  - exceptions
-    - `pyproject.toml`
-    - docstrings
-    - nested f-strings
-- Use newlines to visually separate blocks and conceptual groups of code
-- Include explicit `else` blocks
-  - exceptions
-    - assertive if-statements
-- Naming
-  - balance brevity and clarity: say exactly what is needed
-  - do not restate what is already clear from the context
-- Comments
-  - dos
-    - clarify confusing code
-    - explain the 'why'
-    - first try to explain with the code instead of a comment
-  - do nots
-    - make assumptions about the reader
-    - state that which is explained by the surrounding code
-    - cover up for poor code
-    - just because
-- Multiline strings use concatenated single line strings
-  - exceptions
-    - docstrings
-- No `from my.module import *`
-  - instead: `from my import module as md`

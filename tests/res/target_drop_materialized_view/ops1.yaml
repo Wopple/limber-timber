@@ -24,7 +24,7 @@ operations:
         database: my_project
         schema_name: my_dataset
         name: materialized_view_table
-      select_file: ../sql/create_materialized_view.sql
+      select_file: ../ops/create_materialized_view.sql
       partitioning:
         kind: TIME
         column: col_date
