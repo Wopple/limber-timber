@@ -2,7 +2,7 @@ from math import isclose
 from types import UnionType
 from typing import Any, Callable, Generator, get_args, get_origin
 
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 
 from liti.core.reflect import recursive_subclasses
 
@@ -163,7 +163,7 @@ class LitiModel(BaseModel):
                 # avoids having to specify '.string' in templates when the field is a ValidatedString
                 yield lambda value: setattr(self, field_name, subclass(value))
             else:
-                yield lambda value: setattr(self, field_name, value)
+                yield lambda value: setattr(self, field_name, TypeAdapter(field_type).validate_python(value))
 
 
 def extract_subclass(ty: type, parent: type) -> type | None:

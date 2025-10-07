@@ -222,7 +222,7 @@ Example template file:
 
 Limber Timber is not without its gotchas.
 
-1. Only modify resources created by your migrations.
+1) Only modify resources created by your migrations.
 
 Limber Timber runs simulations of the migrations in memory as part of its normal behavior. If your operations modify a
 resource that was not created by an earlier operation, that resource will not exist in memory and the runner will fail.
@@ -231,19 +231,19 @@ that schema has to be created before any operations are run, so Limber Timber ca
 recommended you put your metadata in a separate schema that only stores metadata, and create the schema you want to
 manage with an operation.
 
-2. Be careful with table expirations.
+2) Be careful with table expirations.
 
 Limber Timber will not understand that a table was supposed to expire by a certain time. If you create a table with an
 expiration date, it is recommend you do not further modify that resource. It may make sense to create those kinds of
 tables with a dedicated set of migrations.
 
-3. Instantiate your template targets in the operation files.
+3) Instantiate your template targets in the operation files.
 
 Currently, templates will only instantiate `ValidatedString`s for you for convenience. It is not smart enough to
 instantiate models that are `None` when the template is setting some of the fields. This is a temporary limitation that
 is planned to be supported later for improved ergonomics.
 
-4. Be aware of irreversible operations.
+4) Be aware of irreversible operations.
 
 Not all changes can be reversed nicely. This is usually due to limitations in backend support. For example, Big Query
 does not allow adding columns with a `NOT NULL` constraint, nor does it allow updating a column to be `NOT NULL`. It
@@ -252,7 +252,7 @@ would be complicated and high risk to work around this limitation, so Limber Tim
 when one of these situations is encountered and skip that behavior. These warnings can be turned into errors if so
 desired.
 
-5. Be careful of certain failure scenarios.
+5) Be careful of certain failure scenarios.
 
 While Limber Timber does its best to fail in recoverable ways, there are some failure scenarios that require manual
 intervention. Two related scenarios can happen when the backend does not support transactional updates to the schema:
@@ -264,7 +264,7 @@ When running an operation, Limber Timber will first check the schema to see if i
 not try to apply it again. However, if the operation being applied is different from the operation that failed in a
 previous run, it has no way to know about that application to correct the error.
 
-6. Be careful of backend quotas.
+6) Be careful of backend quotas.
 
 This might not be the fault of Limber Timber, but some operations cannot be performed frequently. For example, you can
 only set the storage billing model of a Big Query dataset once every 336 hours. So if your migrations have multiple

@@ -1,0 +1,5 @@
+- root_type: Partitioning
+  path: expiration
+  value: P90D
+  local_match:
+    kind: TIME

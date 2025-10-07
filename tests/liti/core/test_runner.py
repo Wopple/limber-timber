@@ -1009,6 +1009,22 @@ def test_template_database_and_schema(
     assert ColumnName('add_col') in table.column_map
 
 
+def test_template_partition_expiration(
+    db_backend: MemoryDbBackend,
+    meta_backend: MemoryMetaBackend,
+    make_runner: TemplateMakeRunner,
+):
+    table_name = QualifiedName('my_project.my_dataset.template_table')
+    template_files = [Path('tests/res/templates/partition_expiration.yaml')]
+
+    make_runner('target_template_partition_expiration', template_files).run(wet_run=True)
+    table = db_backend.get_table(table_name)
+
+    assert len(db_backend.tables) == 1
+    assert len(meta_backend.get_applied_operations()) == 1
+    assert table.partitioning.expiration == timedelta(days=90)
+
+
 def test_apply_templates():
     table_name = QualifiedName('test_project.test_dataset.test_table')
     foreign_table_name = QualifiedName('test_project.test_dataset.test_foreign_table')

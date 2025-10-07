@@ -220,3 +220,103 @@ Now when you run Limber Timber it will assume those migrations have already run.
 environment it will perform the schema migrations you expect.
 
 Adoption complete!
+
+# Multiple Environments
+
+You have a set of migrations to manage a single schema and the resources within. You want to apply these migrations in
+different environments for different purposes like production and development. This can be done with templates.
+
+1) Create a production template.
+
+```yaml
+# ./migrations/tpl/production.yaml
+
+# set the production database value for all QualifiedNames
+- root_type: QualifiedName
+  path: database
+  value: high_slots
+
+# set the production schema value for all QualifiedNames
+- root_type: QualifiedName
+  path: schema_name
+  value: my_app_production
+
+# set the partition expiration to 1 year for all time partitioned tables
+- root_type: Partitioning
+  path: expiration
+  value: P1Y
+  local_match:
+    kind: TIME
+```
+
+> Note: Limber Timber uses Pydantic for modeling, and Pydantic uses
+> [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601#Durations) for timedeltas.
+
+2) Create a development template.
+
+```yaml
+# ./migrations/tpl/development.yaml
+
+# set the production database value for all QualifiedNames
+- root_type: QualifiedName
+  path: database
+  value: low_slots
+
+# set the production schema value for all QualifiedNames
+- root_type: QualifiedName
+  path: schema_name
+  value: my_app_development
+
+# set the partition expiration to 7 days for all time partitioned tables
+- root_type: Partitioning
+  path: expiration
+  value: P7D
+  local_match:
+    kind: TIME
+```
+
+3) Write your other migrations.
+
+```yaml
+version: 1
+operations:
+- kind: create_schema
+  data:
+    schema_object:
+      name:
+        schema_name: placeholder # can omit the database
+- kind: create_table
+  data:
+    table:
+      name: my_table # can omit the database and schema
+      columns:
+      - name: my_column
+        datatype: BOOL
+      - name: col_date
+        datatype: DATE
+      partitioning:
+        kind: TIME
+        column: col_date
+        time_unit: DAY
+        # can omit the expiration
+- kind: add_column
+  data:
+    table_name: my_table # can omit the database and schema
+    column:
+    - name: my_new_column
+      datatype: INT64
+```
+
+4) Select the environment when running the migrations.
+
+```shell
+liti migrate \
+    -t migrations \
+    --db bigquery \
+    --meta bigquery \
+    --meta-table-name high_slots.my_migrations.my_app_production \
+    --tpl migrations/tpl/production.yaml
+```
+
+> Tip: You can use multiple templates. This means you could have more dimensions beyond environment represented by
+> different sets of templates and select 1 template for each environment. This is done with multiple `--tpl` options.
