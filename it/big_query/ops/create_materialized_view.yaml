@@ -1,0 +1,33 @@
+version: 1
+operations:
+- kind: create_materialized_view
+  data:
+    materialized_view:
+      name: materialized_view_1
+      select_file: sql/create_materialized_view_1.sql
+      entity_names:
+        table_1: table_1
+      columns:
+      - name: t1_bool_col
+        description: "a boolean column"
+      friendly_name: "materialized view friendly"
+      description: "materialized view description"
+      labels:
+        key_1: value_1
+        key_2: value_2
+      expiration_timestamp: "2100-01-01 00:00:00"
+      partitioning:
+        kind: TIME
+        column: t1_date_col
+        column_datatype: DATE
+        time_unit: DAY
+        require_filter: false
+        expiration: P30D
+      clustering:
+      - t1_bool_col
+      - t1_int_col
+      allow_non_incremental_definition: true
+      max_staleness:
+        hour: 4
+      enable_refresh: true
+      refresh_interval: P1D

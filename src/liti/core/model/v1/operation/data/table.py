@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import ClassVar
 
-from pydantic import field_validator
+from pydantic import field_serializer, field_validator, TypeAdapter
 
 from liti.core.model.v1.operation.data.base import EntityKind, Operation
 from liti.core.model.v1.schema import ColumnName, ConstraintName, ForeignKey, Identifier, IntervalLiteral, PrimaryKey, \
@@ -42,6 +42,11 @@ class SetDefaultTableExpiration(Operation):
     def supported_entity_kinds(self) -> set[EntityKind]:
         return {'SCHEMA'}
 
+    @field_serializer('expiration')
+    @classmethod
+    def serialize_timedelta(cls, value: timedelta | None) -> str | None:
+        return value and TypeAdapter(timedelta).dump_python(value, mode='json')
+
 
 class SetDefaultPartitionExpiration(Operation):
     schema_name: QualifiedName
@@ -52,6 +57,11 @@ class SetDefaultPartitionExpiration(Operation):
     @property
     def supported_entity_kinds(self) -> set[EntityKind]:
         return {'SCHEMA'}
+
+    @field_serializer('expiration')
+    @classmethod
+    def serialize_timedelta(cls, value: timedelta | None) -> str | None:
+        return value and TypeAdapter(timedelta).dump_python(value, mode='json')
 
 
 class SetDefaultKmsKeyName(Operation):
@@ -118,6 +128,11 @@ class SetMaxTimeTravel(Operation):
     @property
     def supported_entity_kinds(self) -> set[EntityKind]:
         return {'SCHEMA'}
+
+    @field_serializer('duration')
+    @classmethod
+    def serialize_timedelta(cls, value: timedelta | None) -> str | None:
+        return value and TypeAdapter(timedelta).dump_python(value, mode='json')
 
 
 class SetStorageBilling(Operation):
@@ -208,6 +223,11 @@ class SetPartitionExpiration(Operation):
     @property
     def supported_entity_kinds(self) -> set[EntityKind]:
         return {'TABLE'}
+
+    @field_serializer('expiration')
+    @classmethod
+    def serialize_timedelta(cls, value: timedelta | None) -> str | None:
+        return value and TypeAdapter(timedelta).dump_python(value, mode='json')
 
 
 class SetRequirePartitionFilter(Operation):

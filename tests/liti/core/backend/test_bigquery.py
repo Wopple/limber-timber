@@ -2468,6 +2468,7 @@ def test_create_materialized_view_full(db_backend: BigQueryDbBackend, bq_client:
         tags={'t1': 'v1', 't2': 'v2'},
         expiration_timestamp=datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
         allow_non_incremental_definition=True,
+        max_staleness=IntervalLiteral(hour=1),
         enable_refresh=True,
         refresh_interval=timedelta(hours=1)
     )
@@ -2485,6 +2486,7 @@ def test_create_materialized_view_full(db_backend: BigQueryDbBackend, bq_client:
         f'    tags = [(\'t1\', \'v1\'), (\'t2\', \'v2\')],\n'
         f'    expiration_timestamp = TIMESTAMP \'2025-01-01 00:00:00 UTC\',\n'
         f'    allow_non_incremental_definition = TRUE,\n'
+        f'    max_staleness = INTERVAL \'0-0 0 1:0:0.000000\' YEAR TO SECOND,\n'
         f'    enable_refresh = TRUE,\n'
         f'    refresh_interval_minutes = 60.0\n'
         f')\n'

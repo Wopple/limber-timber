@@ -11,7 +11,7 @@ from liti.core.error import Unsupported, UnsupportedError
 from liti.core.model.v1.datatype import Array, BigNumeric, BOOL, Bytes, Datatype, DATE, Date, DATE_TIME, DateTime, \
     Float, FLOAT64, GEOGRAPHY, Int, INT64, INTERVAL, JSON, Numeric, Range, String, Struct, TIME, TIMESTAMP, Timestamp
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.operation.data.table import CreateSchema, CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.parse import parse_operation
 from liti.core.model.v1.schema import BigLake, Column, ColumnName, ConstraintName, DatabaseName, FieldPath, ForeignKey, \
@@ -24,7 +24,8 @@ REQUIRED = 'REQUIRED'
 NULLABLE = 'NULLABLE'
 REPEATED = 'REPEATED'
 
-ONE_HOUR_IN_SECONDS = 60 * 60
+ONE_MINUTE_IN_SECONDS = 60
+ONE_HOUR_IN_SECONDS = 60 * ONE_MINUTE_IN_SECONDS
 ONE_DAY_IN_SECONDS = 24 * ONE_HOUR_IN_SECONDS
 ONE_SECOND_IN_MILLIS = 1000
 ONE_DAY_IN_MILLIS = ONE_DAY_IN_SECONDS * ONE_SECOND_IN_MILLIS
@@ -386,7 +387,7 @@ def column_to_sql(column: Column) -> str:
     return f'`{column.name}` {datatype_to_sql(column.datatype)}{column_schema}'
 
 
-def partition_to_sql(relation: Relation) -> str:
+def partition_to_sql(relation: Table | MaterializedView) -> str:
     if relation.partitioning:
         partitioning = relation.partitioning
         column = partitioning.column
@@ -395,7 +396,7 @@ def partition_to_sql(relation: Relation) -> str:
             if column:
                 if partitioning.column_datatype:
                     datatype = partitioning.column_datatype
-                elif column in relation.column_map:
+                elif isinstance(relation, Table) and column in relation.column_map:
                     datatype = relation.column_map[column].datatype
                 else:
                     raise ValueError(f'Unable to determine the datatype of partition column: {column}')
@@ -443,7 +444,7 @@ def option_dict_to_sql(option: dict[str, str]) -> str:
     return f'[{join_sql}]'
 
 
-def to_table_name(table: bq.Table | bq.TableReference | bq.TableListItem) -> QualifiedName:
+def to_qualified_name(table: bq.Table | bq.TableReference | bq.TableListItem) -> QualifiedName:
     if isinstance(table, bq.Table | bq.TableReference):
         return QualifiedName(
             database=DatabaseName(table.project),
@@ -534,7 +535,7 @@ def to_column(schema_field: bq.SchemaField) -> Column:
 def to_liti_foreign_key(foreign_key: bq.ForeignKey) -> ForeignKey:
     return ForeignKey(
         name=foreign_key.name,
-        foreign_table_name=to_table_name(foreign_key.referenced_table),
+        foreign_table_name=to_qualified_name(foreign_key.referenced_table),
         references=[
             ForeignReference(
                 local_column_name=ref.referencing_column,
@@ -638,7 +639,7 @@ def to_liti_table(table: bq.Table) -> Table:
         )
 
     return Table(
-        name=to_table_name(table),
+        name=to_qualified_name(table),
         columns=[to_column(f) for f in table.schema],
         primary_key=primary_key,
         foreign_keys=foreign_keys,
@@ -657,7 +658,7 @@ def to_liti_view(table: bq.Table) -> View:
     select_sql = table.view_query
 
     return View(
-        name=to_table_name(table),
+        name=to_qualified_name(table),
         columns=[to_column(f) for f in table.schema],
         friendly_name=table.friendly_name,
         description=table.description,
@@ -704,7 +705,7 @@ def to_liti_materialized_view(table: bq.Table) -> MaterializedView:
     refresh_interval = table.mview_refresh_interval
 
     return MaterializedView(
-        name=to_table_name(table),
+        name=to_qualified_name(table),
         select_sql=select_sql or None,
         partitioning=partitioning,
         clustering=table.clustering_fields or None,
@@ -783,8 +784,14 @@ class BigQueryDbBackend(DbBackend):
 
     def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
         dataset = to_dataset_ref(database, schema)
+        schema = self.get_schema(QualifiedName(database=database, schema_name=schema))
         relation_items = self.client.list_tables(dataset)
-        relations = [self.get_table(to_table_name(item)) for item in relation_items]
+        relations = [self.get_relation(to_qualified_name(item)) for item in relation_items]
+
+        if schema:
+            create_schema = [CreateSchema(schema_object=schema)]
+        else:
+            create_schema = []
 
         tables = [
             CreateTable(table=t)
@@ -804,7 +811,7 @@ class BigQueryDbBackend(DbBackend):
             if isinstance(m, MaterializedView)
         ]
 
-        return tables + materialized_views + views
+        return create_schema + tables + materialized_views + views
 
     def scan_relation(self, name: QualifiedName) -> CreateRelation | None:
         if self.has_table(name):
@@ -1327,11 +1334,14 @@ class BigQueryDbBackend(DbBackend):
         if materialized_view.allow_non_incremental_definition:
             options.append(f'allow_non_incremental_definition = {"TRUE" if materialized_view.allow_non_incremental_definition else "FALSE"}')
 
+        if materialized_view.max_staleness:
+            options.append(f'max_staleness = {interval_literal_to_sql(materialized_view.max_staleness)}')
+
         if materialized_view.enable_refresh:
             options.append(f'enable_refresh = {"TRUE" if materialized_view.enable_refresh else "FALSE"}')
 
         if materialized_view.refresh_interval is not None:
-            options.append(f'refresh_interval_minutes = {materialized_view.refresh_interval.seconds / 60.0}')
+            options.append(f'refresh_interval_minutes = {materialized_view.refresh_interval.total_seconds() / ONE_MINUTE_IN_SECONDS}')
 
         if options:
             joined_options = ',\n    '.join(options)
@@ -1427,8 +1437,8 @@ class BigQueryDbBackend(DbBackend):
         if node.enable_refresh is None:
             node.enable_refresh = True
 
-        if node.refresh_interval_minutes is None:
-            node.refresh_interval_minutes = 30.0
+        if node.refresh_interval is None:
+            node.refresh_interval = timedelta(minutes=30)
 
     # validation methods
 
@@ -1492,7 +1502,7 @@ class BigQueryDbBackend(DbBackend):
     def validate_partitioning(self, node: Partitioning, context: Context):
         if node.kind == 'TIME':
             required = ['kind', 'time_unit', 'require_filter']
-            allowed = required + ['column', 'expiration']
+            allowed = required + ['column', 'column_datatype', 'expiration']
         elif node.kind == 'INT':
             required = ['kind', 'column', 'int_start', 'int_end', 'int_step', 'require_filter']
             allowed = required

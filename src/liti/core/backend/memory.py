@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from liti.core.backend.base import CreateRelation, DbBackend, MetaBackend
 from liti.core.model.v1.datatype import Datatype
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.operation.data.table import CreateSchema, CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.schema import Column, ColumnName, ConstraintName, DatabaseName, ForeignKey, Identifier, \
     IntervalLiteral, MaterializedView, PrimaryKey, QualifiedName, RoundingMode, Schema, SchemaName, StorageBilling, \
@@ -18,6 +18,13 @@ class MemoryDbBackend(DbBackend):
         self.materialized_views: dict[QualifiedName, MaterializedView] = {}
 
     def scan_schema(self, database: DatabaseName, schema: SchemaName) -> list[Operation]:
+        schema = self.get_schema(QualifiedName(database=database, schema_name=schema))
+
+        if schema:
+            create_schema = [CreateSchema(schema_object=schema)]
+        else:
+            create_schema = []
+
         tables = [
             CreateTable(table=table)
             for name, table in self.tables.items()
@@ -36,7 +43,7 @@ class MemoryDbBackend(DbBackend):
             if name.database == database and name.schema_name == schema
         ]
 
-        return tables + materialized_views + views
+        return create_schema + tables + materialized_views + views
 
     def scan_relation(self, name: QualifiedName) -> CreateRelation | None:
         if name in self.tables:

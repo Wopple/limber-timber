@@ -182,7 +182,6 @@ This will create an operation file that generates the same schema.
 
 However, scanning is not perfect:
 
-- the `create_schema` operation is not included (soon: will be fixed)
 - views may be created before their dependencies (soon: respect `entity_names` dependency order)
 - if you have cyclical foreign keys, it will fail (soon: generate with warning)
 - the generated file is verbose

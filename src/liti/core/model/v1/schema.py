@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from string import ascii_letters, digits
 from typing import Any, ClassVar, Iterator, Literal
 
-from pydantic import Field, field_serializer, field_validator, model_serializer, model_validator
+from pydantic import Field, field_serializer, field_validator, model_serializer, model_validator, TypeAdapter
 from pydantic_core.core_schema import FieldSerializationInfo
 
 from liti.core.base import LitiModel
@@ -342,9 +342,9 @@ class Column(LitiModel):
 
     @field_serializer('datatype')
     @classmethod
-    def serialize_datatype(cls, value: Datatype, info: FieldSerializationInfo) -> str | dict[str, Any]:
+    def serialize_datatype(cls, value: Datatype | None, info: FieldSerializationInfo) -> str | dict[str, Any] | None:
         # necessary to call the subclass serializer, otherwise pydantic uses Datatype
-        return value.model_dump(exclude_none=info.exclude_none)
+        return value and value.model_dump(exclude_none=info.exclude_none)
 
     def with_name(self, name: ColumnName) -> 'Column':
         return self.model_copy(update={'name': name})
@@ -377,6 +377,11 @@ class Partitioning(LitiModel):
         # necessary to call the subclass serializer, otherwise pydantic uses Datatype
         return value and value.model_dump(exclude_none=info.exclude_none)
 
+    @field_serializer('expiration')
+    @classmethod
+    def serialize_timedelta(cls, value: timedelta | None) -> str | None:
+        return value and TypeAdapter(timedelta).dump_python(value, mode='json')
+
 
 class BigLake(LitiModel):
     connection_id: str
@@ -406,6 +411,11 @@ class Schema(Entity):
     primary_replica: str | None = None
     max_time_travel: timedelta | None = None
     storage_billing: StorageBilling | None = None
+
+    @field_serializer('default_table_expiration', 'default_partition_expiration', 'max_time_travel')
+    @classmethod
+    def serialize_timedelta(cls, value: timedelta | None) -> str | None:
+        return value and TypeAdapter(timedelta).dump_python(value, mode='json')
 
 
 class Relation(Entity):
@@ -513,6 +523,7 @@ class MaterializedView(Relation, ViewLike):
     partitioning: Partitioning | None = None
     clustering: list[ColumnName] | None = None
     allow_non_incremental_definition: bool | None = None
+    max_staleness: IntervalLiteral | None = None
     enable_refresh: bool | None = None
     refresh_interval: timedelta | None = None
 
@@ -525,3 +536,8 @@ class MaterializedView(Relation, ViewLike):
         }
 
         return self.model_dump(exclude=exclude) == other.model_dump(exclude=exclude)
+
+    @field_serializer('refresh_interval')
+    @classmethod
+    def serialize_timedelta(cls, value: timedelta | None) -> str | None:
+        return value and TypeAdapter(timedelta).dump_python(value, mode='json')

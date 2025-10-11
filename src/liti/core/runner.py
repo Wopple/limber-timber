@@ -13,7 +13,7 @@ from liti.core.function import attach_ops
 from liti.core.logger import NoOpLogger
 from liti.core.model.v1.manifest import Manifest
 from liti.core.model.v1.operation.data.base import Operation
-from liti.core.model.v1.operation.data.table import CreateTable
+from liti.core.model.v1.operation.data.table import CreateSchema, CreateTable
 from liti.core.model.v1.parse import parse_manifest, parse_operations, parse_templates
 from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, QualifiedName
 from liti.core.model.v1.template import Template
@@ -148,11 +148,14 @@ class MigrateRunner:
 
 def sort_operations(operations: list[Operation]) -> list[Operation]:
     """ Sorts the operations into a valid application order """
+    create_schemas: list[CreateSchema] = []
     create_tables: dict[QualifiedName, CreateTable] = {}
     others: list[Operation] = []
 
     for op in operations:
-        if isinstance(op, CreateTable):
+        if isinstance(op, CreateSchema):
+            create_schemas.append(op)
+        elif isinstance(op, CreateTable):
             create_tables[op.table.name] = op
         else:
             others.append(op)
@@ -174,7 +177,7 @@ def sort_operations(operations: list[Operation]) -> list[Operation]:
         for table_name in satisfied_ops:
             del create_tables[table_name]
 
-    return list(sorted_ops.values()) + others
+    return create_schemas + list(sorted_ops.values()) + others
 
 
 class ScanRunner:

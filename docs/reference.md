@@ -434,6 +434,7 @@ The `KIND` class constant is the string value to use in the operation file to sp
         - partitioning
         - clustering
         - allow_non_incremental_definition
+        - max_staleness
         - enable_refresh
         - refresh_interval
 
