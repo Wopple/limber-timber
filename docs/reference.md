@@ -305,6 +305,16 @@ The `KIND` class constant is the string value to use in the operation file to sp
         - description
         - table_name
 
+::: liti.core.model.v1.operation.data.sql.ExecuteSql
+    options:
+      members:
+        - KIND
+        - up
+        - down
+        - is_up
+        - is_down
+        - entity_names
+
 ## Schema Types
 
 ::: liti.core.model.v1.schema.IntervalLiteral
