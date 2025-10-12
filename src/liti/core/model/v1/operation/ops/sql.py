@@ -1,3 +1,4 @@
+from liti.core.context import Context
 from liti.core.model.v1.operation.data.sql import ExecuteSql
 from liti.core.model.v1.operation.ops.base import OperationOps
 
@@ -5,8 +6,9 @@ from liti.core.model.v1.operation.ops.base import OperationOps
 class ExecuteSqlOps(OperationOps):
     op: ExecuteSql
 
-    def __init__(self, op: ExecuteSql):
+    def __init__(self, op: ExecuteSql, context: Context):
         self.op = op
+        self.context = context
 
     def up(self):
         if self.context.target_dir is not None:
@@ -28,15 +30,16 @@ class ExecuteSqlOps(OperationOps):
             down=self.op.up,
             is_up=self.op.is_down,
             is_down=self.op.is_up,
+            entity_names=self.op.entity_names,
         )
 
     def is_up(self) -> bool:
-        if self.context.target_dir is not None:
-            path = self.context.target_dir / self.op.is_up
-        else:
-            path = self.op.is_up
-
         if isinstance(self.op.is_up, str):
+            if self.context.target_dir is not None:
+                path = self.context.target_dir / self.op.is_up
+            else:
+                path = self.op.is_up
+
             with open(path) as f:
                 sql = f.read()
 

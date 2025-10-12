@@ -5,6 +5,7 @@ operation_files:
 - ops/set_default_table_expiration.yaml
 - ops/set_default_partition_expiration.yaml
 - ops/set_case_sensitive.yaml
+# Big Query rate limits some operations
 #- ops/set_max_time_travel.yaml
 #- ops/set_storage_billing.yaml
 - ops/create_table.yaml
@@ -35,3 +36,4 @@ operation_files:
 - ops/set_column_rounding_mode.yaml
 - ops/create_view.yaml
 - ops/create_materialized_view.yaml
+- ops/create_add_function.yaml

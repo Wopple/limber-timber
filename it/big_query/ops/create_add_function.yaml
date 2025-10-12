@@ -1,0 +1,11 @@
+version: 1
+operations:
+- kind: execute_sql
+  data:
+    up: "sql/create_add_function.sql"
+    down: "sql/drop_add_function.sql"
+    is_up: false
+    is_down: "sql/is_add_function_dropped.sql"
+    entity_names:
+      schema:
+        schema_name: placeholder

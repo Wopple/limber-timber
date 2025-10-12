@@ -277,6 +277,7 @@ different environments for different purposes like production and development. T
 3) Write your other migrations.
 
 ```yaml
+# ./migrations/ops/init.yaml
 version: 1
 operations:
 - kind: create_schema
@@ -319,3 +320,65 @@ liti migrate \
 
 > Tip: You can use multiple templates. This means you could have more dimensions beyond environment represented by
 > different sets of templates and select 1 template for each environment. This is done with multiple `--tpl` options.
+
+# Unsupported Operations
+
+Limber Timber adopts the philosophy of supporting narrow use cases well over supporting broad use cases poorly. This
+means there will be missing features. While common use cases are prioritized for development, there will always be
+projects that require some unsupported features. If you find yourself in this situation, you have two options: add
+support for the features, or use the `ExecuteSql` operator.
+
+Conceptually, the `ExecuteSql` operator is very simple, it executes arbitrary SQL. While this does give you a path to do
+anything you want with SQL (some operations are API only), there are caveats:
+
+- little support for templating
+- down migrations must be implemented by you
+- checking for application must be implemented by you
+
+1) Write the operation.
+
+```yaml
+# ./migrations/ops/create_add_function.yaml
+version: 1
+operations:
+- kind: execute_sql
+  data:
+    up: "sql/create_add_function.sql"
+    down: "sql/drop_add_function.sql"
+
+    # false values here ensure the operation is always run, SQL files run a
+    # boolean value query where TRUE means the operation is already applied
+    is_up: false
+    is_down: "sql/is_add_function_dropped.sql"
+
+    # entity_names is able to participate in templating
+    entity_names:
+      schema:
+        database: my_project
+        schema_name: my_functions
+```
+
+2) Write the referenced SQL files.
+
+```sql
+-- ./migrations/sql/create_add_function.yaml
+
+-- OR REPLACE is needed since this file is always being applied
+CREATE OR REPLACE FUNCTION `{schema}.add`(a INT64, b INT64, default_value INT64) RETURNS INT64 AS (
+    COALESCE(a + b, default_value)
+)
+```
+
+```sql
+-- ./migrations/sql/drop_add_function.yaml
+DROP FUNCTION `{schema}.add`
+```
+
+```sql
+-- ./migrations/sql/is_add_function_dropped.yaml
+SELECT COUNT(*) = 0
+FROM `{schema}.INFORMATION_SCHEMA.ROUTINES`
+WHERE
+    routine_name = 'add'
+    AND routine_type = 'FUNCTION'
+```
