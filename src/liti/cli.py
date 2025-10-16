@@ -10,7 +10,7 @@ from liti.core.backend.bigquery import BigQueryDbBackend, BigQueryMetaBackend
 from liti.core.backend.memory import MemoryDbBackend, MemoryMetaBackend
 from liti.core.client.bigquery import BqClient
 from liti.core.context import Context
-from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, QualifiedName
+from liti.core.model.v1.schema import DatabaseName, Identifier, QualifiedName, SchemaName
 from liti.core.runner import MigrateRunner, ScanRunner
 
 

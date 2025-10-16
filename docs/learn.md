@@ -125,6 +125,8 @@ Let's look at the fields of a template in detail.
 Example template:
 
 ```yaml
+files:
+- ops/create_users.yaml
 operation_kinds:
 - create_table
 root_type: QualifiedName
@@ -138,6 +140,14 @@ full_match:
 local_match:
   database: auth_db
 ```
+
+#### files
+
+This is a list of the files this template should consider. These values should match the values found in the manifest.
+If none are provided, all files are considered. In the example, this template will only replace values inside operations
+found within the `ops/create_users.yaml` file.
+
+This field is optional.
 
 #### operation_kinds
 

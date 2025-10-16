@@ -15,20 +15,22 @@ from liti.core.model.v1.manifest import Manifest
 from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateSchema, CreateTable
 from liti.core.model.v1.parse import parse_manifest, parse_operations, parse_templates
-from liti.core.model.v1.schema import DatabaseName, Identifier, SchemaName, QualifiedName
+from liti.core.model.v1.schema import DatabaseName, Identifier, QualifiedName, SchemaName
 from liti.core.model.v1.template import Template
 from liti.core.observe import set_defaults, validate_model
 
 log = logging.getLogger(__name__)
 
 
-def apply_templates(operations: list[Operation], templates: list[Template]):
+def apply_templates(file_operations: list[tuple[Path, list[Operation]]], templates: list[Template]):
     # first collect all the update functions
     update_fns = [
         # setting default values to work around late binding pass-by-reference closures
         lambda fn=update_fn, v=template.value: fn(v)
-        for op in operations
+        for filename, ops in file_operations
         for template in templates
+        if not template.files or filename in {Path(f) for f in template.files}
+        for op in ops
         if not template.operation_kinds or type(op) in [Operation.by_kind(k) for k in template.operation_kinds]
         for root, root_match in (
             op.get_roots(template.root_type, template.full_match)
@@ -82,12 +84,12 @@ class MigrateRunner:
     def target_operations(self) -> list[Operation]:
         if self.context.target_operations is None:
             manifest = self.manifest
-            operations = parse_operations(manifest.operation_files, self.target_dir)
+            file_operations = parse_operations(manifest.operation_files, self.target_dir)
 
             if self.templates:
-                apply_templates(operations, self.templates)
+                apply_templates(file_operations, self.templates)
 
-            self.context.target_operations = operations
+            self.context.target_operations = [op for _, ops in file_operations for op in ops]
 
         return self.context.target_operations
 
@@ -127,12 +129,14 @@ class MigrateRunner:
 
                 up_ops = attach_ops(up_op, self.context)
 
+                # Apply only if not applied already
                 if not up_ops.is_up():
                     logger.info(pformat(up_op, highlight=True))
 
                     if wet_run:
                         up_ops.up()
 
+                # Update the metadata
                 if wet_run:
                     if up:
                         self.meta_backend.apply_operation(op)

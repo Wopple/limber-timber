@@ -21,7 +21,11 @@ class CreateSchema(Operation):
 
 
 class DropSchema(Operation):
-    """ Semantics: `DROP TABLE` """
+    """ Semantics: `DROP SCHEMA`
+
+    The down migration for drop schema does NOT attempt to recreate anything within the schema. It only recreates the
+    schema itself with the same properties it had when dropped. This behavior may change in the future.
+    """
 
     schema_name: QualifiedName
 

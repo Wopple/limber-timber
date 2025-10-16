@@ -1029,27 +1029,43 @@ def test_apply_templates():
     table_name = QualifiedName('test_project.test_dataset.test_table')
     foreign_table_name = QualifiedName('test_project.test_dataset.test_foreign_table')
     add_table_name = QualifiedName('test_project.test_dataset.test_table')
+    ignored_table_name = QualifiedName('test_project.test_dataset.test_ignored_table')
 
-    operations = [
-        CreateTable(table=Table(
-            name=table_name,
-            columns=[Column('col_bool', BOOL)],
-            foreign_keys=[ForeignKey(
-                foreign_table_name=foreign_table_name,
-                references=[ForeignReference(
-                    local_column_name=ColumnName('col_bool'),
-                    foreign_column_name=ColumnName('foreign_col_bool'),
-                )],
-            )],
-        )),
-        AddColumn(
-            table_name=add_table_name,
-            column=Column('col_int', INT64),
+    file_operations = [
+        (
+            Path('ops/ops1.yaml'),
+            [
+                CreateTable(table=Table(
+                    name=table_name,
+                    columns=[Column('col_bool', BOOL)],
+                    foreign_keys=[ForeignKey(
+                        foreign_table_name=foreign_table_name,
+                        references=[ForeignReference(
+                            local_column_name=ColumnName('col_bool'),
+                            foreign_column_name=ColumnName('foreign_col_bool'),
+                        )],
+                    )],
+                )),
+                AddColumn(
+                    table_name=add_table_name,
+                    column=Column('col_int', INT64),
+                ),
+            ],
+        ),
+        (
+            Path('ops/ops2.yaml'),
+            [
+                CreateTable(table=Table(
+                    name=ignored_table_name,
+                    columns=[Column('col_bool', BOOL)],
+                )),
+            ],
         ),
     ]
 
     templates = [
         Template(
+            files=['ops/ops1.yaml'],
             root_type=QualifiedName,
             path=['database'],
             value='new_project',
@@ -1061,14 +1077,20 @@ def test_apply_templates():
         ),
     ]
 
-    apply_templates(operations, templates)
+    apply_templates(file_operations, templates)
 
     assert table_name.database.string == 'new_project'
     assert table_name.schema_name.string == 'new_dataset'
+    assert table_name.name.string == 'test_table'
     assert foreign_table_name.database.string == 'new_project'
     assert foreign_table_name.schema_name.string == 'new_dataset'
+    assert foreign_table_name.name.string == 'test_foreign_table'
     assert add_table_name.database.string == 'new_project'
     assert add_table_name.schema_name.string == 'new_dataset'
+    assert add_table_name.name.string == 'test_table'
+    assert ignored_table_name.database.string == 'test_project'
+    assert ignored_table_name.schema_name.string == 'new_dataset'
+    assert ignored_table_name.name.string == 'test_ignored_table'
 
 
 @mark.parametrize(

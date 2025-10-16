@@ -6,9 +6,8 @@ from liti.core.model.v1.operation.data.base import Operation
 from liti.core.model.v1.operation.data.table import CreateTable
 from liti.core.model.v1.operation.data.view import CreateMaterializedView, CreateView
 from liti.core.model.v1.schema import Column, ColumnName, ConstraintName, DatabaseName, FieldPath, ForeignKey, \
-    Identifier, \
-    IntervalLiteral, MaterializedView, PrimaryKey, Relation, RoundingMode, Schema, SchemaName, StorageBilling, Table, \
-    QualifiedName, View
+    Identifier, IntervalLiteral, MaterializedView, PrimaryKey, QualifiedName, Relation, RoundingMode, Schema, \
+    SchemaName, StorageBilling, Table, View
 from liti.core.observe.observer import Defaulter, Validator
 
 CreateRelation = CreateTable | CreateView | CreateMaterializedView

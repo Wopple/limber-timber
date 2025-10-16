@@ -41,9 +41,8 @@ def parse_operation_file(path: Path) -> list[Operation]:
     return [parse_operation(op['kind'], op['data']) for op in obj['operations']]
 
 
-def parse_operations(operation_files: list[Path], target_dir: Path) -> list[Operation]:
+def parse_operations(operation_files: list[Path], target_dir: Path) -> list[tuple[Path, list[Operation]]]:
     return [
-        operation
+        (filename, parse_operation_file(target_dir.joinpath(filename)))
         for filename in operation_files
-        for operation in parse_operation_file(target_dir.joinpath(filename))
     ]

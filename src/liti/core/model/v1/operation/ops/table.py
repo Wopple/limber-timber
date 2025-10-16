@@ -1,7 +1,6 @@
 from liti.core.context import Context
 from liti.core.model.v1.operation.data import table as d
 from liti.core.model.v1.operation.ops.base import OperationOps
-from liti.core.model.v1.schema import ConstraintName
 
 
 class CreateSchemaOps(OperationOps):
@@ -31,6 +30,7 @@ class DropSchemaOps(OperationOps):
     def up(self):
         self.db_backend.drop_schema(self.op.schema_name)
 
+    # TODO: figure out how to recreate the resources within the schema when it was dropped
     def down(self) -> d.CreateSchema:
         sim_db = self.simulate(self.meta_backend.get_previous_operations())
         sim_schema = sim_db.get_schema(self.op.schema_name)
