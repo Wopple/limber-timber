@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/create-schema.schema.json",
+  "title": "Create Schema V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "create_schema"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "schema_object": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/schema.schema.json" }
+      },
+      "required": ["schema_object"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

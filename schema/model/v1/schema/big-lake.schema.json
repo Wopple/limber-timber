@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/big-lake.schema.json",
+  "title": "Big Lake V1",
+  "type": "object",
+  "properties": {
+    "connection_id": {
+      "type": "string"
+    },
+    "storage_uri": {
+      "type": "string"
+    },
+    "file_format": {
+      "type": "string",
+      "enum": ["PARQUET"]
+    },
+    "table_format": {
+      "type": "string",
+      "enum": ["ICEBERG"]
+    }
+  },
+  "required": ["connection_id", "storage_uri"],
+  "additionalProperties": false
+}

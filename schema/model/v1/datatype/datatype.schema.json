@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/datatype.schema.json",
+  "title": "Datatype V1",
+  "oneOf": [
+    {
+      "type": "string",
+      "enum": [
+        "BOOL",
+        "BOOLEAN",
+        "INT64",
+        "FLOAT64",
+        "GEOGRAPHY",
+        "STRING",
+        "BYTES",
+        "JSON",
+        "DATE",
+        "TIME",
+        "DATETIME",
+        "TIMESTAMP",
+        "INTERVAL"
+      ]
+    },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/bool.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/int.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/float.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/geography.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/numeric.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/bignumeric.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/string.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/bytes.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/json.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/date.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/time.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/datetime.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/timestamp.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/range.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/interval.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/array.schema.json" },
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/struct.schema.json" }
+  ]
+}

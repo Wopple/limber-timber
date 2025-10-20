@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/set-case-sensitive.schema.json",
+  "title": "Set Case Sensitive V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "set_case_sensitive"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "schema_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json" },
+        "case_sensitive": {
+          "type": "boolean"
+        }
+      },
+      "required": ["schema_name", "case_sensitive"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

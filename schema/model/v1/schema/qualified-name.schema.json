@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json",
+  "title": "Qualified Name V1",
+  "oneOf": [
+    {
+      "type": "string",
+      "pattern": "^(([0-9A-Za-z_-]+\\.)?[0-9A-Za-z_]+\\.)?[0-9A-Za-z_]+$"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "database": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/database-name.schema.json" },
+        "schema_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/schema-name.schema.json" },
+        "name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/identifier.schema.json" }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

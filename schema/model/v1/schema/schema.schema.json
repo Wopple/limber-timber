@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/schema.schema.json",
+  "title": "Schema V1",
+  "allOf": [
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/entity.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string"
+        },
+        "default_collate": {
+          "type": "string"
+        },
+        "default_table_expiration": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/external/iso-8601-duration.schema.json" },
+        "default_partition_expiration": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/external/iso-8601-duration.schema.json" },
+        "default_rounding_mode": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/rounding-mode.schema.json" },
+        "default_kms_key_name": {
+          "type": "string"
+        },
+        "failover_reservation": {
+          "type": "string"
+        },
+        "is_case_sensitive": {
+          "type": "boolean"
+        },
+        "is_primary_replica": {
+          "type": "boolean"
+        },
+        "primary_replica": {
+          "type": "string"
+        },
+        "max_time_travel": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/external/iso-8601-duration.schema.json" },
+        "storage_billing": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/external/storage-billing.schema.json" }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

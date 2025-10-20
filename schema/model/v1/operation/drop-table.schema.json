@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/drop-table.schema.json",
+  "title": "Drop Table V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "drop_table"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "table_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json" }
+      },
+      "required": ["table_name"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

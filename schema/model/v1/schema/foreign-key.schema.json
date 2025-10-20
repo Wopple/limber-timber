@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/foreign-key.schema.json",
+  "title": "Foreign Key V1",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "boolean"
+    },
+    "foreign_table_name": {
+      "type": "boolean"
+    },
+    "references": {
+      "type": "array",
+      "items": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/foreign-reference.schema.json" },
+      "minLength": 1
+    },
+    "enforced": {
+      "type": "boolean"
+    }
+  },
+  "required": ["foreign_table_name", "references"],
+  "additionalProperties": false
+}

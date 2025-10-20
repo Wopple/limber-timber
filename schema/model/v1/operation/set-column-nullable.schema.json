@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/set-column-nullable.schema.json",
+  "title": "Set Column Nullable V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "set_column_nullable"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "table_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json" },
+        "column_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/column-name.schema.json" },
+        "nullable": {
+          "type": "boolean"
+        }
+      },
+      "required": ["table_name", "column_name", "nullable"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

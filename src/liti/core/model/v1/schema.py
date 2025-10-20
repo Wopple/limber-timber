@@ -44,9 +44,11 @@ class IntervalLiteral(LitiModel):
 
 
 class RoundingMode(LitiModel):
+    """ Used to validate uppercase naming wherever used """
+
     string: RoundingModeLiteral
 
-    def __init__(self, string: RoundingModeLiteral, **kwargs):
+    def __init__(self, string: RoundingModeLiteral | None = None, **kwargs):
         """ Allows RoundingModeLiteral('rounding_mode') """
         if string is None:
             super().__init__(**kwargs)
@@ -411,6 +413,11 @@ class Schema(Entity):
     primary_replica: str | None = None
     max_time_travel: timedelta | None = None
     storage_billing: StorageBilling | None = None
+
+    @field_validator('storage_billing', mode='before')
+    @classmethod
+    def validate_upper(cls, value: str | None) -> str | None:
+        return value and value.upper()
 
     @field_serializer('default_table_expiration', 'default_partition_expiration', 'max_time_travel')
     @classmethod

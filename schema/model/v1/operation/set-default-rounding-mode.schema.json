@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/set-default-rounding-mode.schema.json",
+  "title": "Set Default Rounding Mode V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "set_default_rounding_mode"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "entity_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json" },
+        "rounding_mode": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/rounding-mode.schema.json" }
+      },
+      "required": ["entity_name"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

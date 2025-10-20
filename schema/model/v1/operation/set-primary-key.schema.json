@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/set-primary-key.schema.json",
+  "title": "Set Primary Key V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "set_primary_key"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "table_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json" },
+        "primary_key": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/primary-key.schema.json" }
+      },
+      "required": ["table_name"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

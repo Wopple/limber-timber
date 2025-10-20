@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/table.schema.json",
+  "title": "Table V1",
+  "allOf": [
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/relation.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/column.schema.json" },
+          "minItems": 1
+        },
+        "default_collate": {
+          "type": "string"
+        },
+        "primary_key": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/primary-key.schema.json" },
+        "foreign_keys": {
+          "type": "array",
+          "items": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/foreign-key.schema.json" },
+          "minItems": 1
+        },
+        "partitioning": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/partitioning.schema.json" },
+        "clustering": {
+          "type": "array",
+          "items": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/column-name.schema.json" },
+          "minItems": 1
+        },
+        "default_rounding_mode": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/rounding-mode.schema.json" },
+        "max_staleness": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/interval-literal.schema.json" },
+        "enable_change_history": {
+          "type": "boolean"
+        },
+        "enable_fine_grained_mutations": {
+          "type": "boolean"
+        },
+        "kms_key_name": {
+          "type": "string"
+        },
+        "big_lake": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/big-lake.schema.json" }
+      },
+      "required": ["columns"],
+      "additionalProperties": false
+    }
+  ]
+}

@@ -196,53 +196,96 @@ INTERVAL = Interval()
 
 
 def parse_datatype(data: Datatype | str | dict[str, Any]) -> Datatype:
+    # Need new instances since templates modify in place
+
     # Already parsed
     if isinstance(data, Datatype):
-        return data
+        if data is BOOL:
+            return Bool()
+        elif data is INT64:
+            return Int(bits=64)
+        elif data is FLOAT64:
+            return Float(bits=64)
+        elif data is GEOGRAPHY:
+            return Geography()
+        elif data is STRING:
+            return String()
+        elif data is BYTES:
+            return Bytes()
+        elif data is JSON:
+            return Json()
+        elif data is DATE:
+            return Date()
+        elif data is TIME:
+            return Time()
+        elif data is DATE_TIME:
+            return DateTime()
+        elif data is TIMESTAMP:
+            return Timestamp()
+        elif data is INTERVAL:
+            return Interval()
+        else:
+            return data
     # Map string value to type
     elif isinstance(data, str):
         data = data.upper()
 
         if data in ('BOOL', 'BOOLEAN'):
-            return BOOL
+            return Bool()
         elif data == 'INT64':
-            return INT64
+            return Int(bits=64)
         elif data == 'FLOAT64':
-            return FLOAT64
+            return Float(bits=64)
         elif data == 'GEOGRAPHY':
-            return GEOGRAPHY
+            return Geography()
         elif data == 'STRING':
-            return STRING
+            return String()
         elif data == 'BYTES':
-            return BYTES
+            return Bytes()
         elif data == 'JSON':
-            return JSON
+            return Json()
         elif data == 'DATE':
-            return DATE
+            return Date()
         elif data == 'TIME':
-            return TIME
+            return Time()
         elif data == 'DATETIME':
-            return DATE_TIME
+            return DateTime()
         elif data == 'TIMESTAMP':
-            return TIMESTAMP
+            return Timestamp()
         elif data == 'INTERVAL':
-            return INTERVAL
-    # Parse parametric type
+            return Interval()
+    # Parse object into type
     elif isinstance(data, dict):
         type_ = data['type'].upper()
 
-        if type_ == 'INT':
-            return Int(bits=data['bits'])
+        if type_ == 'BOOL':
+            return Bool()
+        elif type_ == 'INT':
+            return Int(bits=data.get('bits'))
         elif type_ == 'FLOAT':
-            return Float(bits=data['bits'])
+            return Float(bits=data.get('bits'))
         elif type_ == 'NUMERIC':
             return Numeric(precision=data.get('precision'), scale=data.get('scale'))
         elif type_ == 'BIGNUMERIC':
             return BigNumeric(precision=data.get('precision'), scale=data.get('scale'))
+        elif type_ == 'GEOGRAPHY':
+            return Geography()
         elif type_ == 'STRING':
             return String(characters=data.get('characters'))
         elif type_ == 'BYTES':
             return Bytes(bytes=data.get('bytes'))
+        elif type_ == 'JSON':
+            return Json()
+        elif type_ == 'DATE':
+            return Date()
+        elif type_ == 'TIME':
+            return Time()
+        elif type_ == 'DATETIME':
+            return DateTime()
+        elif type_ == 'TIMESTAMP':
+            return Timestamp()
+        elif type_ == 'INTERVAL':
+            return Interval()
         elif type_ == 'RANGE':
             return Range(kind=data['kind'])
         elif type_ == 'ARRAY':

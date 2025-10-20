@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/set-column-datatype.schema.json",
+  "title": "Set Column Datatype V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "set_column_datatype"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "table_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json" },
+        "column_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/column-name.schema.json" },
+        "datatype": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/datatype.schema.json" }
+      },
+      "required": ["table_name", "column_name", "datatype"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

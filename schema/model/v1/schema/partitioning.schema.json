@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/partitioning.schema.json",
+  "title": "Partitioning V1",
+  "allOf": [
+    {
+      "type": "object",
+      "properties": {
+        "column": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/column-name.schema.json" },
+        "column_datatype": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/datatype/datatype.schema.json" },
+        "require_filter": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "TIME"
+            },
+            "time_unit": {
+              "type": "string",
+              "enum": ["YEAR", "MONTH", "DAY", "HOUR"]
+            },
+            "expiration": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/external/iso-8601-duration.schema.json" }
+          },
+          "required": ["kind"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "INT"
+            },
+            "int_start": {
+              "type": "integer"
+            },
+            "int_end": {
+              "type": "integer"
+            },
+            "int_step": {
+              "type": "integer"
+            }
+          },
+          "required": ["kind"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  ]
+}

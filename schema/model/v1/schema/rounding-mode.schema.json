@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/rounding-mode.schema.json",
+  "title": "Rounding Mode V1",
+  "$defs": {
+    "rounding-mode-literal": {
+      "type": "string",
+      "enum": ["ROUND_HALF_AWAY_FROM_ZERO", "ROUND_HALF_EVEN"]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/rounding-mode-literal" },
+    {
+      "type": "object",
+      "properties": {
+        "string": { "$ref": "#/$defs/rounding-mode-literal" }
+      },
+      "required": ["string"],
+      "additionalProperties": false
+    }
+  ]
+}

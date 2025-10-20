@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/add-column.schema.json",
+  "title": "Add Column V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "add_column"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "table_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json" },
+        "column": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/column.schema.json" }
+      },
+      "required": ["table_name", "column"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/view.schema.json",
+  "title": "View V1",
+  "allOf": [
+    { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/view-like.schema.json" },
+    {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/column.schema.json" },
+          "minItems": 1
+        },
+        "privacy_policy": {
+          "type": "object",
+          "additionalProperties": {},
+          "minProperties": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

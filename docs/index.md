@@ -82,6 +82,4 @@ in-memory to generate the metadata and voilà, Limber Timber is ready to go.
 
 ### JSON Schema
 
-(Coming Soon)
-
 JSON Schema allows for integrated validation and code completion.

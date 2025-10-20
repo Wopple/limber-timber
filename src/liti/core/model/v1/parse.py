@@ -21,6 +21,7 @@ def parse_templates(path: Path) -> list[Template]:
 
     return [
         Template(
+            files=template.get('files', []),
             operation_kinds=template.get('operation_kinds', []),
             root_type=LitiModel.by_name(template['root_type']) if template.get('root_type') else None,
             path=template['path'].split('.'),

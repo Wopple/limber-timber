@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/create-view.schema.json",
+  "title": "Create View V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "create_view"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "view": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/view.schema.json" }
+      },
+      "required": ["view"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/storage-billing.schema.json",
+  "title": "Storage Billing V1",
+  "type": "string",
+  "enum": ["LOGICAL", "PHYSICAL"]
+}

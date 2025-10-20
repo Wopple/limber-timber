@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/create-materialized-view.schema.json",
+  "title": "Create Materialized View V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "create_materialized_view"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "materialized_view": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/materialized-view.schema.json" }
+      },
+      "required": ["materialized_view"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

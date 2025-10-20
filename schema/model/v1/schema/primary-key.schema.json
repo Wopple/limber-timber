@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/primary-key.schema.json",
+  "title": "Primary Key V1",
+  "type": "object",
+  "properties": {
+    "column_names": {
+      "type": "array",
+      "items": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/column-name.schema.json" },
+      "minLength": 1
+    },
+    "enforced": {
+      "type": "boolean"
+    }
+  },
+  "required": ["column_names"],
+  "additionalProperties": false
+}

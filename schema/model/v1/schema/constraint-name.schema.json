@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/constraint-name.schema.json",
+  "title": "Constraint Name V1",
+  "$defs": {
+    "constraint-name-regex": {
+      "type": "string",
+      "pattern": "^[0-9A-Za-z_$]+$"
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/constraint-name-regex" },
+    {
+      "type": "object",
+      "properties": {
+        "string": { "$ref": "#/$defs/constraint-name-regex" }
+      },
+      "required": ["string"],
+      "additionalProperties": false
+    }
+  ]
+}

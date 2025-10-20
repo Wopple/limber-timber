@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/interval-literal.schema.json",
+  "title": "Interval Literal V1",
+  "type": "object",
+  "properties": {
+    "year": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "month": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "day": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "hour": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "minute": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "second": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "microsecond": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sign": {
+      "type": "string",
+      "enum": ["+", "-"]
+    }
+  },
+  "additionalProperties": false
+}

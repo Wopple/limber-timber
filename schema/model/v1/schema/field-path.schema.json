@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/field-path.schema.json",
+  "title": "Field Path V1",
+  "$defs": {
+    "field-path-regex": {
+      "type": "string",
+      "pattern": "^[0-9A-Za-z_]+(\\.[0-9A-Za-z_]+)*$"
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/field-path-regex" },
+    {
+      "type": "object",
+      "properties": {
+        "string": { "$ref": "#/$defs/field-path-regex" }
+      },
+      "required": ["string"],
+      "additionalProperties": false
+    }
+  ]
+}

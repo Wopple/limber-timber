@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/heads/main/schema/manifest-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/manifest-v1.schema.json",
   "title": "Limber Timber Manifest V1",
   "type": "object",
   "properties": {

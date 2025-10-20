@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/rename-table.schema.json",
+  "title": "Rename Table V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "rename_table"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "from_name": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json" },
+        "to_name": {
+          "type": "string"
+        }
+      },
+      "required": ["from_name", "to_name"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}

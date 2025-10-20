@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/execute-sql.schema.json",
+  "title": "Execute SQL V1",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "execute_sql"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "up": {
+          "type": "string"
+        },
+        "down": {
+          "type": "string"
+        },
+        "is_up": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "is_down": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "entity_names": {
+          "type": "object",
+          "additionalProperties": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/schema/qualified-name.schema.json" },
+          "minProperties": 1
+        }
+      },
+      "required": ["up", "down"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["kind", "data"],
+  "additionalProperties": false
+}
