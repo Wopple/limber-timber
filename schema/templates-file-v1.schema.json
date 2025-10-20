@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/templates-file.schema.json",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/templates-file-v1.schema.json",
   "title": "Templates File",
   "type": "array",
   "items": {
