@@ -122,6 +122,11 @@ Let's look at the fields of a template in detail.
 > Tip: you can use templates not just to replace values, but also to set unspecified values. For example, you can set
 > the database and schema everywhere with templates, and then only write the name component for all of your entities.
 
+> Tip: use dry runs to confirm your templates are making the replacements you expect. Dry runs are the default, so omit
+> the `-w` flag when running `liti migrate`. Dry runs can also be used to ensure you have not mutated any migrations
+> that have already been applied. If your templates have made such a mutation, then the dry run's migration plan will
+> include down migrations.
+
 Example template:
 
 ```yaml
@@ -158,10 +163,11 @@ This field is optional.
 
 #### root_type
 
-The root type is a Limber Timber model class name (see the reference page). It affects where the `path` searches from.
-The template will search for all instances of that class in the operation, and replace values within those instances. If
-no root type is provided, the operation is used as the root. In the example, this template will use each `QualifiedName`
-as a root to replace the value.
+The root type is a Limber Timber model class name (see the
+[reference page](https://wopple.github.io/limber-timber/reference/)). It affects where the `path` searches from. The
+template will search for all instances of that class in the operation, and replace values within those instances. If no
+root type is provided, the operation is used as the root. In the example, this template will use each `QualifiedName` as
+a root to replace the value.
 
 This field is optional.
 
@@ -227,6 +233,103 @@ Example template file:
   path: schema_name
   value: replacement_schema
 ```
+
+# Sugar
+
+The data section in the operation files maps directly to the structure of the Limber Timber models and their fields.
+Unfortunately, those models can be very verbose. Consider `QualifiedName`:
+
+```python
+class QualifiedName:
+    database: DatabaseName
+    schema_name: SchemaName
+    name: Identifier
+```
+
+Each of those string types is a subclass of `ValidatedString`:
+
+```python
+class ValidatedString:
+    string: str
+```
+
+This means you should have to write your `QualifiedName` like this:
+
+```yaml
+name:
+  database:
+    string: my_database
+  schema_name:
+    string: my_schema
+  name:
+    string: my_table
+```
+
+It would be understandable if you were quite miffed by this verbosity. As such, Limber Timber offers some sugar. These
+are equivalent:
+
+```yaml
+# omit string field for ValidatedStrings
+name:
+  database: my_database
+  schema_name: my_schema
+  name: my_table
+```
+
+```yaml
+# . delimited strings are parsed for QualifiedNames, the 3 forms are:
+# database.schema.name
+# schema.name
+# name
+name: my_database.my_schema.my_table
+```
+
+You can omit the `string` field of `ValidatedString` when specifying the path and matches in a template:
+
+```yaml
+# Column.name is a ColumnName which is a subclass of ValidatedString
+root_type: Column
+# path: name.string
+path: name
+value: to_name
+#local_match:
+#  name:
+#    string: from_name
+local_match:
+  name: from_name
+```
+
+There are also shorthand names for common datatypes. All datatypes have a `type` field and the parametric ones have
+additional fields. These are equivalent:
+
+```yaml
+datatype:
+  type: INT
+  bits: 64
+```
+
+```yaml
+datatype: INT64
+```
+
+Full list of datatype shorthands:
+
+- `BOOL` / `BOOLEAN`
+- `INT64`
+  - 64 bits
+- `FLOAT64`
+  - 64 bits
+- `GEOGRAPHY`
+- `STRING`
+  - unlimited characters
+- `BYTES`
+  - unlimited bytes
+- `JSON`
+- `DATE`
+- `TIME`
+- `DATE_TIME`
+- `TIMESTAMP`
+- `INTERVAL`
 
 # Gotchas
 

@@ -4,7 +4,8 @@ Below are all the datatypes that make up operation data structures.
 
 ## Operation Types
 
-The `KIND` class constant is the string value to use in the operation file to specify that operation.
+The `KIND` class constant is the string value to use for the `kind` field in the operation file. The rest of the members
+are set in the `data` field of the operation.
 
 ::: liti.core.model.v1.operation.data.table.CreateSchema
     options:

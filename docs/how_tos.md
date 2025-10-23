@@ -182,9 +182,9 @@ This will create an operation file that generates the same schema.
 
 However, scanning is not perfect:
 
-- views may be created before their dependencies (soon: respect `entity_names` dependency order)
-- if you have cyclical foreign keys, it will fail (soon: generate with warning)
-- the generated file is verbose
+- views may be created before their dependencies if they depend on other views
+- while foreign keys are respected, if you have cyclical foreign keys it will fail
+- the generated file can be verbose
 - it will scan a migrations table if you have any in the schema
 - scanning will not create templates
 
@@ -256,12 +256,12 @@ different environments for different purposes like production and development. T
 ```yaml
 # ./migrations/tpl/development.yaml
 
-# set the production database value for all QualifiedNames
+# set the development database value for all QualifiedNames
 - root_type: QualifiedName
   path: database
   value: low_slots
 
-# set the production schema value for all QualifiedNames
+# set the development schema value for all QualifiedNames
 - root_type: QualifiedName
   path: schema_name
   value: my_app_development
@@ -319,7 +319,7 @@ liti migrate \
 ```
 
 > Tip: You can use multiple templates. This means you could have more dimensions beyond environment represented by
-> different sets of templates and select 1 template for each environment. This is done with multiple `--tpl` options.
+> different sets of templates and select 1 template for each dimension. This is done with multiple `--tpl` options.
 
 # Unsupported Operations
 
@@ -328,12 +328,15 @@ means there will be missing features. While common use cases are prioritized for
 projects that require some unsupported features. If you find yourself in this situation, you have two options: add
 support for the features, or use the `ExecuteSql` operator.
 
-Conceptually, the `ExecuteSql` operator is very simple, it executes arbitrary SQL. While this does give you a path to do
-anything you want with SQL (some operations are API only), there are caveats:
+Conceptually, the `ExecuteSql` operator is very simple, it executes arbitrary SQL. However, there are caveats:
 
 - little support for templating
 - down migrations must be implemented by you
 - checking for application must be implemented by you
+
+> Note: Some schema changes cannot be performed with SQL queries like updating the clustering columns in Big Query.
+> While that use case is supported with the `SetClustering` operation, other such API-only features would not be
+> supported by `ExecuteSql`.
 
 1) Write the operation.
 
