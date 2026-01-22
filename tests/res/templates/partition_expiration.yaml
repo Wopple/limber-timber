@@ -1,3 +1,5 @@
+version: 1
+templates:
 - root_type: Partitioning
   path: expiration
   value: P90D

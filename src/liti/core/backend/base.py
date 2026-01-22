@@ -199,6 +199,22 @@ class DbBackend(ABC, Defaulter, Validator):
     ):
         raise NotImplementedError('not supported')
 
+    def set_column_data_policies(
+        self,
+        table_name: QualifiedName,
+        column_name: ColumnName,
+        data_policies: list[str] | None,
+    ):
+        raise NotImplementedError('not supported')
+
+    def add_column_data_policies(
+        self,
+        table_name: QualifiedName,
+        column_name: ColumnName,
+        data_policies: list[str],
+    ):
+        raise NotImplementedError('not supported')
+
     def has_view(self, name: QualifiedName) -> bool:
         return self.get_view(name) is not None
 

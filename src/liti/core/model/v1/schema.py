@@ -314,6 +314,7 @@ class Column(LitiModel):
     nullable: bool = False
     description: str | None = None
     rounding_mode: RoundingMode | None = None
+    data_policies: list[str] | None = None
 
     def __init__(
         self,
@@ -323,6 +324,7 @@ class Column(LitiModel):
         nullable: bool = False,
         description: str | None = None,
         rounding_mode: RoundingMode | None = None,
+        data_policies: list[str] | None = None,
     ):
         """ Allows shorthand instantiation """
 
@@ -335,6 +337,7 @@ class Column(LitiModel):
             nullable=nullable,
             description=description,
             rounding_mode=rounding_mode,
+            data_policies=data_policies,
         )
 
     @field_validator('datatype', mode='before')

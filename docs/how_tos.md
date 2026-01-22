@@ -229,7 +229,8 @@ different environments for different purposes like production and development. T
 
 ```yaml
 # ./migrations/tpl/production.yaml
-
+version: 1
+templates:
 # set the production database value for all QualifiedNames
 - root_type: QualifiedName
   path: database
@@ -255,7 +256,8 @@ different environments for different purposes like production and development. T
 
 ```yaml
 # ./migrations/tpl/development.yaml
-
+version: 1
+templates:
 # set the development database value for all QualifiedNames
 - root_type: QualifiedName
   path: database

@@ -1,6 +1,6 @@
 from typing import Any, ClassVar
 
-from pydantic import field_serializer, field_validator
+from pydantic import Field, field_serializer, field_validator
 from pydantic_core.core_schema import FieldSerializationInfo
 
 from liti.core.model.v1.datatype import Datatype, parse_datatype
@@ -129,6 +129,42 @@ class SetColumnRoundingMode(Operation):
     rounding_mode: RoundingMode | None = None
 
     KIND: ClassVar[str] = 'set_column_rounding_mode'
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
+
+
+class SetColumnDataPolicies(Operation):
+    table_name: QualifiedName
+    column_name: ColumnName
+    data_policies: list[str] | None = None
+
+    KIND: ClassVar[str] = 'set_column_data_policies'
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
+
+
+class AddColumnDataPolicies(Operation):
+    table_name: QualifiedName
+    column_name: ColumnName
+    data_policies: list[str] = Field(min_length=1)
+
+    KIND: ClassVar[str] = 'add_column_data_policies'
+
+    @property
+    def supported_entity_kinds(self) -> set[EntityKind]:
+        return {'TABLE'}
+
+
+class DropColumnDataPolicies(Operation):
+    table_name: QualifiedName
+    column_name: ColumnName
+    data_policies: list[str] = Field(min_length=1)
+
+    KIND: ClassVar[str] = 'drop_column_data_policies'
 
     @property
     def supported_entity_kinds(self) -> set[EntityKind]:

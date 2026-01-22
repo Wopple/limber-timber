@@ -381,6 +381,14 @@ def column_to_sql(column: Column) -> str:
     if column.rounding_mode:
         option_parts.append(f'rounding_mode = \'{column.rounding_mode}\'')
 
+    if column.data_policies:
+        policy_elements = ', '.join(
+            f'"{policy.replace('\\', '\\\\').replace('"', '\\"')}"'
+            for policy in column.data_policies
+        )
+
+        option_parts.append(f'data_policies = [{policy_elements}]')
+
     if option_parts:
         column_schema += f' OPTIONS({", ".join(option_parts)})'
 
@@ -1238,7 +1246,52 @@ class BigQueryDbBackend(DbBackend):
         self.set_column_option(
             table_name,
             column_name,
-            'rounding_mode', f'\'{rounding_mode}\'' if rounding_mode else 'NULL',
+            'rounding_mode',
+            f'\'{rounding_mode}\'' if rounding_mode else 'NULL',
+        )
+
+    def set_column_data_policies(
+        self,
+        table_name: QualifiedName,
+        column_name: ColumnName,
+        data_policies: list[str] | None,
+    ):
+        if data_policies:
+            policy_elements = ', '.join(
+                f'"{policy.replace('\\', '\\\\').replace('"', '\\"')}"'
+                for policy in data_policies
+            )
+
+            self.set_column_option(
+                table_name,
+                column_name,
+                'data_policies',
+                f'[{policy_elements}]',
+            )
+        else:
+            self.set_column_option(
+                table_name,
+                column_name,
+                'data_policies',
+                'NULL',
+            )
+
+    def add_column_data_policies(
+        self,
+        table_name: QualifiedName,
+        column_name: ColumnName,
+        data_policies: list[str],
+    ):
+        policy_elements = ', '.join(
+            f'"{policy.replace('\\', '\\\\').replace('"', '\\"')}"'
+            for policy in data_policies
+        )
+
+        self.increment_column_option(
+            table_name,
+            column_name,
+            'data_policies',
+            f'[{policy_elements}]',
         )
 
     def get_view(self, name: QualifiedName) -> View | None:
@@ -1568,6 +1621,13 @@ class BigQueryDbBackend(DbBackend):
             f'ALTER TABLE `{table_name}`\n'
             f'ALTER COLUMN `{column_name}`\n'
             f'SET OPTIONS({key} = {value})\n'
+        )
+
+    def increment_column_option(self, table_name: QualifiedName, column_name: ColumnName, key: str, value: str):
+        self.client.query_and_wait(
+            f'ALTER TABLE `{table_name}`\n'
+            f'ALTER COLUMN `{column_name}`\n'
+            f'SET OPTIONS({key} += {value})\n'
         )
 
     def set_view_option(self, view_name: QualifiedName, key: str, value: str):

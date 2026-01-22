@@ -2363,6 +2363,12 @@ def test_set_column_description(db_backend: BigQueryDbBackend, bq_client: Mock, 
     'rounding_mode, expected',
     [
         [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(rounding_mode = NULL)\n',
+        ],
+        [
             'ROUND_HALF_AWAY_FROM_ZERO',
             f'ALTER TABLE `test_project.test_dataset.test_table`\n'
             f'ALTER COLUMN `col_num`\n'
@@ -2380,6 +2386,72 @@ def test_set_column_rounding_mode(db_backend: BigQueryDbBackend, bq_client: Mock
     table_name = QualifiedName('test_project.test_dataset.test_table')
     column_name = ColumnName('col_num')
     db_backend.set_column_rounding_mode(table_name, column_name, rounding_mode)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'data_policies, expected',
+    [
+        [
+            None,
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(data_policies = NULL)\n',
+        ],
+        [
+            [],
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(data_policies = NULL)\n',
+        ],
+        [
+            ['data_policy1', 'data_policy2'],
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(data_policies = ["data_policy1", "data_policy2"])\n',
+        ],
+        [
+            [
+                '{\'name\':\'myproject.region-us.data_policy_name1\'}',
+                '{\'name\':\'myproject.region-us.data_policy_name2\'}',
+            ],
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(data_policies = ["{{\'name\':\'myproject.region-us.data_policy_name1\'}}", "{{\'name\':\'myproject.region-us.data_policy_name2\'}}"])\n',
+        ],
+    ],
+)
+def test_set_column_data_policies(db_backend: BigQueryDbBackend, bq_client: Mock, data_policies, expected):
+    table_name = QualifiedName('test_project.test_dataset.test_table')
+    column_name = ColumnName('col_num')
+    db_backend.set_column_data_policies(table_name, column_name, data_policies)
+    bq_client.query_and_wait.assert_called_once_with(expected)
+
+
+@mark.parametrize(
+    'data_policies, expected',
+    [
+        [
+            ['data_policy1', 'data_policy2'],
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(data_policies += ["data_policy1", "data_policy2"])\n',
+        ],
+        [
+            [
+                '{\'name\':\'myproject.region-us.data_policy_name1\'}',
+                '{\'name\':\'myproject.region-us.data_policy_name2\'}',
+            ],
+            f'ALTER TABLE `test_project.test_dataset.test_table`\n'
+            f'ALTER COLUMN `col_num`\n'
+            f'SET OPTIONS(data_policies += ["{{\'name\':\'myproject.region-us.data_policy_name1\'}}", "{{\'name\':\'myproject.region-us.data_policy_name2\'}}"])\n',
+        ],
+    ],
+)
+def test_add_column_data_policies(db_backend: BigQueryDbBackend, bq_client: Mock, data_policies, expected):
+    table_name = QualifiedName('test_project.test_dataset.test_table')
+    column_name = ColumnName('col_num')
+    db_backend.add_column_data_policies(table_name, column_name, data_policies)
     bq_client.query_and_wait.assert_called_once_with(expected)
 
 

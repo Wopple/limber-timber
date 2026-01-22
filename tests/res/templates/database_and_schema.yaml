@@ -1,3 +1,5 @@
+version: 1
+templates:
 # match all QualifiedName.database, and replace their values with "new_project"
 - root_type: QualifiedName
   path: database

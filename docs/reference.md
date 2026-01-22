@@ -306,6 +306,30 @@ are set in the `data` field of the operation.
         - description
         - table_name
 
+::: liti.core.model.v1.operation.data.column.SetColumnDataPolicies
+    options:
+      members:
+        - KIND
+        - column_name
+        - data_policies
+        - table_name
+
+::: liti.core.model.v1.operation.data.column.AddColumnDataPolicies
+    options:
+      members:
+        - KIND
+        - column_name
+        - data_policies
+        - table_name
+
+::: liti.core.model.v1.operation.data.column.DropColumnDataPolicies
+    options:
+      members:
+        - KIND
+        - column_name
+        - data_policies
+        - table_name
+
 ::: liti.core.model.v1.operation.data.sql.ExecuteSql
     options:
       members:

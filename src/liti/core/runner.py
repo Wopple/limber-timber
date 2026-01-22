@@ -75,7 +75,7 @@ class MigrateRunner:
             self.context.templates = [
                 template
                 for path in self.context.template_files
-                for template in parse_templates(path)
+                for template in parse_templates(path).templates
             ]
 
         return self.context.templates

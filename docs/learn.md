@@ -222,8 +222,8 @@ from the current directory.
 Example template file:
 
 ```yaml
-# note the -'s which make this file a list instead of an object
-
+version: 1
+templates:
 # within all `QualifiedName`s, replace the database value with "replacement_database"
 - root_type: QualifiedName
   path: database

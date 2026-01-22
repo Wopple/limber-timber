@@ -1,7 +1,8 @@
 from liti.core.context import Context
 from liti.core.function import extract_nested_datatype
-from liti.core.model.v1.operation.data.column import AddColumn, AddColumnField, DropColumn, DropColumnField, \
-    RenameColumn, SetColumnDatatype, SetColumnDescription, SetColumnNullable, SetColumnRoundingMode
+from liti.core.model.v1.operation.data.column import AddColumn, AddColumnDataPolicies, AddColumnField, DropColumn, \
+    DropColumnDataPolicies, DropColumnField, RenameColumn, SetColumnDataPolicies, SetColumnDatatype, \
+    SetColumnDescription, SetColumnNullable, SetColumnRoundingMode
 from liti.core.model.v1.operation.ops.base import OperationOps
 
 
@@ -231,3 +232,85 @@ class SetColumnRoundingModeOps(OperationOps):
     def is_up(self) -> bool:
         table = self.db_backend.get_table(self.op.table_name)
         return table.column_map[self.op.column_name].rounding_mode == self.op.rounding_mode
+
+
+class SetColumnDataPoliciesOps(OperationOps):
+    op: SetColumnDataPolicies
+
+    def __init__(self, op: SetColumnDataPolicies, context: Context):
+        self.op = op
+        self.context = context
+
+    def up(self):
+        self.db_backend.set_column_data_policies(self.op.table_name, self.op.column_name, self.op.data_policies)
+
+    def down(self) -> SetColumnDataPolicies:
+        sim_db = self.simulate(self.meta_backend.get_previous_operations())
+        sim_column = sim_db.get_table(self.op.table_name).column_map[self.op.column_name]
+
+        return SetColumnDataPolicies(
+            table_name=self.op.table_name,
+            column_name=self.op.column_name,
+            data_policies=sim_column.data_policies,
+        )
+
+    def is_up(self) -> bool:
+        table = self.db_backend.get_table(self.op.table_name)
+        existing = table.column_map[self.op.column_name].data_policies or []
+        target = self.op.data_policies or []
+        return sorted(existing.copy()) == sorted(target.copy())
+
+
+class AddColumnDataPoliciesOps(OperationOps):
+    op: AddColumnDataPolicies
+
+    def __init__(self, op: AddColumnDataPolicies, context: Context):
+        self.op = op
+        self.context = context
+
+    def up(self):
+        self.db_backend.add_column_data_policies(self.op.table_name, self.op.column_name, self.op.data_policies)
+
+    def down(self) -> DropColumnDataPolicies:
+        return DropColumnDataPolicies(
+            table_name=self.op.table_name,
+            column_name=self.op.column_name,
+            data_policies=self.op.data_policies,
+        )
+
+    def is_up(self) -> bool:
+        table = self.db_backend.get_table(self.op.table_name)
+        existing = table.column_map[self.op.column_name].data_policies or []
+        new = self.op.data_policies or []
+        return all(policy in existing for policy in new)
+
+
+class DropColumnDataPoliciesOps(OperationOps):
+    op: DropColumnDataPolicies
+
+    def __init__(self, op: DropColumnDataPolicies, context: Context):
+        self.op = op
+        self.context = context
+
+    def up(self):
+        table = self.db_backend.get_table(self.op.table_name)
+        existing = table.column_map[self.op.column_name].data_policies or []
+        target = existing.copy()
+
+        for policy in self.op.data_policies:
+            target.remove(policy)
+
+        self.db_backend.set_column_data_policies(self.op.table_name, self.op.column_name, target)
+
+    def down(self) -> AddColumnDataPolicies:
+        return AddColumnDataPolicies(
+            table_name=self.op.table_name,
+            column_name=self.op.column_name,
+            data_policies=self.op.data_policies,
+        )
+
+    def is_up(self) -> bool:
+        table = self.db_backend.get_table(self.op.table_name)
+        existing = table.column_map[self.op.column_name].data_policies or []
+        new = self.op.data_policies or []
+        return all(policy in existing for policy in new)

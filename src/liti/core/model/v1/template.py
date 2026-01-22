@@ -28,3 +28,8 @@ class Template(BaseModel):
 
     # filter from the root
     local_match: dict | Star = STAR
+
+
+class TemplateFile(BaseModel):
+    version: int
+    templates: list[Template]

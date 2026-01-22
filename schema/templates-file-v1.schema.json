@@ -1,69 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.4/schema/templates-file-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.4.0/schema/templates-file-v1.schema.json",
   "title": "Templates File",
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "files": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        },
-        "minItems": 1
-      },
-      "operation_kinds": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        },
-        "minItems": 1
-      },
-      "root_type": {
-        "type": "string",
-        "enum": [
-          "Array",
-          "BigLake",
-          "BigNumeric",
-          "Bytes",
-          "Column",
-          "Entity",
-          "Float",
-          "ForeignKey",
-          "ForeignReference",
-          "Int",
-          "IntervalLiteral",
-          "MaterializedView",
-          "Numeric",
-          "Partitioning",
-          "PrimaryKey",
-          "QualifiedName",
-          "Range",
-          "Relation",
-          "Schema",
-          "String",
-          "Struct",
-          "Table",
-          "View",
-          "ViewLike"
-        ]
-      },
-      "path": {
-        "type": "string",
-        "pattern": "^[0-9A-Za-z_]+(\\.[0-9A-Za-z_]+)*$"
-      },
-      "value": {},
-      "full_match": {
-        "type": "object",
-        "additionalProperties": true
-      },
-      "local_match": {
-        "type": "object",
-        "additionalProperties": true
-      }
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
     },
-    "required": ["path", "value"],
-    "additionalProperties": false
-  }
+    "templates": {
+      "type": "array",
+      "items": { "$ref": "https://raw.githubusercontent.com/Wopple/limber-timber/refs/tags/0.3.3/schema/model/v1/operation/operation.schema.json" }
+    }
+  },
+  "required": ["version", "templates"],
+  "additionalProperties": false
 }

@@ -199,6 +199,26 @@ class MemoryDbBackend(DbBackend):
         column = table.column_map[column_name]
         column.rounding_mode = rounding_mode
 
+    def set_column_data_policies(
+        self,
+        table_name: QualifiedName,
+        column_name: ColumnName,
+        data_policies: list[str] | None,
+    ):
+        table = self.get_table(table_name)
+        column = table.column_map[column_name]
+        column.data_policies = data_policies
+
+    def add_column_data_policies(
+        self,
+        table_name: QualifiedName,
+        column_name: ColumnName,
+        data_policies: list[str],
+    ):
+        table = self.get_table(table_name)
+        column = table.column_map[column_name]
+        column.data_policies = (column.data_policies or []) + data_policies
+
     def get_view(self, name: QualifiedName) -> View | None:
         return self.views.get(name)
 

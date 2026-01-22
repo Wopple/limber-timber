@@ -1,3 +1,5 @@
+version: 1
+templates:
 # match the table_param and replace its schema_name
 - operation_kinds:
   - create_view
