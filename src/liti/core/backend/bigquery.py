@@ -31,6 +31,10 @@ ONE_SECOND_IN_MILLIS = 1000
 ONE_DAY_IN_MILLIS = ONE_DAY_IN_SECONDS * ONE_SECOND_IN_MILLIS
 
 
+def escape_string(value: str) -> str:
+    return value.replace('\\', '\\\\').replace('"', '\\"')
+
+
 def to_dataset_ref(project: DatabaseName, dataset: SchemaName) -> bq.DatasetReference:
     return bq.DatasetReference(project.string, dataset.string)
 
@@ -382,11 +386,7 @@ def column_to_sql(column: Column) -> str:
         option_parts.append(f'rounding_mode = \'{column.rounding_mode}\'')
 
     if column.data_policies:
-        policy_elements = ', '.join(
-            f'"{policy.replace('\\', '\\\\').replace('"', '\\"')}"'
-            for policy in column.data_policies
-        )
-
+        policy_elements = ', '.join(f'"{escape_string(policy)}"' for policy in column.data_policies)
         option_parts.append(f'data_policies = [{policy_elements}]')
 
     if option_parts:
@@ -1257,10 +1257,7 @@ class BigQueryDbBackend(DbBackend):
         data_policies: list[str] | None,
     ):
         if data_policies:
-            policy_elements = ', '.join(
-                f'"{policy.replace('\\', '\\\\').replace('"', '\\"')}"'
-                for policy in data_policies
-            )
+            policy_elements = ', '.join(f'"{escape_string(policy)}"' for policy in data_policies)
 
             self.set_column_option(
                 table_name,
@@ -1282,10 +1279,7 @@ class BigQueryDbBackend(DbBackend):
         column_name: ColumnName,
         data_policies: list[str],
     ):
-        policy_elements = ', '.join(
-            f'"{policy.replace('\\', '\\\\').replace('"', '\\"')}"'
-            for policy in data_policies
-        )
+        policy_elements = ', '.join(f'"{escape_string(policy)}"' for policy in data_policies)
 
         self.increment_column_option(
             table_name,
