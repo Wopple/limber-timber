@@ -17,7 +17,7 @@ from liti.core.runner import MigrateRunner, ScanRunner
 class Clients(BaseModel):
     """ Used to ensure we have a single instance of any client that is needed
 
-    This becomes useful for example when it comes to having transactions that span the DB and metadata.
+    This is useful for having transactions that span the DB and metadata.
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -105,12 +105,12 @@ def build_db_backend(args: Namespace, clients: Clients) -> DbBackend:
 
 
 def build_meta_backend(args: Namespace, clients: Clients) -> MetaBackend:
-    if args.db == 'memory':
+    if args.meta == 'memory':
         return MemoryMetaBackend()
-    elif args.db == 'bigquery':
+    elif args.meta == 'bigquery':
         return BigQueryMetaBackend(clients.big_query, QualifiedName(args.meta_table_name))
     else:
-        raise ValueError(f'Invalid metadata backend: {args.db}')
+        raise ValueError(f'Invalid metadata backend: {args.meta}')
 
 
 def migrate():
